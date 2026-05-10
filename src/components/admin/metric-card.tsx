@@ -11,7 +11,7 @@ type MetricCardProps = {
 export function MetricCard({ label, value, delta }: MetricCardProps) {
   return (
     <Card className="rounded-lg border-border bg-card shadow-sm">
-      <CardContent>
+      <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <p className="text-sm font-medium text-muted-foreground">{label}</p>
           {delta ? (
