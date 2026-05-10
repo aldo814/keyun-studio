@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Code2, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -13,11 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { updateDraftJson } from "@/features/dashboard/actions";
 import type { Json } from "@/types/database";
 
-type EditorSection = string | Record<string, unknown>;
+type EditorSection = Record<string, unknown>;
 
 type EditorMvpProps = {
   site: {
@@ -35,9 +36,23 @@ type EditorMvpProps = {
 
 function toEditableJson(draftJson: Json) {
   if (draftJson && typeof draftJson === "object" && !Array.isArray(draftJson)) {
+    const sections = Array.isArray(draftJson.sections)
+      ? draftJson.sections.map((section) => {
+          if (typeof section === "string") {
+            return createSection(section);
+          }
+
+          if (section && typeof section === "object" && !Array.isArray(section)) {
+            return section as EditorSection;
+          }
+
+          return createSection("content");
+        })
+      : [];
+
     return {
       ...draftJson,
-      sections: Array.isArray(draftJson.sections) ? draftJson.sections : [],
+      sections,
     } as Record<string, unknown> & { sections: EditorSection[] };
   }
 
@@ -48,15 +63,6 @@ function toEditableJson(draftJson: Json) {
 }
 
 function sectionSummary(section: EditorSection, index: number) {
-  if (typeof section === "string") {
-    return {
-      key: `${section}-${index}`,
-      type: section,
-      title: section,
-      description: "섹션 설정을 JSON에서 수정하세요.",
-    };
-  }
-
   return {
     key: `${String(section.type ?? "section")}-${index}`,
     type: String(section.type ?? "section"),
@@ -102,6 +108,18 @@ function createSection(type: string): EditorSection {
   };
 }
 
+function getTextValue(section: EditorSection, key: string) {
+  const value = section[key];
+
+  return typeof value === "string" ? value : "";
+}
+
+function getItemsValue(section: EditorSection) {
+  const items = section.items;
+
+  return Array.isArray(items) ? items.map(String).join("\n") : "";
+}
+
 export function EditorMvp({ site, page }: EditorMvpProps) {
   const [draft, setDraft] = useState(() => toEditableJson(page.draftJson));
   const [sectionType, setSectionType] = useState("hero");
@@ -113,6 +131,35 @@ export function EditorMvp({ site, page }: EditorMvpProps) {
       ...current,
       sections: nextSections,
     }));
+  }
+
+  function updateSection(index: number, nextSection: EditorSection) {
+    updateSections(
+      draft.sections.map((section, itemIndex) =>
+        itemIndex === index ? nextSection : section,
+      ),
+    );
+  }
+
+  function updateSectionField(index: number, key: string, value: string) {
+    const section = draft.sections[index];
+
+    updateSection(index, {
+      ...section,
+      [key]: value,
+    });
+  }
+
+  function updateSectionItems(index: number, value: string) {
+    const section = draft.sections[index];
+
+    updateSection(index, {
+      ...section,
+      items: value
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    });
   }
 
   function addSection() {
@@ -183,33 +230,148 @@ export function EditorMvp({ site, page }: EditorMvpProps) {
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
-          <Card className="rounded-lg border-border bg-card shadow-sm">
-            <CardHeader>
-              <CardTitle>draft_json 편집</CardTitle>
-              <CardDescription>
-                버튼으로 섹션을 조작하거나 JSON을 직접 수정할 수 있습니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form action={updateDraftJson} className="space-y-4">
+        <form action={updateDraftJson} className="grid gap-6 xl:grid-cols-[1fr_420px]">
+          <div className="space-y-6">
+            <Card className="rounded-lg border-border bg-card shadow-sm">
+              <CardHeader>
+                <CardTitle>섹션 폼 편집</CardTitle>
+                <CardDescription>
+                  제목, 설명, 버튼, 리스트를 입력칸으로 수정합니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <input name="site_id" type="hidden" value={site.id} />
                 <input name="page_id" type="hidden" value={page.id} />
-                <Textarea
-                  className="min-h-[620px] font-mono text-sm leading-6"
-                  name="draft_json"
-                  value={serializedDraft}
-                  onChange={(event) => onJsonChange(event.target.value)}
-                />
-                <div className="flex justify-end gap-2">
-                  <Button type="reset" variant="outline">
-                    변경 취소
-                  </Button>
-                  <Button type="submit">임시 저장</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+                <input name="draft_json" type="hidden" value={serializedDraft} />
+
+                {draft.sections.length ? (
+                  <div className="space-y-4">
+                    {draft.sections.map((section, index) => {
+                      const type = String(section.type ?? "content");
+                      const summary = sectionSummary(section, index);
+
+                      return (
+                        <div
+                          key={summary.key}
+                          className="rounded-lg border border-border bg-muted/30 p-4"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <p className="text-xs font-medium uppercase text-muted-foreground">
+                                {String(index + 1).padStart(2, "0")} / {type}
+                              </p>
+                              <h2 className="mt-2 text-lg font-semibold">
+                                {summary.title}
+                              </h2>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                type="button"
+                                variant="outline"
+                                onClick={() => moveSection(index, -1)}
+                              >
+                                <ArrowUp />
+                              </Button>
+                              <Button
+                                size="icon"
+                                type="button"
+                                variant="outline"
+                                onClick={() => moveSection(index, 1)}
+                              >
+                                <ArrowDown />
+                              </Button>
+                              <Button
+                                size="icon"
+                                type="button"
+                                variant="destructive"
+                                onClick={() => removeSection(index)}
+                              >
+                                <Trash2 />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            <label className="space-y-2">
+                              <span className="text-sm font-medium">제목</span>
+                              <Input
+                                value={getTextValue(section, "title")}
+                                onChange={(event) =>
+                                  updateSectionField(index, "title", event.target.value)
+                                }
+                                placeholder="섹션 제목"
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <span className="text-sm font-medium">버튼 문구</span>
+                              <Input
+                                value={getTextValue(section, "buttonLabel")}
+                                onChange={(event) =>
+                                  updateSectionField(
+                                    index,
+                                    "buttonLabel",
+                                    event.target.value,
+                                  )
+                                }
+                                placeholder="문의하기"
+                              />
+                            </label>
+                            <label className="space-y-2 md:col-span-2">
+                              <span className="text-sm font-medium">설명</span>
+                              <Textarea
+                                className="min-h-24"
+                                value={getTextValue(section, "description")}
+                                onChange={(event) =>
+                                  updateSectionField(
+                                    index,
+                                    "description",
+                                    event.target.value,
+                                  )
+                                }
+                                placeholder="섹션 설명"
+                              />
+                            </label>
+                            {type === "features" ? (
+                              <label className="space-y-2 md:col-span-2">
+                                <span className="text-sm font-medium">
+                                  항목 리스트
+                                </span>
+                                <Textarea
+                                  className="min-h-28"
+                                  value={getItemsValue(section)}
+                                  onChange={(event) =>
+                                    updateSectionItems(index, event.target.value)
+                                  }
+                                  placeholder={"빠른 제작\n반응형\nSEO 최적화"}
+                                />
+                              </label>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-border p-5 text-sm text-muted-foreground">
+                    sections 배열이 비어 있습니다. 오른쪽에서 섹션을 추가하세요.
+                  </div>
+                )}
+
+                <details className="rounded-lg border border-border bg-background p-4">
+                  <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                    <Code2 className="size-4" />
+                    JSON 원본 보기
+                  </summary>
+                  <Textarea
+                    className="mt-4 min-h-72 font-mono text-xs leading-5"
+                    value={serializedDraft}
+                    onChange={(event) => onJsonChange(event.target.value)}
+                  />
+                </details>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="space-y-6">
             <Card className="rounded-lg border-border bg-card shadow-sm">
@@ -318,8 +480,17 @@ export function EditorMvp({ site, page }: EditorMvpProps) {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="rounded-lg border-border bg-card shadow-sm">
+              <CardContent className="flex items-center justify-end gap-2 p-4">
+                <Button type="reset" variant="outline">
+                  변경 취소
+                </Button>
+                <Button type="submit">임시 저장</Button>
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        </form>
       </div>
     </main>
   );

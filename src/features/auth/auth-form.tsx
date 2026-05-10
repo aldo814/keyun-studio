@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ArrowRight, LockKeyhole, Mail, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup";
+type SocialProvider = "google" | "kakao";
 
 type AuthFormProps = {
   mode: AuthMode;
@@ -26,10 +28,52 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [socialName, setSocialName] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const isSignup = mode === "signup";
+
+  function getNextPath() {
+    if (typeof window === "undefined") {
+      return "/dashboard";
+    }
+
+    const next = new URLSearchParams(window.location.search).get("next");
+
+    return next?.startsWith("/") ? next : "/dashboard";
+  }
+
+  async function trackProfileLogin() {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return;
+    }
+
+    const enhancedProfile = await supabase
+      .from("profiles")
+      .upsert({
+        id: user.id,
+        email: user.email ?? email,
+        name: name || socialName || user.user_metadata?.name || user.email || "",
+        username: name || socialName || user.user_metadata?.name || "",
+        last_seen_at: new Date().toISOString(),
+      });
+
+    if (enhancedProfile.error) {
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        email: user.email ?? email,
+        name: name || socialName || user.user_metadata?.name || user.email || "",
+      });
+    }
+
+    await supabase.rpc("track_profile_visit");
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,7 +113,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
-      router.push("/dashboard");
+      await trackProfileLogin();
+      router.push(getNextPath());
       router.refresh();
     } catch (error) {
       setMessage(
@@ -82,8 +127,61 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
+  async function onSocialLogin(provider: SocialProvider) {
+    setIsLoading(true);
+    setMessage("");
+
+    try {
+      const supabase = createClient();
+      const nextPath = getNextPath();
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", nextPath);
+      document.cookie = `keyun_oauth_name=${encodeURIComponent(
+        socialName || name,
+      )}; path=/; max-age=600; samesite=lax`;
+      document.cookie = `keyun_oauth_email=${encodeURIComponent(
+        email,
+      )}; path=/; max-age=600; samesite=lax`;
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: callbackUrl.toString(),
+        },
+      });
+
+      if (error) {
+        setMessage(error.message);
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "SNS 로그인 연결 정보를 확인해줘.",
+      );
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-10">
+    <main className="grid min-h-screen bg-muted/60 px-4 py-10 text-foreground lg:grid-cols-[1fr_480px]">
+      <section className="hidden min-h-full items-center justify-center rounded-[32px] bg-zinc-950 p-10 text-white lg:flex">
+        <div className="max-w-lg">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm text-zinc-300">
+            <Sparkles className="size-4 text-blue-300" />
+            Keyun Studio Account
+          </div>
+          <h1 className="mt-6 text-5xl font-semibold tracking-normal text-balance">
+            로그인 후 바로 내 사이트 대시보드로 이동합니다.
+          </h1>
+          <p className="mt-5 text-sm leading-7 text-zinc-300">
+            홈페이지 제작 버튼에서 들어온 사용자는 계정 확인 뒤 템플릿, 사이트,
+            SEO 작업을 이어갑니다.
+          </p>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-center">
       <Card className="w-full max-w-md rounded-lg border-border bg-card shadow-sm">
         <CardHeader>
           <CardTitle>{isSignup ? "회원가입" : "로그인"}</CardTitle>
@@ -133,21 +231,82 @@ export function AuthForm({ mode }: AuthFormProps) {
             ) : null}
             <Button className="w-full" disabled={isLoading}>
               {isLoading ? "처리 중..." : isSignup ? "가입하기" : "로그인"}
+              <ArrowRight />
             </Button>
           </form>
+
+          <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            SNS 로그인
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="space-y-3">
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-foreground">
+                SNS 표시 아이디/이름
+              </span>
+              <Input
+                value={socialName}
+                onChange={(event) => setSocialName(event.target.value)}
+                placeholder="키운스튜디오에서 보여줄 이름"
+              />
+            </label>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isLoading}
+                onClick={() => onSocialLogin("google")}
+              >
+                <Mail />
+                Google
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isLoading}
+                onClick={() => onSocialLogin("kakao")}
+              >
+                K
+                Kakao
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled
+                title="네이버는 Supabase 기본 OAuth provider가 아니라 커스텀 연결 단계에서 붙입니다."
+              >
+                N
+                Naver
+              </Button>
+            </div>
+            <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+              <LockKeyhole className="mt-0.5 size-3.5" />
+              Google/Kakao는 Supabase Auth provider 설정을 켜면 바로 연결됩니다.
+            </p>
+          </div>
+
           <div className="mt-5 text-center text-sm text-muted-foreground">
             {isSignup ? (
-              <Link className="font-medium text-foreground hover:underline" href="/login">
+              <Link
+                className="font-medium text-foreground hover:underline"
+                href="/login?next=/dashboard"
+              >
                 이미 계정이 있어요
               </Link>
             ) : (
-              <Link className="font-medium text-foreground hover:underline" href="/signup">
+              <Link
+                className="font-medium text-foreground hover:underline"
+                href="/signup?next=/dashboard"
+              >
                 새 계정 만들기
               </Link>
             )}
           </div>
         </CardContent>
       </Card>
+      </div>
     </main>
   );
 }

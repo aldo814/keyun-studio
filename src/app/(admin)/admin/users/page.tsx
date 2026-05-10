@@ -20,7 +20,16 @@ export default async function AdminUsersPage() {
         description="이름이나 상세 버튼을 누르면 사용자 상세로 이동합니다."
       >
         <AdminTable
-          columns={["사용자", "역할", "워크스페이스", "플랜", "상태", "최근 접속", "관리"]}
+          columns={[
+            "사용자",
+            "역할",
+            "가입일",
+            "방문",
+            "워크스페이스",
+            "상태",
+            "최근 접속",
+            "관리",
+          ]}
           rows={users.map((user) => [
             <div key={user.id}>
               <Link
@@ -32,8 +41,9 @@ export default async function AdminUsersPage() {
               <p className="text-xs text-muted-foreground">{user.email}</p>
             </div>,
             user.role,
+            user.joinedAt,
+            `${user.visitCount}회`,
             user.workspace,
-            user.plan,
             <StatusBadge key={user.status} tone={user.status}>
               {user.status}
             </StatusBadge>,

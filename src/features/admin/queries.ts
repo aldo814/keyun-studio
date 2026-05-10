@@ -32,8 +32,11 @@ type ProfileRow = {
   id: string;
   email: string;
   name: string | null;
+  username?: string | null;
   role: string;
   created_at: string;
+  visit_count?: number | null;
+  last_seen_at?: string | null;
 };
 
 type SiteRow = {
@@ -229,19 +232,34 @@ export async function getAdminOverviewStats() {
 
 export async function getAdminUsers() {
   if (!hasSupabaseEnv()) {
-    return mockUsers;
+    return mockUsers.map((user) => ({
+      ...user,
+      visitCount: 0,
+    }));
   }
 
   const supabase = await createClient();
-  const [{ data: profiles }, { data: members }, { data: workspaces }] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id,email,name,role,created_at")
-        .order("created_at", { ascending: false }),
-      supabase.from("workspace_members").select("workspace_id,user_id,role"),
-      supabase.from("workspaces").select("id,name,plan"),
-    ]);
+  const [
+    { data: enhancedProfiles, error: enhancedProfilesError },
+    { data: members },
+    { data: workspaces },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id,email,name,username,role,created_at,visit_count,last_seen_at")
+      .order("created_at", { ascending: false }),
+    supabase.from("workspace_members").select("workspace_id,user_id,role"),
+    supabase.from("workspaces").select("id,name,plan"),
+  ]);
+
+  const profiles = enhancedProfilesError
+    ? (
+        await supabase
+          .from("profiles")
+          .select("id,email,name,role,created_at")
+          .order("created_at", { ascending: false })
+      ).data
+    : enhancedProfiles;
 
   const workspaceById = new Map(
     ((workspaces ?? []) as Array<Pick<WorkspaceRow, "id" | "name" | "plan">>).map(
@@ -259,12 +277,14 @@ export async function getAdminUsers() {
       id: profile.id,
       name: profile.name ?? profile.email,
       email: profile.email,
+      username: profile.username ?? "-",
       role: member?.role ?? profile.role,
       workspace: workspace?.name ?? "-",
       plan: workspace?.plan ?? "-",
       status: profile.role === "admin" ? "admin" : "active",
       joinedAt: formatDateTime(profile.created_at),
-      lastSeen: "-",
+      visitCount: profile.visit_count ?? 0,
+      lastSeen: formatDateTime(profile.last_seen_at),
     };
   });
 }

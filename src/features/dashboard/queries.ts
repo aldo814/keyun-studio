@@ -116,6 +116,39 @@ export async function getDashboardSites() {
   }));
 }
 
+export async function getDashboardOverview() {
+  const sites = await getDashboardSites();
+  const publishedCount = sites.filter((site) => site.status === "published").length;
+  const draftCount = sites.filter((site) => site.status === "draft").length;
+  const latestSite = sites[0] ?? null;
+
+  return {
+    sites,
+    stats: [
+      {
+        label: "전체 사이트",
+        value: sites.length.toLocaleString("ko-KR"),
+        delta: "내 작업",
+      },
+      {
+        label: "공개 사이트",
+        value: publishedCount.toLocaleString("ko-KR"),
+        delta: "published",
+      },
+      {
+        label: "초안",
+        value: draftCount.toLocaleString("ko-KR"),
+        delta: "draft",
+      },
+      {
+        label: "최근 작업",
+        value: latestSite?.updatedAt ?? "-",
+        delta: latestSite?.name ?? "대기",
+      },
+    ],
+  };
+}
+
 export async function getDashboardSite(siteId: string) {
   const sites = await getDashboardSites();
 
