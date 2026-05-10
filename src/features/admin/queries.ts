@@ -6,6 +6,8 @@ import {
   logs as mockLogs,
   overviewStats as mockOverviewStats,
   sites as mockSites,
+  reports as mockReports,
+  subscriptions as mockSubscriptions,
   templates as mockTemplates,
   users as mockUsers,
   workspaces as mockWorkspaces,
@@ -73,6 +75,32 @@ type AdminLogRow = {
   created_at: string;
 };
 
+type ReportRow = {
+  id: string;
+  site_id: string | null;
+  target_label: string;
+  reason: string;
+  description: string | null;
+  severity: string;
+  status: string;
+  resolution: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type SubscriptionRow = {
+  id: string;
+  workspace_id: string | null;
+  customer_label: string;
+  plan: string;
+  amount_krw: number;
+  status: string;
+  provider: string;
+  provider_subscription_id: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+};
+
 function formatDateTime(value?: string | null) {
   if (!value) {
     return "-";
@@ -121,6 +149,48 @@ function normalizeTemplate(template: {
       sections: ["hero", "features", "pricing", "footer"],
       theme: "keyun-default",
     },
+  };
+}
+
+function normalizeReport(report: {
+  id: string;
+  target: string;
+  reason: string;
+  severity: string;
+  status: string;
+  createdAt: string;
+  siteId?: string | null;
+  description?: string;
+  resolution?: string;
+  updatedAt?: string;
+}) {
+  return {
+    ...report,
+    siteId: report.siteId ?? null,
+    description: report.description ?? "",
+    resolution: report.resolution ?? "",
+    updatedAt: report.updatedAt ?? report.createdAt,
+  };
+}
+
+function normalizeSubscription(subscription: {
+  id: string;
+  customer: string;
+  plan: string;
+  amount: string;
+  status: string;
+  renewal: string;
+  provider?: string;
+  providerSubscriptionId?: string;
+  workspaceId?: string | null;
+  cancelAtPeriodEnd?: boolean;
+}) {
+  return {
+    ...subscription,
+    provider: subscription.provider ?? "stripe",
+    providerSubscriptionId: subscription.providerSubscriptionId ?? "-",
+    workspaceId: subscription.workspaceId ?? null,
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd ?? false,
   };
 }
 
@@ -298,6 +368,39 @@ export async function getAdminSite(siteId: string) {
   return sites.find((site) => site.id === siteId) ?? null;
 }
 
+export async function getAdminReports() {
+  if (!hasSupabaseEnv()) {
+    return mockReports.map(normalizeReport);
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("reports")
+    .select(
+      "id,site_id,target_label,reason,description,severity,status,resolution,created_at,updated_at",
+    )
+    .order("created_at", { ascending: false });
+
+  return ((data ?? []) as ReportRow[]).map((report) => ({
+    id: report.id,
+    siteId: report.site_id,
+    target: report.target_label,
+    reason: report.reason,
+    description: report.description ?? "",
+    severity: report.severity,
+    status: report.status,
+    resolution: report.resolution ?? "",
+    createdAt: formatDateTime(report.created_at),
+    updatedAt: formatDateTime(report.updated_at),
+  }));
+}
+
+export async function getAdminReport(reportId: string) {
+  const reports = await getAdminReports();
+
+  return reports.find((report) => report.id === reportId) ?? null;
+}
+
 export async function getAdminTemplates() {
   if (!hasSupabaseEnv()) {
     return mockTemplates.map(normalizeTemplate);
@@ -344,6 +447,35 @@ export async function getAdminTemplate(templateId: string) {
   const templates = await getAdminTemplates();
 
   return templates.find((template) => template.id === templateId) ?? null;
+}
+
+export async function getAdminSubscriptions() {
+  if (!hasSupabaseEnv()) {
+    return mockSubscriptions.map(normalizeSubscription);
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("subscriptions")
+    .select(
+      "id,workspace_id,customer_label,plan,amount_krw,status,provider,provider_subscription_id,current_period_end,cancel_at_period_end",
+    )
+    .order("current_period_end", { ascending: true, nullsFirst: false });
+
+  return ((data ?? []) as SubscriptionRow[]).map((subscription) => ({
+    id: subscription.id,
+    workspaceId: subscription.workspace_id,
+    customer: subscription.customer_label,
+    plan: subscription.plan,
+    amount: `₩${subscription.amount_krw.toLocaleString("ko-KR")}`,
+    status: subscription.status,
+    provider: subscription.provider,
+    providerSubscriptionId: subscription.provider_subscription_id ?? "-",
+    renewal: subscription.current_period_end
+      ? formatDateTime(subscription.current_period_end)
+      : "-",
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+  }));
 }
 
 export async function getAdminLogs() {

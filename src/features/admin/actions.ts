@@ -210,6 +210,40 @@ export async function updateTemplateJson(formData: FormData) {
   revalidatePath(`/admin/templates/${id}/preview`);
 }
 
+export async function updateReport(formData: FormData) {
+  await getCurrentAdminId();
+
+  const id = value(formData, "id");
+  const reason = value(formData, "reason");
+  const severity = value(formData, "severity") || "medium";
+  const status = value(formData, "status") || "open";
+  const resolution = value(formData, "resolution") || null;
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("reports")
+    .update({
+      reason,
+      severity,
+      status,
+      resolution,
+      updated_at: new Date().toISOString(),
+      resolved_at: status === "resolved" ? new Date().toISOString() : null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await writeAdminLog("신고 검수 정보 수정", "report", id, {
+    severity,
+    status,
+  });
+  revalidatePath("/admin/reports");
+  revalidatePath(`/admin/reports/${id}`);
+}
+
 export async function createTemplate(formData: FormData) {
   const adminId = await getCurrentAdminId();
 

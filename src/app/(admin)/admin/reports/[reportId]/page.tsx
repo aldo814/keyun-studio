@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { AdminSection } from "@/components/admin/admin-section";
 import { AdminShell } from "@/components/admin/admin-shell";
@@ -10,11 +11,31 @@ import {
 } from "@/components/admin/detail-panels";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
-import { reports, sites } from "@/features/admin/data";
+import { createAdminNote, updateReport } from "@/features/admin/actions";
+import { getAdminReport, getAdminSites } from "@/features/admin/queries";
 
-export default function AdminReportDetailPage() {
-  const report = reports[0];
-  const relatedSite = sites.find((site) => site.name === report.target);
+type AdminReportDetailPageProps = {
+  params: Promise<{
+    reportId: string;
+  }>;
+};
+
+export default async function AdminReportDetailPage({
+  params,
+}: AdminReportDetailPageProps) {
+  const { reportId } = await params;
+  const [report, sites] = await Promise.all([
+    getAdminReport(reportId),
+    getAdminSites(),
+  ]);
+
+  if (!report) {
+    redirect("/admin/reports");
+  }
+
+  const relatedSite = report.siteId
+    ? sites.find((site) => site.id === report.siteId)
+    : sites.find((site) => site.name === report.target);
 
   return (
     <AdminShell
@@ -25,15 +46,19 @@ export default function AdminReportDetailPage() {
         <EditPanel
           title="신고 정보 수정"
           description="신고 사유, 심각도, 처리 상태를 운영자가 업데이트합니다."
+          action={updateReport}
           fields={[
-            { label: "신고 ID", value: report.id },
-            { label: "대상", value: report.target },
-            { label: "사유", value: report.reason },
-            { label: "심각도", value: report.severity },
-            { label: "상태", value: report.status },
-            { label: "접수 시각", value: report.createdAt },
+            { label: "신고 ID", value: report.id, readOnly: true },
+            { label: "대상", value: report.target, readOnly: true },
+            { label: "사유", name: "reason", value: report.reason },
+            { label: "심각도", name: "severity", value: report.severity },
+            { label: "상태", name: "status", value: report.status },
+            { label: "처리 결과", name: "resolution", value: report.resolution },
+            { label: "접수 시각", value: report.createdAt, readOnly: true },
           ]}
-        />
+        >
+          <input name="id" type="hidden" value={report.id} />
+        </EditPanel>
         <ActionPanel
           title="검수 액션"
           description={`현재 상태: ${report.status}`}
@@ -46,7 +71,12 @@ export default function AdminReportDetailPage() {
         />
       </div>
 
-      <NotesPanel placeholder="신고 판단 근거, 고객 응대 내용, 후속 조치 계획을 적어두세요." />
+      <NotesPanel
+        action={createAdminNote}
+        placeholder="신고 판단 근거, 고객 응대 내용, 후속 조치 계획을 적어두세요."
+        targetId={report.id}
+        targetType="report"
+      />
 
       <AdminSection title="연결된 사이트">
         <AdminTable

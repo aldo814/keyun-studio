@@ -2,9 +2,11 @@ import { AdminSection } from "@/components/admin/admin-section";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminTable } from "@/components/admin/admin-table";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { subscriptions } from "@/features/admin/data";
+import { getAdminSubscriptions } from "@/features/admin/queries";
 
-export default function AdminSubscriptionsPage() {
+export default async function AdminSubscriptionsPage() {
+  const subscriptions = await getAdminSubscriptions();
+
   return (
     <AdminShell
       title="구독과 결제"
@@ -12,7 +14,7 @@ export default function AdminSubscriptionsPage() {
     >
       <AdminSection title="구독 목록">
         <AdminTable
-          columns={["고객", "플랜", "금액", "상태", "다음 갱신"]}
+          columns={["고객", "플랜", "금액", "상태", "다음 갱신", "제공자"]}
           rows={subscriptions.map((subscription) => [
             <span key={subscription.id} className="font-medium text-foreground">
               {subscription.customer}
@@ -23,6 +25,7 @@ export default function AdminSubscriptionsPage() {
               {subscription.status}
             </StatusBadge>,
             subscription.renewal,
+            subscription.provider,
           ])}
         />
       </AdminSection>

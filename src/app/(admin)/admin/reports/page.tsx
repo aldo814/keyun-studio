@@ -5,9 +5,18 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminTable } from "@/components/admin/admin-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
-import { reports } from "@/features/admin/data";
+import { getAdminReports } from "@/features/admin/queries";
 
-export default function AdminReportsPage() {
+export default async function AdminReportsPage() {
+  const reports = await getAdminReports();
+  const openCount = reports.filter((report) => report.status === "open").length;
+  const reviewingCount = reports.filter(
+    (report) => report.status === "reviewing",
+  ).length;
+  const resolvedCount = reports.filter(
+    (report) => report.status === "resolved",
+  ).length;
+
   return (
     <AdminShell
       title="신고와 검수"
@@ -15,9 +24,9 @@ export default function AdminReportsPage() {
     >
       <div className="grid gap-4 md:grid-cols-3">
         {[
-          ["열린 신고", "18"],
-          ["검수 중", "7"],
-          ["오늘 처리", "42"],
+          ["열린 신고", openCount.toLocaleString("ko-KR")],
+          ["검수 중", reviewingCount.toLocaleString("ko-KR")],
+          ["처리 완료", resolvedCount.toLocaleString("ko-KR")],
         ].map(([label, value]) => (
           <div
             key={label}
