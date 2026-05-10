@@ -5,7 +5,11 @@ export function getSupabaseUrl() {
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
   }
 
-  return url;
+  try {
+    return new URL(url).origin;
+  } catch {
+    throw new Error("Invalid NEXT_PUBLIC_SUPABASE_URL");
+  }
 }
 
 export function getSupabaseAnonKey() {
