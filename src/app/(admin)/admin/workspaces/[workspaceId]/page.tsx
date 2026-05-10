@@ -11,7 +11,11 @@ import {
 } from "@/components/admin/detail-panels";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
-import { createAdminNote, updateWorkspace } from "@/features/admin/actions";
+import {
+  createAdminNote,
+  setWorkspaceStatusAction,
+  updateWorkspace,
+} from "@/features/admin/actions";
 import {
   getAdminSites,
   getAdminUsers,
@@ -80,9 +84,22 @@ export default async function AdminWorkspaceDetailPage({
           title="워크스페이스 액션"
           description={`현재 상태: ${workspace.status}`}
           actions={[
-            { label: "플랜 강제 변경" },
-            { label: "멤버 초대 제한" },
-            { label: "배포 일시 중지", variant: "destructive" },
+            {
+              label: "정상 운영 전환",
+              action: setWorkspaceStatusAction,
+              fields: { id: workspace.id, status: "active" },
+            },
+            {
+              label: "멤버 초대 제한",
+              action: setWorkspaceStatusAction,
+              fields: { id: workspace.id, status: "invite_limited" },
+            },
+            {
+              label: "배포 일시 중지",
+              variant: "destructive",
+              action: setWorkspaceStatusAction,
+              fields: { id: workspace.id, status: "deploy_paused" },
+            },
           ]}
         />
       </div>

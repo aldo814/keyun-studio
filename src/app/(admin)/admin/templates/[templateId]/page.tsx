@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createAdminNote,
+  setTemplateStateAction,
   updateTemplate,
   updateTemplateJson,
 } from "@/features/admin/actions";
@@ -64,9 +65,27 @@ export default async function AdminTemplateDetailPage({
           title="템플릿 액션"
           description={`현재 상태: ${template.status}`}
           actions={[
-            { label: "추천 템플릿 지정" },
-            { label: "비공개 전환" },
-            { label: "사용 중지", variant: "destructive" },
+            {
+              label: "추천 템플릿 지정",
+              action: setTemplateStateAction,
+              fields: { id: template.id, is_featured: "true", status: "active" },
+            },
+            {
+              label: "비공개 전환",
+              action: setTemplateStateAction,
+              fields: { id: template.id, visibility: "private" },
+            },
+            {
+              label: "공개 전환",
+              action: setTemplateStateAction,
+              fields: { id: template.id, visibility: "public", status: "active" },
+            },
+            {
+              label: "사용 중지",
+              variant: "destructive",
+              action: setTemplateStateAction,
+              fields: { id: template.id, status: "disabled", is_featured: "false" },
+            },
           ]}
         />
       </div>

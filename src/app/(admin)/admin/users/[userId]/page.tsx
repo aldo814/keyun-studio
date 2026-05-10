@@ -8,7 +8,12 @@ import {
   EditPanel,
   NotesPanel,
 } from "@/components/admin/detail-panels";
-import { createAdminNote, updateUserProfile } from "@/features/admin/actions";
+import {
+  createAdminNote,
+  sendPasswordResetAction,
+  setUserRoleAction,
+  updateUserProfile,
+} from "@/features/admin/actions";
 import { getAdminLogs, getAdminUser } from "@/features/admin/queries";
 
 type AdminUserDetailPageProps = {
@@ -57,10 +62,29 @@ export default async function AdminUserDetailPage({
           title="계정 상태"
           description={`현재 상태: ${user.status}`}
           actions={[
-            { label: "계정 정지", variant: "destructive" },
-            { label: "계정 정지 해제" },
-            { label: "비밀번호 재설정 메일", variant: "outline" },
-            { label: "슈퍼관리자 검토 표시", variant: "secondary" },
+            {
+              label: "계정 정지",
+              variant: "destructive",
+              action: setUserRoleAction,
+              fields: { id: user.id, role: "suspended" },
+            },
+            {
+              label: "계정 정지 해제",
+              action: setUserRoleAction,
+              fields: { id: user.id, role: "user" },
+            },
+            {
+              label: "비밀번호 재설정 메일",
+              variant: "outline",
+              action: sendPasswordResetAction,
+              fields: { id: user.id, email: user.email },
+            },
+            {
+              label: "슈퍼관리자 검토 표시",
+              variant: "secondary",
+              action: setUserRoleAction,
+              fields: { id: user.id, role: "review" },
+            },
           ]}
         />
       </div>

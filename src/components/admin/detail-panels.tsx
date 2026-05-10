@@ -113,6 +113,8 @@ type ActionPanelProps = {
   actions: Array<{
     label: string;
     variant?: "default" | "outline" | "destructive" | "secondary";
+    action?: (formData: FormData) => void | Promise<void>;
+    fields?: Record<string, string | number | boolean | null | undefined>;
   }>;
 };
 
@@ -125,13 +127,23 @@ export function ActionPanel({ title, description, actions }: ActionPanelProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         {actions.map((action) => (
-          <Button
-            key={action.label}
-            className="w-full"
-            variant={action.variant ?? "outline"}
-          >
-            {action.label}
-          </Button>
+          <form key={action.label} action={action.action}>
+            {Object.entries(action.fields ?? {}).map(([name, value]) => (
+              <input
+                key={name}
+                name={name}
+                type="hidden"
+                value={String(value ?? "")}
+              />
+            ))}
+            <Button
+              className="w-full"
+              type="submit"
+              variant={action.variant ?? "outline"}
+            >
+              {action.label}
+            </Button>
+          </form>
         ))}
       </CardContent>
     </Card>

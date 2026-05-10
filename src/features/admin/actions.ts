@@ -244,6 +244,141 @@ export async function updateReport(formData: FormData) {
   revalidatePath(`/admin/reports/${id}`);
 }
 
+export async function setUserRoleAction(formData: FormData) {
+  await getCurrentAdminId();
+
+  const id = value(formData, "id");
+  const role = value(formData, "role") || "user";
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ role }).eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await writeAdminLog("사용자 역할 변경", "profile", id, { role });
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${id}`);
+}
+
+export async function sendPasswordResetAction(formData: FormData) {
+  await getCurrentAdminId();
+
+  const id = value(formData, "id");
+  const email = value(formData, "email");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await writeAdminLog("비밀번호 재설정 메일 발송", "profile", id, { email });
+  revalidatePath(`/admin/users/${id}`);
+}
+
+export async function setWorkspaceStatusAction(formData: FormData) {
+  await getCurrentAdminId();
+
+  const id = value(formData, "id");
+  const status = value(formData, "status") || "active";
+  const supabase = await createClient();
+  const { error } = await supabase.from("workspaces").update({ status }).eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await writeAdminLog("워크스페이스 상태 변경", "workspace", id, { status });
+  revalidatePath("/admin/workspaces");
+  revalidatePath(`/admin/workspaces/${id}`);
+}
+
+export async function setSiteStatusAction(formData: FormData) {
+  await getCurrentAdminId();
+
+  const id = value(formData, "id");
+  const status = value(formData, "status") || "draft";
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sites")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await writeAdminLog("사이트 상태 변경", "site", id, { status });
+  revalidatePath("/admin/sites");
+  revalidatePath(`/admin/sites/${id}`);
+}
+
+export async function setTemplateStateAction(formData: FormData) {
+  await getCurrentAdminId();
+
+  const id = value(formData, "id");
+  const status = value(formData, "status");
+  const visibility = value(formData, "visibility");
+  const featuredValue = value(formData, "is_featured");
+  const payload: Record<string, string | boolean> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (status) {
+    payload.status = status;
+  }
+
+  if (visibility) {
+    payload.visibility = visibility;
+  }
+
+  if (featuredValue) {
+    payload.is_featured = boolValue(formData, "is_featured");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("templates").update(payload).eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await writeAdminLog("템플릿 상태 변경", "template", id, payload);
+  revalidatePath("/admin/templates");
+  revalidatePath(`/admin/templates/${id}`);
+  revalidatePath(`/admin/templates/${id}/preview`);
+}
+
+export async function setReportStatusAction(formData: FormData) {
+  await getCurrentAdminId();
+
+  const id = value(formData, "id");
+  const status = value(formData, "status") || "reviewing";
+  const resolution = value(formData, "resolution") || null;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("reports")
+    .update({
+      status,
+      resolution,
+      updated_at: new Date().toISOString(),
+      resolved_at: status === "resolved" ? new Date().toISOString() : null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await writeAdminLog("신고 처리 상태 변경", "report", id, {
+    status,
+    resolution,
+  });
+  revalidatePath("/admin/reports");
+  revalidatePath(`/admin/reports/${id}`);
+}
+
 export async function createTemplate(formData: FormData) {
   const adminId = await getCurrentAdminId();
 

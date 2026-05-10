@@ -8,7 +8,11 @@ import { ActionPanel, EditPanel, NotesPanel } from "@/components/admin/detail-pa
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { reports } from "@/features/admin/data";
-import { createAdminNote, updateSite } from "@/features/admin/actions";
+import {
+  createAdminNote,
+  setSiteStatusAction,
+  updateSite,
+} from "@/features/admin/actions";
 import { getAdminLogs, getAdminSite } from "@/features/admin/queries";
 
 type AdminSiteDetailPageProps = {
@@ -55,10 +59,34 @@ export default async function AdminSiteDetailPage({
           title="사이트 운영 액션"
           description={`최근 배포: ${site.lastDeploy}`}
           actions={[
-            { label: "사이트 비공개", variant: "destructive" },
-            { label: "삭제 잠금" },
-            { label: "강제 배포 중단", variant: "destructive" },
-            { label: "도메인 재검증", variant: "outline" },
+            {
+              label: "사이트 공개",
+              action: setSiteStatusAction,
+              fields: { id: site.id, status: "published" },
+            },
+            {
+              label: "사이트 비공개",
+              variant: "destructive",
+              action: setSiteStatusAction,
+              fields: { id: site.id, status: "private" },
+            },
+            {
+              label: "삭제 잠금",
+              action: setSiteStatusAction,
+              fields: { id: site.id, status: "locked" },
+            },
+            {
+              label: "강제 배포 중단",
+              variant: "destructive",
+              action: setSiteStatusAction,
+              fields: { id: site.id, status: "deploy_paused" },
+            },
+            {
+              label: "도메인 재검증",
+              variant: "outline",
+              action: setSiteStatusAction,
+              fields: { id: site.id, status: "domain_review" },
+            },
           ]}
         />
       </div>

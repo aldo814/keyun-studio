@@ -11,7 +11,12 @@ import {
 } from "@/components/admin/detail-panels";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
-import { createAdminNote, updateReport } from "@/features/admin/actions";
+import {
+  createAdminNote,
+  setReportStatusAction,
+  setSiteStatusAction,
+  updateReport,
+} from "@/features/admin/actions";
 import { getAdminReport, getAdminSites } from "@/features/admin/queries";
 
 type AdminReportDetailPageProps = {
@@ -63,10 +68,46 @@ export default async function AdminReportDetailPage({
           title="검수 액션"
           description={`현재 상태: ${report.status}`}
           actions={[
-            { label: "처리 완료" },
-            { label: "사이트 비공개", variant: "destructive" },
-            { label: "사용자 경고 발송", variant: "outline" },
-            { label: "추가 자료 요청", variant: "secondary" },
+            {
+              label: "검수 중으로 변경",
+              action: setReportStatusAction,
+              fields: { id: report.id, status: "reviewing" },
+            },
+            {
+              label: "처리 완료",
+              action: setReportStatusAction,
+              fields: {
+                id: report.id,
+                status: "resolved",
+                resolution: "운영자 처리 완료",
+              },
+            },
+            {
+              label: "사이트 비공개",
+              variant: "destructive",
+              action: setSiteStatusAction,
+              fields: { id: relatedSite?.id, status: "private" },
+            },
+            {
+              label: "사용자 경고 발송",
+              variant: "outline",
+              action: setReportStatusAction,
+              fields: {
+                id: report.id,
+                status: "warning_sent",
+                resolution: "사용자 경고 발송",
+              },
+            },
+            {
+              label: "추가 자료 요청",
+              variant: "secondary",
+              action: setReportStatusAction,
+              fields: {
+                id: report.id,
+                status: "need_more_info",
+                resolution: "추가 자료 요청",
+              },
+            },
           ]}
         />
       </div>
