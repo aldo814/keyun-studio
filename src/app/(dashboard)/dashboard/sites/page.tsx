@@ -52,7 +52,7 @@ export default async function SitesPage() {
         </div>
 
         <AdminTable
-          columns={["사이트", "주소", "상태", "수정일", "관리"]}
+          columns={["사이트", "주소", "상태", "수정일", "최근 게시", "관리"]}
           rows={sites.map((site) => [
             <Link
               key={site.id}
@@ -66,6 +66,7 @@ export default async function SitesPage() {
               {site.status}
             </StatusBadge>,
             site.updatedAt,
+            site.publishedAt,
             <Button
               key={`${site.id}-settings`}
               size="sm"

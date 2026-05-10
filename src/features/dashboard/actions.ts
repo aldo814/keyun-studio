@@ -194,3 +194,52 @@ export async function updateSiteSeoSettings(formData: FormData) {
 
   revalidatePath(`/dashboard/sites/${siteId}/settings`);
 }
+
+export async function publishSite(formData: FormData) {
+  await getCurrentUser();
+
+  const siteId = value(formData, "site_id");
+  const slug = value(formData, "slug");
+  const publishedUrl = `/s/${slug}`;
+  const supabase = await createClient();
+
+  const { data: pages, error: pagesError } = await supabase
+    .from("site_pages")
+    .select("id,draft_json")
+    .eq("site_id", siteId);
+
+  if (pagesError) {
+    throw new Error(pagesError.message);
+  }
+
+  await Promise.all(
+    (pages ?? []).map((page) =>
+      supabase
+        .from("site_pages")
+        .update({
+          published_json: page.draft_json,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", page.id),
+    ),
+  );
+
+  const { error } = await supabase
+    .from("sites")
+    .update({
+      status: "published",
+      published_url: publishedUrl,
+      published_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", siteId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard/sites");
+  revalidatePath(`/dashboard/sites/${siteId}`);
+  revalidatePath(`/s/${slug}`);
+  revalidatePath("/sitemap.xml");
+}

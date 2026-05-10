@@ -24,7 +24,7 @@ on public.site_seo_settings(site_id);
 
 alter table public.site_seo_settings enable row level security;
 
-create or replace function public.is_workspace_editor(workspace_id uuid)
+create or replace function public.is_workspace_editor(p_workspace_id uuid)
 returns boolean
 language sql
 security definer
@@ -34,7 +34,7 @@ as $$
   select exists (
     select 1
     from public.workspace_members
-    where workspace_members.workspace_id = is_workspace_editor.workspace_id
+    where workspace_members.workspace_id = p_workspace_id
       and workspace_members.user_id = auth.uid()
       and workspace_members.role in ('owner', 'admin', 'editor')
   );
