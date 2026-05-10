@@ -47,6 +47,16 @@ type PublishedPageRow = {
   published_json: Json;
 };
 
+type EditorPageRow = {
+  id: string;
+  site_id: string;
+  title: string;
+  path: string;
+  draft_json: Json;
+  published_json: Json;
+  updated_at: string;
+};
+
 function formatDateTime(value?: string | null) {
   if (!value) {
     return "-";
@@ -110,6 +120,46 @@ export async function getDashboardSite(siteId: string) {
   const sites = await getDashboardSites();
 
   return sites.find((site) => site.id === siteId) ?? null;
+}
+
+export async function getSiteEditorState(siteId: string) {
+  if (!hasSupabaseEnv()) {
+    return null;
+  }
+
+  const [site, supabase] = await Promise.all([
+    getDashboardSite(siteId),
+    createClient(),
+  ]);
+
+  if (!site) {
+    return null;
+  }
+
+  const { data } = await supabase
+    .from("site_pages")
+    .select("id,site_id,title,path,draft_json,published_json,updated_at")
+    .eq("site_id", siteId)
+    .eq("path", "/")
+    .maybeSingle();
+
+  const page = data as EditorPageRow | null;
+
+  if (!page) {
+    return null;
+  }
+
+  return {
+    site,
+    page: {
+      id: page.id,
+      title: page.title,
+      path: page.path,
+      draftJson: page.draft_json,
+      publishedJson: page.published_json,
+      updatedAt: formatDateTime(page.updated_at),
+    },
+  };
 }
 
 export async function getSiteSeoSettings(siteId: string) {

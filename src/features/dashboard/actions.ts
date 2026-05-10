@@ -243,3 +243,44 @@ export async function publishSite(formData: FormData) {
   revalidatePath(`/s/${slug}`);
   revalidatePath("/sitemap.xml");
 }
+
+export async function updateDraftJson(formData: FormData) {
+  await getCurrentUser();
+
+  const siteId = value(formData, "site_id");
+  const pageId = value(formData, "page_id");
+  const rawJson = value(formData, "draft_json");
+  let draftJson: unknown;
+
+  try {
+    draftJson = JSON.parse(rawJson);
+  } catch {
+    throw new Error("draft_json 형식이 올바르지 않아.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("site_pages")
+    .update({
+      draft_json: draftJson,
+      page_json: draftJson,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", pageId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await supabase
+    .from("sites")
+    .update({
+      status: "draft",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", siteId);
+
+  revalidatePath(`/dashboard/editor/${siteId}`);
+  revalidatePath(`/dashboard/sites/${siteId}`);
+  revalidatePath("/dashboard/sites");
+}
