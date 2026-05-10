@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
+import type { Json } from "@/types/database";
 
 import {
   logs as mockLogs,
@@ -53,6 +54,7 @@ type TemplateRow = {
   status: string;
   visibility: string;
   is_featured: boolean;
+  template_json: Json;
   created_at: string;
   updated_at: string;
 };
@@ -108,11 +110,17 @@ function normalizeTemplate(template: {
   status: string;
   description?: string;
   thumbnailUrl?: string;
+  templateJson?: Json;
 }) {
   return {
     ...template,
     description: template.description ?? "",
     thumbnailUrl: template.thumbnailUrl ?? "",
+    templateJson: template.templateJson ?? {
+      version: 1,
+      sections: ["hero", "features", "pricing", "footer"],
+      theme: "keyun-default",
+    },
   };
 }
 
@@ -301,7 +309,7 @@ export async function getAdminTemplates() {
       supabase
         .from("templates")
         .select(
-          "id,name,category_id,description,thumbnail_url,status,visibility,is_featured,created_at,updated_at",
+          "id,name,category_id,description,thumbnail_url,status,visibility,is_featured,template_json,created_at,updated_at",
         )
         .order("updated_at", { ascending: false }),
       supabase.from("template_categories").select("id,name"),
@@ -320,6 +328,7 @@ export async function getAdminTemplates() {
     name: template.name,
     description: template.description ?? "",
     thumbnailUrl: template.thumbnail_url ?? "",
+    templateJson: template.template_json,
     category: template.category_id
       ? categoryById.get(template.category_id) ?? "-"
       : "-",

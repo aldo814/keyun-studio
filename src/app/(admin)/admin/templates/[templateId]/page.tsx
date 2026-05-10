@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { AdminSection } from "@/components/admin/admin-section";
 import { AdminShell } from "@/components/admin/admin-shell";
@@ -9,7 +9,12 @@ import {
   NotesPanel,
 } from "@/components/admin/detail-panels";
 import { Button } from "@/components/ui/button";
-import { createAdminNote, updateTemplate } from "@/features/admin/actions";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  createAdminNote,
+  updateTemplate,
+  updateTemplateJson,
+} from "@/features/admin/actions";
 import { getAdminTemplate } from "@/features/admin/queries";
 import { TemplateThumbnailUpload } from "@/features/admin/template-thumbnail-upload";
 
@@ -26,7 +31,7 @@ export default async function AdminTemplateDetailPage({
   const template = await getAdminTemplate(templateId);
 
   if (!template) {
-    notFound();
+    redirect("/admin/templates");
   }
 
   return (
@@ -88,17 +93,23 @@ export default async function AdminTemplateDetailPage({
       />
 
       <AdminSection title="템플릿 JSON">
-        <pre className="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-950 p-5 text-sm leading-6 text-zinc-100">
-          {JSON.stringify(
-            {
-              version: 1,
-              sections: ["hero", "features", "pricing", "footer"],
-              theme: "keyun-default",
-            },
-            null,
-            2,
-          )}
-        </pre>
+        <form
+          action={updateTemplateJson}
+          className="rounded-lg border border-border bg-card p-5 shadow-sm"
+        >
+          <input name="id" type="hidden" value={template.id} />
+          <Textarea
+            className="min-h-[360px] font-mono text-sm leading-6"
+            defaultValue={JSON.stringify(template.templateJson, null, 2)}
+            name="template_json"
+          />
+          <div className="mt-4 flex justify-end gap-2">
+            <Button type="reset" variant="outline">
+              변경 취소
+            </Button>
+            <Button type="submit">JSON 저장</Button>
+          </div>
+        </form>
       </AdminSection>
     </AdminShell>
   );

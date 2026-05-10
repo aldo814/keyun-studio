@@ -178,6 +178,38 @@ export async function updateTemplate(formData: FormData) {
   revalidatePath(`/admin/templates/${id}/preview`);
 }
 
+export async function updateTemplateJson(formData: FormData) {
+  await getCurrentAdminId();
+
+  const id = value(formData, "id");
+  const rawJson = value(formData, "template_json");
+  let templateJson: unknown;
+
+  try {
+    templateJson = JSON.parse(rawJson);
+  } catch {
+    throw new Error("템플릿 JSON 형식이 올바르지 않아.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("templates")
+    .update({
+      template_json: templateJson,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await writeAdminLog("템플릿 JSON 수정", "template", id);
+  revalidatePath("/admin/templates");
+  revalidatePath(`/admin/templates/${id}`);
+  revalidatePath(`/admin/templates/${id}/preview`);
+}
+
 export async function createTemplate(formData: FormData) {
   const adminId = await getCurrentAdminId();
 

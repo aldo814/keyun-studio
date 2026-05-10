@@ -1,10 +1,48 @@
-import { templates } from "@/features/admin/data";
+import { redirect } from "next/navigation";
 
-export default function AdminTemplatePreviewPage() {
-  const template = templates[0];
+import { getAdminTemplate } from "@/features/admin/queries";
+
+type AdminTemplatePreviewPageProps = {
+  params: Promise<{
+    templateId: string;
+  }>;
+};
+
+function getSections(templateJson: unknown) {
+  if (
+    templateJson &&
+    typeof templateJson === "object" &&
+    "sections" in templateJson &&
+    Array.isArray(templateJson.sections)
+  ) {
+    return templateJson.sections.map((section) => String(section));
+  }
+
+  return ["hero", "features", "pricing"];
+}
+
+export default async function AdminTemplatePreviewPage({
+  params,
+}: AdminTemplatePreviewPageProps) {
+  const { templateId } = await params;
+  const template = await getAdminTemplate(templateId);
+
+  if (!template) {
+    redirect("/admin/templates");
+  }
+
+  const sections = getSections(template.templateJson);
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">
+      {template.thumbnailUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt=""
+          className="fixed inset-0 h-full w-full object-cover opacity-10"
+          src={template.thumbnailUrl}
+        />
+      ) : null}
       <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-16">
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500">
           Template Preview
@@ -13,11 +51,11 @@ export default function AdminTemplatePreviewPage() {
           {template.name}
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-600">
-          이 화면은 슈퍼관리자가 템플릿을 새 창으로 확인하는 미리보기입니다.
-          실제 웹빌더 렌더러가 붙으면 템플릿 JSON을 그대로 렌더링합니다.
+          {template.description ||
+            "템플릿 JSON을 기반으로 섹션 구조를 확인하는 운영 미리보기입니다."}
         </p>
         <div className="mt-12 grid gap-4 md:grid-cols-3">
-          {["Hero", "Features", "Pricing"].map((section) => (
+          {sections.map((section) => (
             <div
               key={section}
               className="rounded-lg border border-zinc-200 bg-zinc-50 p-6"
