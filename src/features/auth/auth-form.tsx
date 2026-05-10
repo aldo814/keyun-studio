@@ -44,6 +44,17 @@ export function AuthForm({ mode }: AuthFormProps) {
     return next?.startsWith("/") ? next : "/dashboard";
   }
 
+  function getAuthCallbackUrl() {
+    if (typeof window === "undefined") {
+      return "/auth/callback?next=/dashboard";
+    }
+
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", getNextPath());
+
+    return callbackUrl.toString();
+  }
+
   async function trackProfileLogin() {
     const supabase = createClient();
     const {
@@ -88,6 +99,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           email,
           password,
           options: {
+            emailRedirectTo: getAuthCallbackUrl(),
             data: {
               name,
             },
