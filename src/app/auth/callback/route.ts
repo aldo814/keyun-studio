@@ -8,6 +8,10 @@ function getCookieValue(request: NextRequest, key: string) {
   return value ? decodeURIComponent(value) : "";
 }
 
+function getCallbackValue(request: NextRequest, key: string, cookieKey: string) {
+  return request.nextUrl.searchParams.get(key) ?? getCookieValue(request, cookieKey);
+}
+
 function getSafeNext(request: NextRequest) {
   const next = request.nextUrl.searchParams.get("next");
 
@@ -30,10 +34,12 @@ export async function GET(request: NextRequest) {
 
       if (user) {
         const preferredName =
-          getCookieValue(request, "keyun_oauth_name") ||
+          getCallbackValue(request, "display_name", "keyun_oauth_name") ||
           String(user.user_metadata?.name ?? "");
         const preferredEmail =
-          getCookieValue(request, "keyun_oauth_email") || user.email || "";
+          getCallbackValue(request, "display_email", "keyun_oauth_email") ||
+          user.email ||
+          "";
 
         const enhancedProfile = await supabase
           .from("profiles")

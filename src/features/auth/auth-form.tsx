@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup";
-type SocialProvider = "google" | "kakao";
+type SocialProvider = "google" | "kakao" | "custom:naver";
 
 type AuthFormProps = {
   mode: AuthMode;
@@ -148,17 +148,20 @@ export function AuthForm({ mode }: AuthFormProps) {
       const nextPath = getNextPath();
       const callbackUrl = new URL("/auth/callback", window.location.origin);
       callbackUrl.searchParams.set("next", nextPath);
-      document.cookie = `keyun_oauth_name=${encodeURIComponent(
-        socialName || name,
-      )}; path=/; max-age=600; samesite=lax`;
-      document.cookie = `keyun_oauth_email=${encodeURIComponent(
-        email,
-      )}; path=/; max-age=600; samesite=lax`;
+
+      if (socialName || name) {
+        callbackUrl.searchParams.set("display_name", socialName || name);
+      }
+
+      if (email) {
+        callbackUrl.searchParams.set("display_email", email);
+      }
 
       const { error } = await supabase.auth.signInWithOAuth({
-        provider,
+        provider: provider as unknown as "google",
         options: {
           redirectTo: callbackUrl.toString(),
+          scopes: getSocialScopes(provider),
         },
       });
 
@@ -173,6 +176,18 @@ export function AuthForm({ mode }: AuthFormProps) {
       );
       setIsLoading(false);
     }
+  }
+
+  function getSocialScopes(provider: SocialProvider) {
+    if (provider === "google") {
+      return "email profile";
+    }
+
+    if (provider === "kakao") {
+      return "profile_nickname profile_image account_email";
+    }
+
+    return "name email profile_image";
   }
 
   return (
@@ -286,8 +301,9 @@ export function AuthForm({ mode }: AuthFormProps) {
               <Button
                 type="button"
                 variant="outline"
-                disabled
-                title="네이버는 Supabase 기본 OAuth provider가 아니라 커스텀 연결 단계에서 붙입니다."
+                disabled={isLoading}
+                title="Supabase Custom OAuth provider identifier를 custom:naver로 설정해야 작동합니다."
+                onClick={() => onSocialLogin("custom:naver")}
               >
                 N
                 Naver
@@ -295,7 +311,8 @@ export function AuthForm({ mode }: AuthFormProps) {
             </div>
             <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
               <LockKeyhole className="mt-0.5 size-3.5" />
-              Google/Kakao는 Supabase Auth provider 설정을 켜면 바로 연결됩니다.
+              Google/Kakao는 Supabase 기본 Provider, Naver는 custom:naver
+              Provider 설정 후 연결됩니다.
             </p>
           </div>
 
