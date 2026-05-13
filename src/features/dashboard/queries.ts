@@ -57,6 +57,82 @@ type EditorPageRow = {
   updated_at: string;
 };
 
+const demoUpdatedAt = new Date("2026-05-13T09:00:00+09:00").toISOString();
+
+const demoTemplateJson: Json = {
+  version: 1,
+  theme: "keyun-demo",
+  sections: [
+    {
+      type: "hero",
+      title: "키운 스튜디오 데모 사이트",
+      description:
+        "로그인 없이도 웹빌더 흐름을 확인할 수 있는 샘플 화면입니다.",
+      buttonLabel: "상담 신청",
+    },
+    {
+      type: "features",
+      title: "웹사이트 제작 흐름",
+      description: "템플릿 선택부터 SEO와 게시까지 한 번에 이어집니다.",
+      items: ["섹션 폼 편집", "SEO 설정", "공개 사이트 게시"],
+    },
+    {
+      type: "cta",
+      title: "로그인하면 저장할 수 있어요",
+      description: "데모를 확인한 뒤 계정을 만들면 실제 사이트로 저장됩니다.",
+      buttonLabel: "시작하기",
+    },
+  ],
+};
+
+const demoTemplates = [
+  {
+    id: "demo_template_landing",
+    name: "데모 브랜드 랜딩",
+    description: "Hero, Features, CTA로 구성된 기본 랜딩 템플릿",
+    thumbnailUrl: "",
+    status: "featured",
+    templateJson: demoTemplateJson,
+  },
+  {
+    id: "demo_template_portfolio",
+    name: "데모 포트폴리오",
+    description: "개인/스튜디오 포트폴리오 시작용 템플릿",
+    thumbnailUrl: "",
+    status: "active",
+    templateJson: demoTemplateJson,
+  },
+];
+
+const demoSites = [
+  {
+    id: "demo_site_keyun",
+    workspaceId: "demo_workspace",
+    templateId: "demo_template_landing",
+    name: "키운 스튜디오 데모",
+    slug: "keyun-demo",
+    status: "draft",
+    publishedUrl: "",
+    publishedAt: "-",
+    updatedAt: formatDateTime(demoUpdatedAt),
+    isDemo: true,
+  },
+];
+
+const demoSeoSettings = {
+  id: "demo_seo_keyun",
+  siteId: "demo_site_keyun",
+  title: "키운 스튜디오 데모",
+  description: "로그인 없이 확인하는 키운 스튜디오 웹빌더 데모입니다.",
+  ogTitle: "키운 스튜디오 데모",
+  ogDescription: "템플릿, 에디터, SEO, 게시 흐름을 확인하세요.",
+  ogImageUrl: "",
+  canonicalUrl: "",
+  faviconUrl: "",
+  robotsIndex: true,
+  robotsFollow: true,
+};
+
 function formatDateTime(value?: string | null) {
   if (!value) {
     return "-";
@@ -68,12 +144,31 @@ function formatDateTime(value?: string | null) {
   }).format(new Date(value));
 }
 
-export async function getDashboardTemplates() {
+async function isAuthenticated() {
   if (!hasSupabaseEnv()) {
-    return [];
+    return false;
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return Boolean(user);
+}
+
+export async function getDashboardTemplates() {
+  if (!hasSupabaseEnv()) {
+    return demoTemplates;
+  }
+
+  const supabase = await createClient();
+  const authenticated = await isAuthenticated();
+
+  if (!authenticated) {
+    return demoTemplates;
+  }
+
   const { data } = await supabase
     .from("templates")
     .select("id,name,description,thumbnail_url,status,visibility,is_featured,template_json")
@@ -94,10 +189,16 @@ export async function getDashboardTemplates() {
 
 export async function getDashboardSites() {
   if (!hasSupabaseEnv()) {
-    return [];
+    return demoSites;
   }
 
   const supabase = await createClient();
+  const authenticated = await isAuthenticated();
+
+  if (!authenticated) {
+    return demoSites;
+  }
+
   const { data } = await supabase
     .from("sites")
     .select("id,workspace_id,template_id,name,slug,status,published_url,published_at,updated_at")
@@ -157,7 +258,13 @@ export async function getDashboardSite(siteId: string) {
 
 export async function getSiteEditorState(siteId: string) {
   if (!hasSupabaseEnv()) {
-    return null;
+    return getDemoEditorState(siteId);
+  }
+
+  const authenticated = await isAuthenticated();
+
+  if (!authenticated) {
+    return getDemoEditorState(siteId);
   }
 
   const [site, supabase] = await Promise.all([
@@ -197,7 +304,13 @@ export async function getSiteEditorState(siteId: string) {
 
 export async function getSiteSeoSettings(siteId: string) {
   if (!hasSupabaseEnv()) {
-    return null;
+    return siteId === "demo_site_keyun" ? demoSeoSettings : null;
+  }
+
+  const authenticated = await isAuthenticated();
+
+  if (!authenticated) {
+    return siteId === "demo_site_keyun" ? demoSeoSettings : null;
   }
 
   const supabase = await createClient();
@@ -228,6 +341,26 @@ export async function getSiteSeoSettings(siteId: string) {
     faviconUrl: seo.favicon_url ?? "",
     robotsIndex: seo.robots_index,
     robotsFollow: seo.robots_follow,
+  };
+}
+
+function getDemoEditorState(siteId: string) {
+  const site = demoSites.find((item) => item.id === siteId) ?? null;
+
+  if (!site) {
+    return null;
+  }
+
+  return {
+    site,
+    page: {
+      id: "demo_page_home",
+      title: "Home",
+      path: "/",
+      draftJson: demoTemplateJson,
+      publishedJson: demoTemplateJson,
+      updatedAt: site.updatedAt,
+    },
   };
 }
 
