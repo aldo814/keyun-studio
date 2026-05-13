@@ -136,17 +136,27 @@ function normalizeTemplate(template: {
   id: string;
   name: string;
   category: string;
+  categoryId?: string | null;
   visibility: string;
   used: number;
   status: string;
+  rawStatus?: string;
   description?: string;
   thumbnailUrl?: string;
   templateJson?: Json;
+  isFeatured?: boolean;
+  updatedAt?: string;
+  createdAt?: string;
 }) {
   return {
     ...template,
+    categoryId: template.categoryId ?? null,
     description: template.description ?? "",
     thumbnailUrl: template.thumbnailUrl ?? "",
+    isFeatured: template.isFeatured ?? template.status === "featured",
+    rawStatus: template.rawStatus ?? template.status,
+    updatedAt: template.updatedAt ?? "-",
+    createdAt: template.createdAt ?? "-",
     templateJson: template.templateJson ?? {
       version: 1,
       sections: ["hero", "features", "pricing", "footer"],
@@ -449,6 +459,7 @@ export async function getAdminTemplates() {
   return ((templateRows ?? []) as TemplateRow[]).map((template) => ({
     id: template.id,
     name: template.name,
+    categoryId: template.category_id,
     description: template.description ?? "",
     thumbnailUrl: template.thumbnail_url ?? "",
     templateJson: template.template_json,
@@ -460,6 +471,10 @@ export async function getAdminTemplates() {
       (site) => site.template_id === template.id,
     ).length,
     status: template.is_featured ? "featured" : template.status,
+    rawStatus: template.status,
+    isFeatured: template.is_featured,
+    createdAt: formatDateTime(template.created_at),
+    updatedAt: formatDateTime(template.updated_at),
   }));
 }
 
@@ -467,6 +482,57 @@ export async function getAdminTemplate(templateId: string) {
   const templates = await getAdminTemplates();
 
   return templates.find((template) => template.id === templateId) ?? null;
+}
+
+export async function getAdminTemplateCategories() {
+  if (!hasSupabaseEnv()) {
+    return [
+      { id: "landing", name: "Landing" },
+      { id: "booking", name: "Booking" },
+      { id: "portfolio", name: "Portfolio" },
+    ];
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("template_categories")
+    .select("id,name")
+    .order("name", { ascending: true });
+
+  return (data ?? []) as CategoryRow[];
+}
+
+export async function getAdminTemplateStats() {
+  const templates = await getAdminTemplates();
+
+  return [
+    {
+      label: "전체 템플릿",
+      value: templates.length.toLocaleString("ko-KR"),
+      delta: "library",
+    },
+    {
+      label: "공개",
+      value: templates
+        .filter((template) => template.visibility === "public")
+        .length.toLocaleString("ko-KR"),
+      delta: "public",
+    },
+    {
+      label: "추천",
+      value: templates
+        .filter((template) => template.isFeatured)
+        .length.toLocaleString("ko-KR"),
+      delta: "featured",
+    },
+    {
+      label: "사용 횟수",
+      value: templates
+        .reduce((total, template) => total + template.used, 0)
+        .toLocaleString("ko-KR"),
+      delta: "sites",
+    },
+  ];
 }
 
 export async function getAdminSubscriptions() {

@@ -15,10 +15,58 @@ function getSections(templateJson: unknown) {
     "sections" in templateJson &&
     Array.isArray(templateJson.sections)
   ) {
-    return templateJson.sections.map((section) => String(section));
+    return templateJson.sections.map((section, index) => {
+      if (typeof section === "string") {
+        return {
+          key: `${section}-${index}`,
+          type: section,
+          title: section,
+          description: "섹션 내용을 구성하세요.",
+        };
+      }
+
+      if (section && typeof section === "object") {
+        const record = section as Record<string, unknown>;
+
+        return {
+          key: `${String(record.type ?? "section")}-${index}`,
+          type: String(record.type ?? "section"),
+          title: String(record.title ?? record.type ?? "Untitled"),
+          description: String(
+            record.description ?? record.subtitle ?? "섹션 내용을 구성하세요.",
+          ),
+        };
+      }
+
+      return {
+        key: `section-${index}`,
+        type: "section",
+        title: "Untitled",
+        description: "섹션 내용을 구성하세요.",
+      };
+    });
   }
 
-  return ["hero", "features", "pricing"];
+  return [
+    {
+      key: "hero",
+      type: "hero",
+      title: "Hero",
+      description: "섹션 내용을 구성하세요.",
+    },
+    {
+      key: "features",
+      type: "features",
+      title: "Features",
+      description: "섹션 내용을 구성하세요.",
+    },
+    {
+      key: "cta",
+      type: "cta",
+      title: "CTA",
+      description: "섹션 내용을 구성하세요.",
+    },
+  ];
 }
 
 export default async function AdminTemplatePreviewPage({
@@ -57,10 +105,14 @@ export default async function AdminTemplatePreviewPage({
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           {sections.map((section) => (
             <div
-              key={section}
+              key={section.key}
               className="rounded-lg border border-zinc-200 bg-zinc-50 p-6"
             >
-              <p className="text-sm font-medium text-zinc-500">{section}</p>
+              <p className="text-sm font-medium text-zinc-500">{section.type}</p>
+              <h2 className="mt-4 text-xl font-semibold">{section.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                {section.description}
+              </p>
               <div className="mt-6 h-28 rounded-md bg-white shadow-sm" />
             </div>
           ))}
