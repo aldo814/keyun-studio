@@ -9,6 +9,7 @@ import {
   Layers3,
   Plus,
   Trash2,
+  UploadCloud,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { updateDraftJson } from "@/features/dashboard/actions";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/types/database";
 
@@ -37,10 +39,26 @@ type EditorMvpProps = {
 };
 
 const sectionTypes = [
-  { value: "hero", label: "메인 섹션" },
-  { value: "features", label: "장점 카드" },
-  { value: "content", label: "서브 콘텐츠" },
-  { value: "cta", label: "전환 CTA" },
+  {
+    value: "hero",
+    label: "메인 섹션",
+    description: "첫 화면에서 브랜드 메시지를 강하게 보여줍니다.",
+  },
+  {
+    value: "features",
+    label: "장점 카드",
+    description: "핵심 강점과 서비스를 카드나 단계형으로 정리합니다.",
+  },
+  {
+    value: "content",
+    label: "서브 콘텐츠",
+    description: "이미지와 설명으로 신뢰감을 쌓는 보조 섹션입니다.",
+  },
+  {
+    value: "cta",
+    label: "전환 CTA",
+    description: "문의, 예약, 구매 같은 다음 행동을 유도합니다.",
+  },
 ];
 
 const layoutOptions: Record<string, Array<{ value: string; label: string }>> = {
@@ -193,6 +211,66 @@ function layoutLabel(section: EditorSection) {
     layoutOptions[type]?.find((option) => option.value === layout)?.label ??
     layout ??
     "기본 레이아웃"
+  );
+}
+
+function MiniVisual({ type, layout }: { type: string; layout?: string }) {
+  return (
+    <div className="h-20 overflow-hidden rounded-md border border-border bg-zinc-950 p-2">
+      <div
+        className={cn(
+          "h-full rounded bg-[radial-gradient(circle_at_30%_20%,rgba(37,99,235,0.9),transparent_35%),radial-gradient(circle_at_75%_70%,rgba(124,58,237,0.55),transparent_38%),linear-gradient(145deg,#020617,#050505)]",
+          type === "hero" && layout === "split" ? "grid grid-cols-2 gap-2 p-2" : "",
+          type === "features" ? "grid grid-cols-3 gap-1 p-2" : "",
+          type === "content" ? "grid grid-cols-[0.8fr_1fr] gap-2 p-2" : "",
+          type === "cta" ? "p-3" : "",
+        )}
+      >
+        {type === "hero" && layout === "split" ? (
+          <>
+            <div className="space-y-1">
+              <div className="h-1.5 w-10 rounded bg-blue-300/70" />
+              <div className="h-2 w-16 rounded bg-white/70" />
+              <div className="h-1.5 w-12 rounded bg-white/30" />
+            </div>
+            <div className="rounded border border-blue-300/30 bg-white/10" />
+          </>
+        ) : null}
+        {type === "features" ? (
+          <>
+            <div className="rounded bg-white/10" />
+            <div className="rounded bg-white/10" />
+            <div className="rounded bg-white/10" />
+          </>
+        ) : null}
+        {type === "content" ? (
+          <>
+            <div className="rounded bg-blue-500/20" />
+            <div className="space-y-1">
+              <div className="h-1.5 w-10 rounded bg-blue-300/70" />
+              <div className="h-2 w-16 rounded bg-white/70" />
+              <div className="h-1.5 w-14 rounded bg-white/25" />
+            </div>
+          </>
+        ) : null}
+        {type === "cta" ? (
+          <div className="flex h-full items-center justify-between rounded border border-white/10 bg-white/10 px-2">
+            <div className="space-y-1">
+              <div className="h-2 w-16 rounded bg-white/70" />
+              <div className="h-1.5 w-12 rounded bg-white/30" />
+            </div>
+            <div className="h-5 w-10 rounded bg-blue-500" />
+          </div>
+        ) : null}
+        {type === "hero" && layout !== "split" ? (
+          <div className="flex h-full flex-col justify-end p-3">
+            <div className="h-1.5 w-12 rounded bg-blue-300/70" />
+            <div className="mt-2 h-3 w-28 rounded bg-white/80" />
+            <div className="mt-1 h-2 w-20 rounded bg-white/30" />
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -358,6 +436,8 @@ export function EditorMvp({ site, page }: EditorMvpProps) {
   const [draft, setDraft] = useState(() => toEditableJson(page.draftJson));
   const [sectionType, setSectionType] = useState("hero");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const serializedDraft = useMemo(() => JSON.stringify(draft, null, 2), [draft]);
   const selectedSection = draft.sections[selectedIndex] ?? draft.sections[0] ?? null;
 
@@ -430,6 +510,56 @@ export function EditorMvp({ site, page }: EditorMvpProps) {
     }
   }
 
+  async function uploadSectionImage(file: File) {
+    const section = draft.sections[selectedIndex];
+
+    if (!section) {
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadMessage("");
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setUploadMessage("이미지 업로드는 로그인 후 사용할 수 있습니다.");
+        return;
+      }
+
+      const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
+      const sectionId = stringValue(section, "builderId") || `section-${selectedIndex}`;
+      const path = `users/${user.id}/sites/${site.id}/sections/${sectionId}-${Date.now()}.${extension}`;
+      const { error } = await supabase.storage
+        .from("site-assets")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (error) {
+        setUploadMessage(error.message);
+        return;
+      }
+
+      const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
+      updateSectionField(selectedIndex, "imageUrl", data.publicUrl);
+      setUploadMessage("업로드 완료. 저장을 누르면 섹션에 반영됩니다.");
+    } catch (error) {
+      setUploadMessage(
+        error instanceof Error
+          ? error.message
+          : "이미지 업로드 중 문제가 생겼습니다.",
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950">
       <form action={updateDraftJson}>
@@ -483,21 +613,29 @@ export function EditorMvp({ site, page }: EditorMvpProps) {
               <Layers3 className="size-5 text-muted-foreground" />
             </div>
 
-            <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
-              <select
-                className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
-                value={sectionType}
-                onChange={(event) => setSectionType(event.target.value)}
-              >
-                {sectionTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              <Button type="button" onClick={addSection}>
+            <div className="mt-4 grid gap-2">
+              {sectionTypes.map((type) => (
+                <button
+                  key={type.value}
+                  className={cn(
+                    "rounded-lg border p-2 text-left transition-colors",
+                    sectionType === type.value
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:bg-muted",
+                  )}
+                  type="button"
+                  onClick={() => setSectionType(type.value)}
+                >
+                  <MiniVisual type={type.value} />
+                  <p className="mt-2 text-sm font-semibold">{type.label}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {type.description}
+                  </p>
+                </button>
+              ))}
+              <Button className="mt-2 w-full" type="button" onClick={addSection}>
                 <Plus />
-                추가
+                선택한 섹션 추가
               </Button>
             </div>
 
@@ -577,24 +715,45 @@ export function EditorMvp({ site, page }: EditorMvpProps) {
                   </Button>
                 </div>
 
-                <label className="space-y-2">
+                <div className="space-y-2">
                   <span className="text-sm font-medium">레이아웃 샘플</span>
-                  <select
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-                    value={stringValue(selectedSection, "layout")}
-                    onChange={(event) =>
-                      updateSectionField(selectedIndex, "layout", event.target.value)
-                    }
-                  >
+                  <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
                     {(layoutOptions[stringValue(selectedSection, "type")] ??
                       layoutOptions.content
-                    ).map((layout) => (
-                      <option key={layout.value} value={layout.value}>
-                        {layout.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    ).map((layout) => {
+                      const isActive =
+                        stringValue(selectedSection, "layout") === layout.value;
+
+                      return (
+                        <button
+                          key={layout.value}
+                          className={cn(
+                            "rounded-lg border p-2 text-left transition-colors",
+                            isActive
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-background hover:bg-muted",
+                          )}
+                          type="button"
+                          onClick={() =>
+                            updateSectionField(
+                              selectedIndex,
+                              "layout",
+                              layout.value,
+                            )
+                          }
+                        >
+                          <MiniVisual
+                            layout={layout.value}
+                            type={stringValue(selectedSection, "type") || "content"}
+                          />
+                          <p className="mt-2 text-xs font-semibold">
+                            {layout.label}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 <label className="space-y-2">
                   <span className="text-sm font-medium">섹션 라벨</span>
@@ -642,19 +801,43 @@ export function EditorMvp({ site, page }: EditorMvpProps) {
                     }
                   />
                 </label>
-                <label className="space-y-2">
-                  <span className="flex items-center gap-2 text-sm font-medium">
+                <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
                     <ImageIcon className="size-4" />
-                    이미지 URL
-                  </span>
+                    섹션 이미지
+                  </div>
+                  <div className="aspect-video overflow-hidden rounded-lg border border-border bg-zinc-950">
+                    {visualTile(selectedSection)}
+                  </div>
+                  <Input
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={isUploading}
+                    type="file"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+
+                      if (file) {
+                        void uploadSectionImage(file);
+                      }
+                    }}
+                  />
                   <Input
                     value={stringValue(selectedSection, "imageUrl")}
                     onChange={(event) =>
                       updateSectionField(selectedIndex, "imageUrl", event.target.value)
                     }
-                    placeholder="https://..."
+                    placeholder="또는 이미지 URL 직접 입력"
                   />
-                </label>
+                  <Button disabled={isUploading} type="button" variant="outline">
+                    <UploadCloud />
+                    {isUploading ? "업로드 중..." : "파일 선택 시 자동 업로드"}
+                  </Button>
+                  {uploadMessage ? (
+                    <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                      {uploadMessage}
+                    </p>
+                  ) : null}
+                </div>
                 {stringValue(selectedSection, "type") === "features" ? (
                   <label className="space-y-2">
                     <span className="text-sm font-medium">
