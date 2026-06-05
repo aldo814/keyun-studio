@@ -8,8 +8,14 @@ import {
   CreditCard,
   FileText,
   Globe2,
+  ImageIcon,
+  Inbox,
   Layers3,
+  Megaphone,
   Menu,
+  Newspaper,
+  Palette,
+  Pencil,
   Search,
   Settings,
   Users,
@@ -21,7 +27,27 @@ import { cn } from "@/lib/utils";
 const dashboardNavItems = [
   { label: "개요", href: "/dashboard", icon: Globe2 },
   { label: "내 사이트", href: "/dashboard/sites", icon: FileText },
-  { label: "템플릿", href: "/dashboard/templates", icon: Layers3 },
+  {
+    label: "디자인",
+    href: "/dashboard/design",
+    icon: Palette,
+    children: [
+      { label: "테마", href: "/dashboard/design/theme", icon: Palette },
+      { label: "디자인 편집", href: "/dashboard/editor/demo_site_keyun", icon: Pencil },
+      { label: "템플릿", href: "/dashboard/design/templates", icon: Layers3 },
+    ],
+  },
+  {
+    label: "콘텐츠",
+    href: "/dashboard/content",
+    icon: Newspaper,
+    children: [
+      { label: "게시글", href: "/dashboard/content/posts", icon: Newspaper },
+      { label: "문의폼", href: "/dashboard/content/forms", icon: Inbox },
+      { label: "미디어", href: "/dashboard/content/media", icon: ImageIcon },
+      { label: "팝업", href: "/dashboard/content/popups", icon: Megaphone },
+    ],
+  },
   { label: "멤버", href: "/dashboard/members", icon: Users },
   { label: "구독", href: "/dashboard/billing", icon: CreditCard },
   { label: "설정", href: "/dashboard/settings", icon: Settings },
@@ -34,16 +60,31 @@ type DashboardShellProps = {
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
 
+  if (pathname.startsWith("/dashboard/editor")) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen bg-muted/60 text-foreground">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-border bg-card lg:flex lg:flex-col">
-        <div className="flex h-16 items-center gap-3 border-b border-border px-5">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Globe2 className="size-5" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Keyun Studio</p>
-            <p className="text-xs text-muted-foreground">사용자 대시보드</p>
+        <div className="flex h-16 items-center border-b border-border px-5">
+          <Link href="/dashboard" className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img alt="keyun" className="h-8 w-auto" src="/keyun-logo.svg" />
+          </Link>
+        </div>
+
+        <div className="border-b border-border px-4 py-4">
+          <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-white shadow-sm">
+              <Globe2 className="size-5 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">KEYUN Official</p>
+              <p className="truncate text-xs text-muted-foreground">
+                https://keyun.io
+              </p>
+            </div>
           </div>
         </div>
 
@@ -56,27 +97,53 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 : pathname.startsWith(item.href);
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="size-4" />
-                {item.label}
-              </Link>
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-blue-50 text-blue-600 shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-4" />
+                  {item.label}
+                </Link>
+
+                {"children" in item && item.children && isActive ? (
+                  <div className="mt-1 space-y-1 pl-5">
+                    {item.children.map((child) => {
+                      const ChildIcon = child.icon;
+                      const childActive = pathname.startsWith(child.href);
+
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={cn(
+                            "flex h-9 items-center gap-2 rounded-md px-3 text-sm transition-colors",
+                            childActive
+                              ? "bg-white text-blue-600 shadow-sm"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                        >
+                          <ChildIcon className="size-3.5" />
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
             );
           })}
         </nav>
 
         <div className="border-t border-border p-4">
-          <div className="rounded-lg bg-primary p-4 text-primary-foreground">
+          <div className="rounded-lg bg-blue-600 p-4 text-white">
             <p className="text-sm font-semibold">선택형 웹빌더</p>
-            <p className="mt-1 text-xs leading-5 text-primary-foreground/70">
+            <p className="mt-1 text-xs leading-5 text-white/70">
               섹션 레이아웃을 고르고 텍스트와 이미지만 수정합니다.
             </p>
           </div>

@@ -67,14 +67,22 @@ export default async function SitesPage() {
             </StatusBadge>,
             site.updatedAt,
             site.publishedAt,
-            <Button
-              key={`${site.id}-settings`}
-              size="sm"
-              variant="outline"
-              render={<Link href={`/dashboard/sites/${site.id}/settings`} />}
-            >
-              설정
-            </Button>,
+            <div key={`${site.id}-actions`} className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                render={<Link href={`/dashboard/editor/${site.id}`} />}
+              >
+                에디터
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                render={<Link href={`/dashboard/sites/${site.id}/settings`} />}
+              >
+                SEO
+              </Button>
+            </div>,
           ])}
         />
       </div>

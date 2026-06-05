@@ -257,6 +257,10 @@ export async function getDashboardSite(siteId: string) {
 }
 
 export async function getSiteEditorState(siteId: string) {
+  if (siteId === "demo_site_keyun") {
+    return getDemoEditorState(siteId);
+  }
+
   if (!hasSupabaseEnv()) {
     return getDemoEditorState(siteId);
   }
@@ -362,6 +366,19 @@ function getDemoEditorState(siteId: string) {
       updatedAt: site.updatedAt,
     },
   };
+}
+
+export async function getPublicTemplates() {
+  const templates = await getDashboardTemplates();
+  return templates.map((t) => ({
+    ...t,
+    category: t.id.includes("portfolio")
+      ? "포트폴리오"
+      : t.id.includes("shop")
+        ? "쇼핑몰"
+        : "비즈니스",
+    isFeatured: t.status === "featured",
+  }));
 }
 
 export async function getPublishedSiteBySlug(siteSlug: string) {

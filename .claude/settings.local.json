@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(node -e \"require\\('./node_modules/next/dist/compiled/semver/index.js'\\); console.log\\('ok'\\)\")",
+      "Bash(xxd /Users/eunyo/Desktop/키운/키운스튜디오/keyun-studio/node_modules/next/dist/compiled/find-up/package.json)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:3002/dashboard)",
+      "Bash(ln -sf /Users/eunyo/Desktop/키운/키운스튜디오/keyun-studio/node_modules/lightningcss-darwin-arm64/lightningcss.darwin-arm64.node /Users/eunyo/Desktop/키운/키운스튜디오/keyun-studio/node_modules/lightningcss/lightningcss.darwin-arm64.node)",
+      "Bash(curl -s http://localhost:3000/dashboard)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(xargs file)",
+      "Bash(npm install *)",
+      "Bash(rm -f \"/Users/eunyo/Desktop/키운/키운스튜디오/keyun-studio/.git/index.lock\" && echo \"lock removed\")"
+    ]
+  }
+}
