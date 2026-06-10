@@ -1,13 +1,13 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  Layers3,
-  SearchCheck,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
+import type { ComponentType } from "react";
+import ArrowRight from "lucide-react/dist/esm/icons/arrow-right";
+import Layers3 from "lucide-react/dist/esm/icons/layers-3";
+import SearchCheck from "lucide-react/dist/esm/icons/search-check";
+import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 
 import { Button } from "@/components/ui/button";
+
+type LucideIcon = ComponentType<{ className?: string }>;
 
 const featureCards: Array<{
   title: string;

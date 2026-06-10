@@ -1,32 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  ChevronDown,
-  Check,
-  Copy,
-  Eye,
-  FileText,
-  GripVertical,
-  Home,
-  ImageIcon,
-  Laptop,
-  Layers3,
-  Monitor,
-  MoreHorizontal,
-  Palette,
-  Plus,
-  Settings,
-  Smartphone,
-  Tablet,
-  Trash2,
-  UploadCloud,
-  X,
-} from "lucide-react";
+import ArrowDown from "lucide-react/dist/esm/icons/arrow-down";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left";
+import ArrowRight from "lucide-react/dist/esm/icons/arrow-right";
+import ArrowUp from "lucide-react/dist/esm/icons/arrow-up";
+import Check from "lucide-react/dist/esm/icons/check";
+import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
+import Copy from "lucide-react/dist/esm/icons/copy";
+import Eye from "lucide-react/dist/esm/icons/eye";
+import FileText from "lucide-react/dist/esm/icons/file-text";
+import GripVertical from "lucide-react/dist/esm/icons/grip-vertical";
+import Home from "lucide-react/dist/esm/icons/home";
+import ImageIcon from "lucide-react/dist/esm/icons/image";
+import Laptop from "lucide-react/dist/esm/icons/laptop";
+import Layers3 from "lucide-react/dist/esm/icons/layers-3";
+import Monitor from "lucide-react/dist/esm/icons/monitor";
+import MoreHorizontal from "lucide-react/dist/esm/icons/more-horizontal";
+import Palette from "lucide-react/dist/esm/icons/palette";
+import Plus from "lucide-react/dist/esm/icons/plus";
+import Settings from "lucide-react/dist/esm/icons/settings";
+import Smartphone from "lucide-react/dist/esm/icons/smartphone";
+import Tablet from "lucide-react/dist/esm/icons/tablet";
+import Trash2 from "lucide-react/dist/esm/icons/trash-2";
+import UploadCloud from "lucide-react/dist/esm/icons/upload-cloud";
+import X from "lucide-react/dist/esm/icons/x";
 import {
   useEffect,
   useMemo,

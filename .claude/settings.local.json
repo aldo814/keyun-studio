@@ -12,7 +12,12 @@
       "Bash(pkill -f \"next dev\")",
       "Bash(xargs file)",
       "Bash(npm install *)",
-      "Bash(rm -f \"/Users/eunyo/Desktop/키운/키운스튜디오/keyun-studio/.git/index.lock\" && echo \"lock removed\")"
+      "Bash(rm -f \"/Users/eunyo/Desktop/키운/키운스튜디오/keyun-studio/.git/index.lock\" && echo \"lock removed\")",
+      "Bash(gh repo *)",
+      "Bash(git --version)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

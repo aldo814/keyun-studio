@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { EditorMvp } from "@/features/dashboard/editor-mvp";
+import { DesignEditorLoader } from "@/features/dashboard/design-editor-loader";
 import { getSiteEditorState } from "@/features/dashboard/queries";
 
 type EditorPageProps = {
@@ -17,5 +17,5 @@ export default async function EditorPage({ params }: EditorPageProps) {
     notFound();
   }
 
-  return <EditorMvp page={state.page} site={state.site} />;
+  return <DesignEditorLoader page={state.page} site={state.site} />;
 }

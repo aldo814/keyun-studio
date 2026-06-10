@@ -2,24 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ArrowRight,
-  Bell,
-  CreditCard,
-  FileText,
-  Globe2,
-  ImageIcon,
-  Inbox,
-  Layers3,
-  Megaphone,
-  Menu,
-  Newspaper,
-  Palette,
-  Pencil,
-  Search,
-  Settings,
-  Users,
-} from "lucide-react";
+import ArrowRight from "lucide-react/dist/esm/icons/arrow-right";
+import Bell from "lucide-react/dist/esm/icons/bell";
+import CreditCard from "lucide-react/dist/esm/icons/credit-card";
+import FileText from "lucide-react/dist/esm/icons/file-text";
+import Globe2 from "lucide-react/dist/esm/icons/globe-2";
+import ImageIcon from "lucide-react/dist/esm/icons/image";
+import Inbox from "lucide-react/dist/esm/icons/inbox";
+import Layers3 from "lucide-react/dist/esm/icons/layers-3";
+import Megaphone from "lucide-react/dist/esm/icons/megaphone";
+import Menu from "lucide-react/dist/esm/icons/menu";
+import Newspaper from "lucide-react/dist/esm/icons/newspaper";
+import Palette from "lucide-react/dist/esm/icons/palette";
+import Pencil from "lucide-react/dist/esm/icons/pencil";
+import Search from "lucide-react/dist/esm/icons/search";
+import Settings from "lucide-react/dist/esm/icons/settings";
+import Users from "lucide-react/dist/esm/icons/users";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

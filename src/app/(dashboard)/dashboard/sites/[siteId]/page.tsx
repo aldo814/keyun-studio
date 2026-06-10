@@ -39,6 +39,9 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
             <p className="mt-2 text-sm text-muted-foreground">/s/{site.slug}</p>
           </div>
           <div className="flex gap-2">
+            <Button render={<Link href={`/dashboard/editor/${site.id}`} />}>
+              디자인 편집
+            </Button>
             <Button variant="outline" render={<Link href={`/dashboard/sites/${site.id}/settings`} />}>
               SEO 설정
             </Button>
