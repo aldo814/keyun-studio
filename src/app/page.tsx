@@ -1,9 +1,6 @@
 import Link from "next/link";
 import type { ComponentType } from "react";
-import ArrowRight from "lucide-react/dist/esm/icons/arrow-right";
-import Layers3 from "lucide-react/dist/esm/icons/layers-3";
-import SearchCheck from "lucide-react/dist/esm/icons/search-check";
-import Sparkles from "lucide-react/dist/esm/icons/sparkles";
+import { ArrowRight, Layers3, SearchCheck, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
