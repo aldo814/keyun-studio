@@ -29,7 +29,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Site</p>
@@ -39,11 +39,11 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
             <p className="mt-2 text-sm text-muted-foreground">/s/{site.slug}</p>
           </div>
           <div className="flex gap-2">
-            <Button render={<Link href={`/dashboard/editor/${site.id}`} />}>
-              디자인 편집
+            <Button render={<Link href="/dashboard/content/posts" />}>
+              콘텐츠 관리
             </Button>
             <Button variant="outline" render={<Link href={`/dashboard/sites/${site.id}/settings`} />}>
-              SEO 설정
+              사이트 설정
             </Button>
             <Button variant="outline" render={<Link href="/dashboard/sites" />}>
               목록
@@ -52,7 +52,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>상태</CardTitle>
               <CardDescription>현재 공개 상태</CardDescription>
@@ -61,7 +61,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
               <StatusBadge tone={site.status}>{site.status}</StatusBadge>
             </CardContent>
           </Card>
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>최근 수정</CardTitle>
               <CardDescription>마지막 저장 시각</CardDescription>
@@ -70,7 +70,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
               <p className="text-sm font-medium">{site.updatedAt}</p>
             </CardContent>
           </Card>
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>최근 게시</CardTitle>
               <CardDescription>published_at</CardDescription>
@@ -81,11 +81,11 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
           </Card>
         </div>
 
-        <Card className="rounded-lg border-border bg-card shadow-sm">
+        <Card className="rounded-lg border-border bg-card">
           <CardHeader>
             <CardTitle>게시하기</CardTitle>
             <CardDescription>
-              현재 draft 페이지 데이터를 published_json으로 복사하고 공개 상태로 전환합니다.
+              현재 저장된 사이트 데이터를 공개 상태로 전환합니다. 디자인 편집 기능은 추후 오픈 예정입니다.
             </CardDescription>
           </CardHeader>
           <CardContent>

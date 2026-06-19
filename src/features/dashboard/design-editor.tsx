@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { updateDraftJson } from "@/features/dashboard/actions";
+import { publishSite, updateDraftJson } from "@/features/dashboard/actions";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/types/database";
 
@@ -47,8 +47,24 @@ type DesignSettings = {
   sectionGap: string;
 };
 
+type EditorPageItem = {
+  id: string;
+  title: string;
+  path: string;
+  status: "public" | "private";
+};
+
+type EditorNavigationItem = {
+  id: string;
+  label: string;
+  pageId: string;
+  enabled: boolean;
+};
+
 type EditableDraft = Record<string, unknown> & {
   design: DesignSettings;
+  navigation: EditorNavigationItem[];
+  pages: EditorPageItem[];
   sections: EditorSection[];
 };
 
@@ -173,13 +189,19 @@ const modulePresets: ModulePreset[] = [
   },
 ];
 
-const pageItems = ["메인 페이지", "회사 소개", "서비스", "가격", "블로그"];
+const defaultPages: EditorPageItem[] = [
+  { id: "home", title: "메인 페이지", path: "/", status: "public" },
+  { id: "about", title: "회사 소개", path: "/about", status: "public" },
+  { id: "service", title: "서비스", path: "/service", status: "public" },
+  { id: "pricing", title: "가격", path: "/pricing", status: "private" },
+  { id: "blog", title: "블로그", path: "/blog", status: "public" },
+];
 
-const pageManagementItems = [
-  { label: "메인 페이지", path: "/", status: "공개", menu: "제품" },
-  { label: "회사 소개", path: "/about", status: "공개", menu: "회사" },
-  { label: "서비스", path: "/service", status: "공개", menu: "솔루션" },
-  { label: "가격", path: "/pricing", status: "비공개", menu: "가격" },
+const defaultNavigation: EditorNavigationItem[] = [
+  { id: "nav-products", label: "제품", pageId: "home", enabled: true },
+  { id: "nav-solutions", label: "솔루션", pageId: "service", enabled: true },
+  { id: "nav-pricing", label: "가격", pageId: "pricing", enabled: true },
+  { id: "nav-company", label: "회사", pageId: "about", enabled: true },
 ];
 
 const widthOptions = [
@@ -348,6 +370,75 @@ function numberValue(record: Record<string, unknown>, key: string, fallback: num
   return Number.isFinite(value) ? value : fallback;
 }
 
+
+function normalizePages(value: unknown): EditorPageItem[] {
+  if (!Array.isArray(value)) {
+    return defaultPages;
+  }
+
+  const pages = value
+    .map((item, index) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const fallback = defaultPages[index] ?? defaultPages[0];
+      const id = stringValue(record, "id", fallback.id || `page-${index}`);
+      const title = stringValue(record, "title", fallback.title || "새 페이지");
+      const path = stringValue(record, "path", fallback.path || `/page-${index + 1}`);
+      const status = stringValue(record, "status", fallback.status) === "private" ? "private" : "public";
+
+      return { id, path, status, title } satisfies EditorPageItem;
+    })
+    .filter((item): item is EditorPageItem => Boolean(item));
+
+  return pages.length ? pages : defaultPages;
+}
+
+function normalizeNavigation(value: unknown, pages: EditorPageItem[]): EditorNavigationItem[] {
+  const pageIds = new Set(pages.map((page) => page.id));
+
+  if (!Array.isArray(value)) {
+    return defaultNavigation.filter((item) => pageIds.has(item.pageId));
+  }
+
+  const navigation = value
+    .map((item, index) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const fallback = defaultNavigation[index] ?? defaultNavigation[0];
+      const pageId = stringValue(record, "pageId", fallback.pageId);
+
+      if (!pageIds.has(pageId)) {
+        return null;
+      }
+
+      return {
+        enabled: record.enabled === false ? false : true,
+        id: stringValue(record, "id", `nav-${index}`),
+        label: stringValue(record, "label", fallback.label || "메뉴"),
+        pageId,
+      } satisfies EditorNavigationItem;
+    })
+    .filter((item): item is EditorNavigationItem => Boolean(item));
+
+  return navigation.length ? navigation : defaultNavigation.filter((item) => pageIds.has(item.pageId));
+}
+
+function slugifyPath(title: string) {
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug ? `/${slug}` : `/page-${Date.now()}`;
+}
+
 function normalizeDesign(value: unknown): DesignSettings {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const record = value as Record<string, unknown>;
@@ -414,9 +505,13 @@ function toEditableJson(draftJson: Json): EditableDraft {
         })
       : [];
 
+    const pages = normalizePages(record.pages);
+
     return {
       ...record,
       design: normalizeDesign(record.design),
+      navigation: normalizeNavigation(record.navigation, pages),
+      pages,
       sections: sections.length
         ? sections
         : [createSection("hero"), createSection("features"), createSection("cta")],
@@ -425,6 +520,8 @@ function toEditableJson(draftJson: Json): EditableDraft {
 
   return {
     design: defaultDesign,
+    navigation: defaultNavigation,
+    pages: defaultPages,
     sections: [createSection("hero"), createSection("features"), createSection("cta")],
     theme: "keyun-default",
     version: 1,
@@ -1318,8 +1415,10 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const [previewInsertAfterIndex, setPreviewInsertAfterIndex] = useState(0);
   const [isSectionLibraryOpen, setIsSectionLibraryOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [leftPanel, setLeftPanel] = useState<"pages" | "sections" | "settings">("settings");
-  const [settingsSubPanel, setSettingsSubPanel] = useState<null | "menu" | "footer">(null);
+  const [leftPanel, setLeftPanel] = useState<"sections" | "settings">("settings");
+  const [settingsSubPanel, setSettingsSubPanel] = useState<null | "pages" | "menu" | "footer">(null);
+  const [headerSettingsTab, setHeaderSettingsTab] = useState<"layout" | "color" | "menu">("layout");
+  const [footerSettingsTab, setFooterSettingsTab] = useState<"layout" | "color">("layout");
   const [saveMessage, setSaveMessage] = useState("저장 전 상태");
   const [isSaving, setIsSaving] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
@@ -1336,6 +1435,9 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const gradientToInputRef = useRef<HTMLInputElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const visualMediaInputRef = useRef<HTMLInputElement>(null);
+  const canvasScrollRef = useRef<HTMLDivElement>(null);
+  const headerPreviewRef = useRef<HTMLDivElement>(null);
+  const footerPreviewRef = useRef<HTMLElement>(null);
   const serializedDraft = useMemo(() => JSON.stringify(draft, null, 2), [draft]);
   const serializedSavedDraft = useMemo(
     () => JSON.stringify(savedDraft, null, 2),
@@ -1366,6 +1468,27 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     () => (previewPreset ? createSection(previewPreset.type, previewPreset.layout) : null),
     [previewPreset],
   );
+
+  useEffect(() => {
+    if (leftPanel !== "settings" || !settingsSubPanel) return;
+
+    const scrollRoot = canvasScrollRef.current;
+    const target =
+      settingsSubPanel === "menu"
+        ? headerPreviewRef.current
+        : settingsSubPanel === "footer"
+          ? footerPreviewRef.current
+          : null;
+
+    if (!scrollRoot) return;
+
+    window.requestAnimationFrame(() => {
+      target?.scrollIntoView({
+        behavior: "smooth",
+        block: settingsSubPanel === "menu" ? "start" : "center",
+      });
+    });
+  }, [leftPanel, settingsSubPanel, viewport]);
   const normalizedPreviewInsertAfterIndex = Math.max(
     0,
     Math.min(previewInsertAfterIndex, Math.max(draft.sections.length - 1, 0)),
@@ -1384,18 +1507,25 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
     try {
       const parsedDraft = toEditableJson(JSON.parse(storedDraft) as Json);
-      setDraft(parsedDraft);
-      setSavedDraft(parsedDraft);
-      setSaveMessage("저장된 데모 상태를 불러왔습니다.");
+
+      window.queueMicrotask(() => {
+        setDraft(parsedDraft);
+        setSavedDraft(parsedDraft);
+        setSaveMessage("저장된 데모 상태를 불러왔습니다.");
+      });
     } catch {
       window.localStorage.removeItem(storageKey);
     }
   }, [isDemoSite, storageKey]);
 
   useEffect(() => {
-    if (settingsSubPanel) {
-      setIsSectionLibraryOpen(false);
+    if (!settingsSubPanel) {
+      return;
     }
+
+    window.queueMicrotask(() => {
+      setIsSectionLibraryOpen(false);
+    });
   }, [settingsSubPanel]);
 
   useEffect(() => {
@@ -1436,6 +1566,142 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
         [key]: value,
       },
     });
+  }
+
+
+  function updatePages(nextPages: EditorPageItem[]) {
+    const pageIds = new Set(nextPages.map((page) => page.id));
+    const nextNavigation = draft.navigation.filter((item) => pageIds.has(item.pageId));
+
+    updateDraft({
+      navigation: nextNavigation.length ? nextNavigation : normalizeNavigation([], nextPages),
+      pages: nextPages,
+    });
+  }
+
+  function updatePage(pageId: string, nextPage: Partial<EditorPageItem>) {
+    updatePages(
+      draft.pages.map((page) =>
+        page.id === pageId
+          ? {
+              ...page,
+              ...nextPage,
+              path: nextPage.path ? (nextPage.path.startsWith("/") ? nextPage.path : `/${nextPage.path}`) : page.path,
+            }
+          : page,
+      ),
+    );
+  }
+
+  function addPage() {
+    const nextIndex = draft.pages.length + 1;
+    const title = `새 페이지 ${nextIndex}`;
+    const page: EditorPageItem = {
+      id: `page-${Date.now()}`,
+      path: slugifyPath(title),
+      status: "private",
+      title,
+    };
+
+    updateDraft({
+      navigation: [
+        ...draft.navigation,
+        { enabled: false, id: `nav-${Date.now()}`, label: title, pageId: page.id },
+      ],
+      pages: [...draft.pages, page],
+    });
+  }
+
+  function duplicatePage(pageId: string) {
+    const source = draft.pages.find((page) => page.id === pageId);
+
+    if (!source) return;
+
+    const page: EditorPageItem = {
+      ...source,
+      id: `page-${Date.now()}`,
+      path: `${source.path === "/" ? "/home" : source.path}-copy`,
+      status: "private",
+      title: `${source.title} 복사본`,
+    };
+
+    updateDraft({
+      navigation: [
+        ...draft.navigation,
+        { enabled: false, id: `nav-${Date.now()}`, label: page.title, pageId: page.id },
+      ],
+      pages: [...draft.pages, page],
+    });
+  }
+
+  function removePage(pageId: string) {
+    if (pageId === "home" || draft.pages.length <= 1) {
+      return;
+    }
+
+    updatePages(draft.pages.filter((page) => page.id !== pageId));
+  }
+
+  function movePage(pageId: string, direction: -1 | 1) {
+    const index = draft.pages.findIndex((page) => page.id === pageId);
+    const targetIndex = index + direction;
+
+    if (index < 0 || targetIndex < 0 || targetIndex >= draft.pages.length) {
+      return;
+    }
+
+    const nextPages = [...draft.pages];
+    const current = nextPages[index];
+    nextPages[index] = nextPages[targetIndex];
+    nextPages[targetIndex] = current;
+    updatePages(nextPages);
+  }
+
+  function updateNavigationItem(itemId: string, nextItem: Partial<EditorNavigationItem>) {
+    updateDraft({
+      navigation: draft.navigation.map((item) =>
+        item.id === itemId ? { ...item, ...nextItem } : item,
+      ),
+    });
+  }
+
+  function addNavigationItem() {
+    const firstPublicPage = draft.pages.find((page) => page.status === "public") ?? draft.pages[0];
+
+    if (!firstPublicPage) return;
+
+    updateDraft({
+      navigation: [
+        ...draft.navigation,
+        {
+          enabled: true,
+          id: `nav-${Date.now()}`,
+          label: firstPublicPage.title,
+          pageId: firstPublicPage.id,
+        },
+      ],
+    });
+  }
+
+  function removeNavigationItem(itemId: string) {
+    updateDraft({
+      navigation: draft.navigation.filter((item) => item.id !== itemId),
+    });
+  }
+
+  function moveNavigationItem(itemId: string, direction: -1 | 1) {
+    const index = draft.navigation.findIndex((item) => item.id === itemId);
+    const targetIndex = index + direction;
+
+    if (index < 0 || targetIndex < 0 || targetIndex >= draft.navigation.length) {
+      return;
+    }
+
+    const nextNavigation = [...draft.navigation];
+    const current = nextNavigation[index];
+    nextNavigation[index] = nextNavigation[targetIndex];
+    nextNavigation[targetIndex] = current;
+    updateDraft({ navigation: nextNavigation });
   }
 
   function updateSections(nextSections: EditorSection[], nextSelectedIndex = selectedIndex) {
@@ -1660,13 +1926,66 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
       setSavedDraft(draft);
       setSaveMessage("저장되었습니다.");
+      return true;
     } catch (error) {
       setSaveMessage(
         error instanceof Error ? error.message : "저장 중 문제가 생겼습니다.",
       );
+      return false;
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function saveAndPublish() {
+    const saved = await saveDraft();
+
+    if (!saved) {
+      return;
+    }
+
+    if (isDemoSite) {
+      setSaveMessage("데모 사이트는 저장까지만 지원됩니다.");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage("게시 중...");
+
+    try {
+      const formData = new FormData();
+
+      formData.set("site_id", site.id);
+      formData.set("slug", site.slug);
+      await publishSite(formData);
+      setSaveMessage("저장 후 게시되었습니다.");
+    } catch (error) {
+      setSaveMessage(
+        error instanceof Error ? error.message : "게시 중 문제가 생겼습니다.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function previewDraft() {
+    const previewWindow = window.open("about:blank", "_blank");
+    const saved = await saveDraft();
+
+    if (!saved) {
+      previewWindow?.close();
+      return;
+    }
+
+    const previewUrl = `/dashboard/preview/${site.id}`;
+
+    if (previewWindow) {
+      previewWindow.location.href = previewUrl;
+    } else {
+      window.location.href = previewUrl;
+    }
+
+    setSaveMessage("초안 미리보기를 열었습니다.");
   }
 
   function restoreSavedDraft() {
@@ -2354,11 +2673,16 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     "--brand-soft": draft.design.subColor,
     "--canvas-text": draft.design.textColor,
   } as CSSProperties;
+  const isPageSettingsMode = leftPanel === "settings" && settingsSubPanel === "pages";
   const isHeaderSettingsMode = leftPanel === "settings" && settingsSubPanel === "menu";
   const isFooterSettingsMode = leftPanel === "settings" && settingsSubPanel === "footer";
   const headerLayout = draft.design.headerLayout;
   const footerLayout = draft.design.footerLayout;
-  const headerMenuItems = ["제품", "솔루션", "가격", "리소스", "회사"];
+  const pageById = new Map(draft.pages.map((page) => [page.id, page]));
+  const headerMenuItems = draft.navigation
+    .filter((item) => item.enabled)
+    .filter((item) => pageById.get(item.pageId)?.status === "public")
+    .map((item) => item.label);
   const headerStyle = {
     backgroundColor: draft.design.headerBgColor,
     color: draft.design.headerTextColor,
@@ -2374,6 +2698,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const footerAccentStyle = {
     color: draft.design.footerAccentColor,
   } as CSSProperties;
+  const focusPreviewClass =
+    "relative z-30 ring-2 ring-blue-500 ring-offset-4 ring-offset-white shadow-[0_0_0_9999px_rgba(15,23,42,0.10)]";
 
   return (
     <form
@@ -2455,9 +2781,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
             <nav className="mt-8 space-y-1">
               {[
-                { label: "기본 설정", icon: Settings, panel: "settings" as const },
                 { label: "디자인", icon: Palette, panel: "sections" as const },
-                { label: "페이지", icon: FileText, panel: "pages" as const },
+                { label: "기본 설정", icon: Settings, panel: "settings" as const },
               ].map((item) => {
                 const Icon = item.icon;
                 const isActive = leftPanel === item.panel;
@@ -2475,6 +2800,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                     onClick={() => {
                       setLeftPanel(item.panel);
                       if (item.panel === "sections") selectSiteStyle();
+                      if (item.panel === "settings") setSettingsSubPanel("menu");
                     }}
                   >
                     <Icon className="size-4" />
@@ -2484,106 +2810,10 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
               })}
             </nav>
 
-            {/* 페이지 탭 */}
-            {leftPanel === "pages" && (
-              <div className="mt-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">페이지 관리</p>
-                  <Button size="icon" type="button" variant="ghost">
-                    <Plus />
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {pageManagementItems.map((item, index) => (
-                    <div
-                      key={item.path}
-                      className="rounded-lg border border-slate-200 bg-white p-3"
-                    >
-                      <div className="flex items-start gap-2">
-                        <GripVertical className="mt-0.5 size-4 shrink-0 text-slate-300" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate text-xs font-semibold">{item.label}</p>
-                            <span className={cn(
-                              "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                              item.status === "공개" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500",
-                            )}>
-                              {item.status}
-                            </span>
-                          </div>
-                          <p className="mt-0.5 truncate text-[11px] text-slate-400">{item.path}</p>
-                        </div>
-                        <div className="flex shrink-0 gap-0.5">
-                          <Button disabled={index === 0} size="icon" title="위로" type="button" variant="ghost">
-                            <ArrowUp />
-                          </Button>
-                          <Button disabled={index === pageManagementItems.length - 1} size="icon" title="아래로" type="button" variant="ghost">
-                            <ArrowDown />
-                          </Button>
-                          <Button size="icon" title="삭제" type="button" variant="ghost">
-                            <Trash2 />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <Button className="w-full justify-start" type="button" variant="outline">
-                  <Plus />
-                  페이지 추가
-                </Button>
-              </div>
-            )}
-
-            {/* 디자인 탭 — 페이지 목록 + 섹션 순서 */}
+            {/* 디자인 탭 — 섹션 순서 */}
             {leftPanel === "sections" && (
               <>
-                <div className="mt-8 rounded-lg bg-blue-50/60 p-3">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-sm font-semibold">페이지</p>
-                    <Button size="icon" type="button" variant="ghost">
-                      <Plus />
-                    </Button>
-                  </div>
-                  <div className="space-y-1">
-                    {pageItems.map((item, index) => (
-                      <button
-                        key={item}
-                        className={cn(
-                          "flex h-9 w-full items-center justify-between rounded-md px-3 text-left text-sm",
-                          index === 0 ? "bg-white text-blue-600" : "text-slate-600",
-                        )}
-                        type="button"
-                      >
-                        {item}
-                        {index === 0 ? <Home className="size-3.5" /> : null}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-blue-100 pt-3">
-                    {[
-                      { icon: Plus, label: "추가" },
-                      { icon: Copy, label: "복제" },
-                      { icon: ArrowUp, label: "순서" },
-                      { icon: Eye, label: "공개" },
-                    ].map((action) => {
-                      const Icon = action.icon;
-                      return (
-                        <button
-                          key={action.label}
-                          className="flex h-8 items-center justify-center gap-1.5 rounded-md border border-blue-100 bg-white text-xs font-semibold text-slate-600 hover:text-blue-600"
-                          type="button"
-                          onClick={selectSiteStyle}
-                        >
-                          <Icon className="size-3.5" />
-                          {action.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mt-5">
+                <div className="mt-8">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-sm font-semibold">섹션 위치</p>
                     <span className="text-xs text-slate-400">Drag</span>
@@ -2625,366 +2855,99 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
             {/* 기본 설정 탭 */}
             {leftPanel === "settings" && (
               <div className="mt-4">
-                {/* ── 상위 메뉴 카드 ── */}
-                {settingsSubPanel === null && (
-                  <div className="space-y-2">
-                    {/* 메뉴 설정 카드 */}
-                    <button
-                      className="group w-full overflow-hidden rounded-xl border border-slate-200 bg-white transition-all hover:border-blue-300 hover:bg-blue-50/40"
-                      type="button"
-                      onClick={() => setSettingsSubPanel("menu")}
-                    >
-                      {/* 미니 헤더 프리뷰 */}
-                      <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-                        <div className="flex h-7 items-center justify-between rounded-lg bg-white px-3 border border-slate-200">
-                          <div className="h-2 w-10 rounded-full bg-blue-500" />
-                          <div className="flex gap-1.5">
-                            {["제품","솔루션","가격","회사"].map((m) => (
-                              <span key={m} className="text-[9px] font-semibold text-slate-400">{m}</span>
+                <div className="space-y-2">
+                  {[
+                    {
+                      key: "pages" as const,
+                      label: "페이지 관리",
+                      desc: "페이지 추가 · 순서 · 공개 설정",
+                      preview: (
+                        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+                          <div className="space-y-1.5">
+                            {draft.pages.slice(0, 4).map((page, index) => (
+                              <div key={page.id} className="flex items-center gap-2">
+                                <span className="size-4 rounded bg-blue-100 text-[9px] font-bold leading-4 text-blue-600">{index + 1}</span>
+                                <span className="h-1.5 flex-1 rounded-full bg-slate-200" />
+                                <span className={cn("h-3 w-8 rounded-full", page.status === "public" ? "bg-emerald-100" : "bg-slate-200")} />
+                              </div>
                             ))}
                           </div>
-                          <div className="h-4 w-9 rounded-full bg-slate-800" />
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <div className="text-left">
-                          <p className="text-sm font-semibold text-slate-800">메뉴 설정</p>
-                          <p className="mt-0.5 text-[11px] text-slate-400">GNB 연결 · 헤더 레이아웃</p>
-                        </div>
-                        <ArrowRight className="size-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-400" />
-                      </div>
-                    </button>
-
-                    {/* 하단 정보 설정 카드 */}
-                    <button
-                      className="group w-full overflow-hidden rounded-xl border border-slate-200 bg-white transition-all hover:border-blue-300 hover:bg-blue-50/40"
-                      type="button"
-                      onClick={() => setSettingsSubPanel("footer")}
-                    >
-                      {/* 미니 푸터 프리뷰 */}
-                      <div className="border-b border-slate-100 bg-slate-900 px-4 py-3">
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="space-y-1">
-                            <div className="h-1.5 w-10 rounded-full bg-white/40" />
-                            {[1,2].map(i => <div key={i} className="h-1 w-8 rounded-full bg-white/20" />)}
-                          </div>
-                          <div className="space-y-1">
-                            <div className="h-1.5 w-10 rounded-full bg-white/40" />
-                            {[1,2].map(i => <div key={i} className="h-1 w-7 rounded-full bg-white/20" />)}
-                          </div>
-                          <div className="flex gap-1 pt-0.5">
-                            {[1,2,3].map(i => <div key={i} className="size-3 rounded bg-white/20" />)}
+                      ),
+                    },
+                    {
+                      key: "menu" as const,
+                      label: "메뉴 설정",
+                      desc: "GNB 연결 · 헤더 레이아웃",
+                      preview: (
+                        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+                          <div className="flex h-7 items-center justify-between rounded-lg border border-slate-200 bg-white px-3">
+                            <div className="h-2 w-10 rounded-full bg-blue-500" />
+                            <div className="flex gap-1.5">
+                              {["제품","솔루션","가격","회사"].map((m) => (
+                                <span key={m} className="text-[9px] font-semibold text-slate-400">{m}</span>
+                              ))}
+                            </div>
+                            <div className="h-4 w-9 rounded-full bg-slate-800" />
                           </div>
                         </div>
-                        <div className="mt-2 h-px bg-white/10" />
-                        <div className="mt-1.5 h-1 w-24 rounded-full bg-white/15" />
-                      </div>
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <div className="text-left">
-                          <p className="text-sm font-semibold text-slate-800">하단 정보 설정</p>
-                          <p className="mt-0.5 text-[11px] text-slate-400">레이아웃 · 카피라이트 · 색상</p>
+                      ),
+                    },
+                    {
+                      key: "footer" as const,
+                      label: "하단 정보 설정",
+                      desc: "레이아웃 · 카피라이트 · 색상",
+                      preview: (
+                        <div className="border-b border-slate-100 bg-slate-900 px-4 py-3">
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <div className="h-1.5 w-10 rounded-full bg-white/40" />
+                              {[1,2].map(i => <div key={i} className="h-1 w-8 rounded-full bg-white/20" />)}
+                            </div>
+                            <div className="space-y-1">
+                              <div className="h-1.5 w-10 rounded-full bg-white/40" />
+                              {[1,2].map(i => <div key={i} className="h-1 w-7 rounded-full bg-white/20" />)}
+                            </div>
+                            <div className="flex gap-1 pt-0.5">
+                              {[1,2,3].map(i => <div key={i} className="size-3 rounded bg-white/20" />)}
+                            </div>
+                          </div>
+                          <div className="mt-2 h-px bg-white/10" />
+                          <div className="mt-1.5 h-1 w-24 rounded-full bg-white/15" />
                         </div>
-                        <ArrowRight className="size-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-400" />
-                      </div>
-                    </button>
-                  </div>
-                )}
-
-                {/* ── 메뉴 설정 드릴다운 ── */}
-                {settingsSubPanel === "menu" && (
-                  <div className="space-y-5">
-                    {/* 뒤로가기 헤더 */}
-                    <div className="flex items-center gap-2">
+                      ),
+                    },
+                  ].map((item) => {
+                    const isSelected = settingsSubPanel === item.key;
+                    return (
                       <button
-                        className="flex size-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-900"
+                        key={item.key}
+                        className={cn(
+                          "group w-full overflow-hidden rounded-xl border-2 bg-white transition-all",
+                          isSelected
+                            ? "border-blue-500"
+                            : "border-slate-200 hover:border-blue-300",
+                        )}
                         type="button"
-                        onClick={() => setSettingsSubPanel(null)}
+                        onClick={() => setSettingsSubPanel(item.key)}
                       >
-                        <ArrowLeft className="size-4" />
-                      </button>
-                      <div>
-                        <p className="text-sm font-semibold">메뉴 설정</p>
-                        <p className="mt-0.5 text-[11px] text-slate-400">
-                          Header 레이아웃과 GNB 연결만 설정합니다.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Header 레이아웃 */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">헤더 레이아웃</p>
-                        <button
-                          className={cn(
-                            "flex h-6 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold transition-colors",
-                            draft.design.headerPosition === "fixed" ? "bg-blue-600 text-white" : "border border-slate-200 bg-white text-slate-500",
-                          )}
-                          type="button"
-                          onClick={() =>
-                            updateDesign(
-                              "headerPosition",
-                              draft.design.headerPosition === "fixed" ? "scroll" : "fixed",
-                            )
-                          }
-                        >
-                          {draft.design.headerPosition === "fixed" ? "고정" : "스크롤"}
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        {[
-                          { label: "기본형", value: "center", desc: "로고 / 중앙 GNB / 우측 버튼", preview: (
-                            <div className="flex h-7 items-center justify-between rounded-lg bg-slate-50 px-2">
-                              <div className="h-2 w-8 rounded-full bg-blue-500" />
-                              <div className="flex gap-1.5">{[1,2,3].map(i=><div key={i} className="h-1.5 w-5 rounded-full bg-slate-300"/>)}</div>
-                              <div className="h-5 w-10 rounded-full bg-slate-900" />
-                            </div>
-                          )},
-                          { label: "좌측 메뉴형", value: "left", desc: "로고 옆에 GNB", preview: (
-                            <div className="flex h-7 items-center justify-between rounded-lg bg-slate-50 px-2">
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-8 rounded-full bg-blue-500" />
-                                <div className="flex gap-1.5">{[1,2,3].map(i=><div key={i} className="h-1.5 w-4 rounded-full bg-slate-300"/>)}</div>
-                              </div>
-                              <div className="h-5 w-10 rounded-full bg-slate-900" />
-                            </div>
-                          )},
-                          { label: "CTA 강조형", value: "cta", desc: "우측 버튼 강조", preview: (
-                            <div className="flex h-7 items-center justify-between rounded-lg bg-slate-50 px-2">
-                              <div className="h-2 w-8 rounded-full bg-blue-500" />
-                              <div className="flex gap-1.5">{[1,2,3].map(i=><div key={i} className="h-1.5 w-5 rounded-full bg-slate-300"/>)}</div>
-                              <div className="h-5 w-14 rounded-full bg-blue-600" />
-                            </div>
-                          )},
-                        ].map((opt, idx) => (
-                          <button
-                            key={opt.label}
-                            className={cn(
-                              "w-full overflow-hidden rounded-xl border-2 transition-all",
-                              draft.design.headerLayout === opt.value ? "border-blue-500" : "border-slate-200 hover:border-blue-200",
-                            )}
-                            type="button"
-                            onClick={() => updateDesign("headerLayout", opt.value)}
-                          >
-                            <div className="bg-white px-3 py-2.5">{opt.preview}</div>
-                            <div className={cn("border-t px-3 py-1.5 text-left", draft.design.headerLayout === opt.value ? "border-blue-100 bg-blue-50" : "border-slate-100 bg-slate-50")}>
-                              <div className="flex items-center justify-between">
-                                <p className={cn("text-[11px] font-semibold", draft.design.headerLayout === opt.value ? "text-blue-600" : "text-slate-600")}>{opt.label}</p>
-                                {draft.design.headerLayout === opt.value && <Check className="size-3 text-blue-500" />}
-                              </div>
-                              <p className="text-[10px] text-slate-400">{opt.desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* GNB 메뉴 연결 */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">GNB 메뉴 연결</p>
-                        <Button className="h-6 px-2 text-[11px]" size="sm" type="button" variant="outline">
-                          <Plus className="size-3" />
-                          추가
-                        </Button>
-                      </div>
-                      {/* 현재 헤더 미리보기 */}
-                      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-                        <div className="flex h-9 items-center justify-between border-b border-slate-100 bg-white px-3">
-                          <div className="h-2.5 w-12 rounded-full bg-blue-500" />
-                          <div className="flex gap-2.5 text-[10px] font-semibold text-slate-500">
-                            {["제품","솔루션","가격","회사"].map(m => <span key={m}>{m}</span>)}
+                        {item.preview}
+                        <div className={cn(
+                          "flex items-center justify-between px-4 py-3",
+                          isSelected && "bg-blue-50/60",
+                        )}>
+                          <div className="text-left">
+                            <p className={cn("text-sm font-semibold", isSelected ? "text-blue-700" : "text-slate-800")}>{item.label}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-400">{item.desc}</p>
                           </div>
-                          <div className="h-5 w-10 rounded-full bg-slate-900" />
+                          {isSelected
+                            ? <Check className="size-4 text-blue-500" />
+                            : <ArrowRight className="size-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-400" />}
                         </div>
-                        <p className="px-3 py-1.5 text-[10px] text-slate-400">현재 적용된 GNB 구조</p>
-                      </div>
-                      {/* 메뉴 항목 */}
-                      <div className="space-y-1.5">
-                        {[
-                          { menu: "제품", page: "메인 페이지", color: "bg-blue-100 text-blue-700" },
-                          { menu: "솔루션", page: "서비스", color: "bg-violet-100 text-violet-700" },
-                          { menu: "가격", page: "가격", color: "bg-emerald-100 text-emerald-700" },
-                          { menu: "회사", page: "회사 소개", color: "bg-amber-100 text-amber-700" },
-                        ].map(({ menu, page, color }) => (
-                          <div key={menu} className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
-                            <GripVertical className="size-3.5 shrink-0 text-slate-300" />
-                            <span className={cn("shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold", color)}>{menu}</span>
-                            <ArrowRight className="size-3 shrink-0 text-slate-300" />
-                            <span className="min-w-0 flex-1 truncate text-[11px] text-slate-500">{page}</span>
-                            <Button className="h-5 shrink-0 px-1.5 text-[10px]" size="sm" type="button" variant="outline">변경</Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Header 색상</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { key: "headerBgColor", label: "배경", value: draft.design.headerBgColor },
-                          { key: "headerTextColor", label: "메뉴 텍스트", value: draft.design.headerTextColor },
-                          { key: "headerButtonBgColor", label: "버튼 배경", value: draft.design.headerButtonBgColor },
-                          { key: "headerButtonTextColor", label: "버튼 텍스트", value: draft.design.headerButtonTextColor },
-                        ].map((item) => (
-                          <label key={item.key} className="space-y-1.5">
-                            <span className="text-[11px] text-slate-500">{item.label}</span>
-                            <div className="relative h-9 overflow-hidden rounded-lg border border-slate-200 bg-white">
-                              <input
-                                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                                type="color"
-                                value={item.value}
-                                onChange={(event) =>
-                                  updateDesign(item.key as keyof DesignSettings, event.target.value)
-                                }
-                                onInput={(event) =>
-                                  updateDesign(
-                                    item.key as keyof DesignSettings,
-                                    event.currentTarget.value,
-                                  )
-                                }
-                              />
-                              <div className="pointer-events-none flex h-full items-center gap-2 px-2">
-                                <span
-                                  className="inline-block size-4 rounded border border-slate-200"
-                                  style={{ backgroundColor: item.value }}
-                                />
-                                <span className="font-mono text-[11px] uppercase text-slate-500">
-                                  {item.value}
-                                </span>
-                              </div>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── 하단 정보 설정 드릴다운 ── */}
-                {settingsSubPanel === "footer" && (
-                  <div className="space-y-5">
-                    {/* 뒤로가기 헤더 */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="flex size-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-900"
-                        type="button"
-                        onClick={() => setSettingsSubPanel(null)}
-                      >
-                        <ArrowLeft className="size-4" />
                       </button>
-                      <div>
-                        <p className="text-sm font-semibold">하단 정보 설정</p>
-                        <p className="mt-0.5 text-[11px] text-slate-400">
-                          Footer 레이아웃, 카피라이트, 색상만 설정합니다.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Footer 레이아웃 */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">레이아웃</p>
-                      <div className="space-y-2">
-                        {[
-                          { label: "심플형", value: "simple", desc: "카피라이트 · 링크 중심", preview: (
-                            <div className="bg-slate-900 px-3 py-3 rounded-t-xl">
-                              <div className="flex items-center justify-between">
-                                <div className="h-1.5 w-16 rounded-full bg-white/30" />
-                                <div className="flex gap-1.5">{[1,2,3].map(i=><div key={i} className="h-1.5 w-6 rounded-full bg-white/20"/>)}</div>
-                              </div>
-                              <div className="mt-2 h-px bg-white/10" />
-                              <div className="mt-2 mx-auto h-1.5 w-24 rounded-full bg-white/20" />
-                            </div>
-                          )},
-                          { label: "정보형", value: "info", desc: "회사정보 · SNS · 약관", preview: (
-                            <div className="bg-slate-900 px-3 py-3 rounded-t-xl">
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="space-y-1"><div className="h-2 w-10 rounded-full bg-white/50"/>{[1,2].map(i=><div key={i} className="h-1 w-8 rounded-full bg-white/20"/>)}</div>
-                                <div className="space-y-1"><div className="h-2 w-10 rounded-full bg-white/50"/>{[1,2].map(i=><div key={i} className="h-1 w-7 rounded-full bg-white/20"/>)}</div>
-                                <div className="flex gap-1 pt-1">{[1,2,3].map(i=><div key={i} className="size-3 rounded bg-white/20"/>)}</div>
-                              </div>
-                              <div className="mt-2 h-px bg-white/10" />
-                              <div className="mt-1.5 h-1 w-20 rounded-full bg-white/15" />
-                            </div>
-                          )},
-                          { label: "CTA형", value: "cta", desc: "상담 유도 영역 포함", preview: (
-                            <div className="bg-slate-900 px-3 py-3 rounded-t-xl">
-                              <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center">
-                                <div className="mx-auto h-2 w-20 rounded-full bg-white/40"/>
-                                <div className="mx-auto mt-1 h-1.5 w-14 rounded-full bg-white/20"/>
-                                <div className="mx-auto mt-2 h-5 w-14 rounded-full bg-blue-500/70"/>
-                              </div>
-                              <div className="mt-2 h-1 w-20 rounded-full bg-white/15"/>
-                            </div>
-                          )},
-                        ].map((opt, idx) => (
-                          <button
-                            key={opt.label}
-                            className={cn(
-                              "w-full overflow-hidden rounded-xl border-2 transition-all",
-                              draft.design.footerLayout === opt.value ? "border-blue-500" : "border-slate-200 hover:border-blue-200",
-                            )}
-                            type="button"
-                            onClick={() => updateDesign("footerLayout", opt.value)}
-                          >
-                            {opt.preview}
-                            <div className={cn("border-t px-3 py-1.5 text-left", draft.design.footerLayout === opt.value ? "border-blue-100 bg-blue-50" : "border-slate-100 bg-slate-50")}>
-                              <div className="flex items-center justify-between">
-                                <p className={cn("text-[11px] font-semibold", draft.design.footerLayout === opt.value ? "text-blue-600" : "text-slate-600")}>{opt.label}</p>
-                                {draft.design.footerLayout === opt.value && <Check className="size-3 text-blue-500" />}
-                              </div>
-                              <p className="text-[10px] text-slate-400">{opt.desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Copyright */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">카피라이트</p>
-                      <input
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                        defaultValue="© KEYUN. All rights reserved."
-                      />
-                    </div>
-
-                    {/* 색상 */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">색상</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { key: "footerBgColor", label: "배경", value: draft.design.footerBgColor },
-                          { key: "footerTextColor", label: "텍스트", value: draft.design.footerTextColor },
-                          { key: "footerAccentColor", label: "강조", value: draft.design.footerAccentColor },
-                        ].map((item) => (
-                          <label key={item.key} className="space-y-1.5">
-                            <span className="text-[11px] text-slate-500">{item.label}</span>
-                            <div className="relative h-9 overflow-hidden rounded-lg border border-slate-200 bg-white">
-                              <input
-                                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                                type="color"
-                                value={item.value}
-                                onChange={(event) =>
-                                  updateDesign(item.key as keyof DesignSettings, event.target.value)
-                                }
-                                onInput={(event) =>
-                                  updateDesign(
-                                    item.key as keyof DesignSettings,
-                                    event.currentTarget.value,
-                                  )
-                                }
-                              />
-                              <div className="pointer-events-none flex h-full items-center gap-2 px-2">
-                                <span className="inline-block size-4 rounded border border-slate-200" style={{ backgroundColor: item.value }} />
-                                <span className="font-mono text-[11px] text-slate-500 uppercase">{item.value}</span>
-                              </div>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </aside>
@@ -3055,34 +3018,49 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                 >
                   {isSaving ? "저장 중..." : "저장"}
                 </Button>
-                <Button type="button" variant="outline">
+                <Button
+                  disabled={isSaving}
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    void previewDraft();
+                  }}
+                >
                   미리보기
                 </Button>
-                <Button type="button">
-                  저장 및 게시
+                <Button
+                  disabled={isSaving}
+                  type="button"
+                  onClick={() => {
+                    void saveAndPublish();
+                  }}
+                >
+                  {isSaving ? "처리 중..." : "저장 및 게시"}
                   <ChevronDown />
                 </Button>
               </div>
             </header>
 
-            <div className="h-[calc(100vh-74px)] overflow-auto px-8 py-5">
+            <div ref={canvasScrollRef} className="h-[calc(100vh-74px)] overflow-auto px-8 py-5">
               <div
                 className={cn(
-                  "mx-auto overflow-hidden rounded-lg border border-blue-100 bg-white transition-all",
+                  "mx-auto rounded-lg border border-blue-100 bg-white transition-all",
+                  draft.design.headerPosition === "fixed" ? "overflow-visible" : "overflow-hidden",
                   canvasWidthClass,
                 )}
                 style={canvasStyle}
                 onContextMenu={openSiteContextMenu}
               >
-                {!isFooterSettingsMode ? (
-                  <div
-                    className={cn(
-                      "flex min-h-20 items-center gap-8 px-10 transition-all",
-                      draft.design.headerPosition === "fixed" && "sticky top-0 z-20 shadow-sm",
-                      headerLayout === "left" ? "justify-between" : "justify-between",
-                    )}
-                    style={headerStyle}
-                  >
+                <div
+                  ref={headerPreviewRef}
+                  className={cn(
+                    "flex min-h-20 items-center gap-8 px-10 transition-all",
+                    draft.design.headerPosition === "fixed" && "sticky top-0 z-40 shadow-sm",
+                    headerLayout === "left" ? "justify-between" : "justify-between",
+                    isHeaderSettingsMode && focusPreviewClass,
+                  )}
+                  style={headerStyle}
+                >
                     <div
                       className={cn(
                         "flex min-w-0 items-center",
@@ -3123,10 +3101,9 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                     >
                       시작하기
                     </button>
-                  </div>
-                ) : null}
+                </div>
 
-                {!isHeaderSettingsMode && !isFooterSettingsMode ? (
+                
                   <div className="space-y-[var(--section-gap)]" style={{ "--section-gap": `${draft.design.sectionGap}px` } as CSSProperties}>
                     {draft.sections.map((section, index) => (
                       <CanvasSection
@@ -3148,10 +3125,16 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                       />
                     ))}
                   </div>
-                ) : null}
+                
 
-                {!isHeaderSettingsMode ? (
-                  <footer className="px-10 py-10 transition-all" style={footerStyle}>
+                <footer
+                  ref={footerPreviewRef}
+                  className={cn(
+                    "px-10 py-10 transition-all",
+                    isFooterSettingsMode && focusPreviewClass,
+                  )}
+                  style={footerStyle}
+                >
                     {footerLayout === "simple" ? (
                       <div className="flex flex-wrap items-center justify-between gap-5">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3227,11 +3210,435 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                         </div>
                       </div>
                     )}
-                  </footer>
-                ) : null}
+                </footer>
               </div>
 
             </div>
+
+            {/* 페이지 관리 floating 패널 */}
+            {isPageSettingsMode ? (
+              <div className="fixed bottom-5 left-[340px] right-[380px] z-40">
+                <div className="rounded-2xl border border-blue-100 bg-white/95 shadow-2xl shadow-blue-950/10 backdrop-blur">
+                  <div className="max-h-[420px] overflow-hidden p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">페이지 생성 및 관리</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          페이지를 추가하고 공개 상태, 경로, 메뉴 연결 기준을 관리합니다.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button className="h-8 px-3 text-xs" type="button" variant="outline" onClick={addPage}>
+                          <Plus className="size-3.5" />
+                          페이지 추가
+                        </Button>
+                        <Button size="icon" type="button" variant="ghost" onClick={() => setSettingsSubPanel(null)}>
+                          <X className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-[330px] space-y-2 overflow-auto pr-1">
+                      {draft.pages.map((pageItem, index) => (
+                        <div
+                          key={pageItem.id}
+                          className="grid gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 md:grid-cols-[56px_1.1fr_1fr_88px_128px] md:items-center"
+                        >
+                          <div className="flex items-center gap-1">
+                            <GripVertical className="size-4 text-slate-300" />
+                            <Button className="size-6" disabled={index === 0} size="icon" title="위로" type="button" variant="ghost" onClick={() => movePage(pageItem.id, -1)}>
+                              <ArrowUp className="size-3" />
+                            </Button>
+                            <Button className="size-6" disabled={index === draft.pages.length - 1} size="icon" title="아래로" type="button" variant="ghost" onClick={() => movePage(pageItem.id, 1)}>
+                              <ArrowDown className="size-3" />
+                            </Button>
+                          </div>
+
+                          <label className="space-y-1">
+                            <span className="text-[10px] font-semibold text-slate-400">페이지명</span>
+                            <Input
+                              className="h-8 bg-white text-xs"
+                              value={pageItem.title}
+                              onChange={(event) => updatePage(pageItem.id, { title: event.target.value })}
+                            />
+                          </label>
+
+                          <label className="space-y-1">
+                            <span className="text-[10px] font-semibold text-slate-400">주소</span>
+                            <Input
+                              className="h-8 bg-white font-mono text-xs"
+                              value={pageItem.path}
+                              onChange={(event) => updatePage(pageItem.id, { path: event.target.value })}
+                            />
+                          </label>
+
+                          <button
+                            className={cn(
+                              "mt-4 h-8 rounded-md border px-2 text-xs font-semibold md:mt-5",
+                              pageItem.status === "public"
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-slate-200 bg-white text-slate-500",
+                            )}
+                            type="button"
+                            onClick={() => updatePage(pageItem.id, { status: pageItem.status === "public" ? "private" : "public" })}
+                          >
+                            {pageItem.status === "public" ? "공개" : "비공개"}
+                          </button>
+
+                          <div className="mt-4 flex items-center justify-end gap-1 md:mt-5">
+                            <Button className="h-8 px-2 text-xs" type="button" variant="outline" onClick={() => duplicatePage(pageItem.id)}>
+                              <Copy className="size-3.5" />
+                              복제
+                            </Button>
+                            <Button
+                              className="h-8 px-2 text-xs"
+                              disabled={pageItem.id === "home" || draft.pages.length <= 1}
+                              type="button"
+                              variant="outline"
+                              onClick={() => removePage(pageItem.id)}
+                            >
+                              <Trash2 className="size-3.5" />
+                              삭제
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* 헤더 설정 floating 패널 */}
+            {isHeaderSettingsMode ? (
+              <div className="fixed bottom-5 left-[340px] right-[380px] z-40">
+                <div className="rounded-2xl border border-blue-100 bg-white/95 shadow-2xl shadow-blue-950/10 backdrop-blur">
+                  <div className="max-h-[360px] overflow-hidden p-4">
+                    {/* 헤더 */}
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">메뉴 설정</p>
+                        <p className="mt-0.5 text-xs text-slate-500">헤더 레이아웃과 색상을 편집합니다.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className={cn(
+                            "flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors",
+                            draft.design.headerPosition === "fixed"
+                              ? "bg-blue-600 text-white"
+                              : "border border-slate-200 bg-white text-slate-500 hover:border-blue-300",
+                          )}
+                          type="button"
+                          onClick={() => updateDesign("headerPosition", draft.design.headerPosition === "fixed" ? "scroll" : "fixed")}
+                        >
+                          {draft.design.headerPosition === "fixed" ? "고정됨" : "스크롤"}
+                        </button>
+                        <Button size="icon" type="button" variant="ghost" onClick={() => setSettingsSubPanel(null)}>
+                          <X className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {/* 탭 + 컨텐츠 */}
+                    <div className="grid gap-4 md:grid-cols-[100px_1fr]">
+                      {/* 좌측 탭 */}
+                      <div className="space-y-1">
+                        {(["layout", "color", "menu"] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            className={cn(
+                              "block h-8 w-full rounded-md px-3 text-left text-sm",
+                              headerSettingsTab === tab ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-50",
+                            )}
+                            type="button"
+                            onClick={() => setHeaderSettingsTab(tab)}
+                          >
+                            {tab === "layout" ? "레이아웃" : tab === "color" ? "색상" : "GNB 메뉴"}
+                          </button>
+                        ))}
+                      </div>
+                      {/* 우측 컨텐츠 */}
+                      <div className="max-h-[260px] overflow-auto pr-1">
+                        {headerSettingsTab === "layout" && (
+                          <>
+                            <div className="mb-3 flex items-center justify-between">
+                              <p className="text-sm font-semibold">헤더 섹션</p>
+                              <span className="text-xs text-slate-400">3개 레이아웃</span>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-3">
+                              {[
+                                { label: "기본형", value: "center", desc: "로고 / 중앙 GNB / 우측 버튼", preview: (
+                                  <div className="flex h-10 items-center justify-between rounded-lg bg-slate-50 px-2">
+                                    <div className="h-2 w-8 rounded-full bg-blue-500" />
+                                    <div className="flex gap-1.5">{[1,2,3].map(i=><div key={i} className="h-1.5 w-5 rounded-full bg-slate-300"/>)}</div>
+                                    <div className="h-5 w-10 rounded-full bg-slate-900" />
+                                  </div>
+                                )},
+                                { label: "좌측 메뉴형", value: "left", desc: "로고 옆에 GNB 메뉴 배치", preview: (
+                                  <div className="flex h-10 items-center justify-between rounded-lg bg-slate-50 px-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="h-2 w-8 rounded-full bg-blue-500" />
+                                      <div className="flex gap-1.5">{[1,2,3].map(i=><div key={i} className="h-1.5 w-4 rounded-full bg-slate-300"/>)}</div>
+                                    </div>
+                                    <div className="h-5 w-10 rounded-full bg-slate-900" />
+                                  </div>
+                                )},
+                                { label: "CTA 강조형", value: "cta", desc: "우측 버튼을 강조한 구성", preview: (
+                                  <div className="flex h-10 items-center justify-between rounded-lg bg-slate-50 px-2">
+                                    <div className="h-2 w-8 rounded-full bg-blue-500" />
+                                    <div className="flex gap-1.5">{[1,2,3].map(i=><div key={i} className="h-1.5 w-5 rounded-full bg-slate-300"/>)}</div>
+                                    <div className="h-5 w-14 rounded-full bg-blue-600" />
+                                  </div>
+                                )},
+                              ].map((opt) => (
+                                <div
+                                  key={opt.value}
+                                  role="button"
+                                  tabIndex={0}
+                                  className={cn(
+                                    "rounded-lg border p-2 text-left transition hover:border-blue-300 hover:bg-blue-50/40",
+                                    draft.design.headerLayout === opt.value ? "border-blue-500" : "border-slate-100",
+                                  )}
+                                  onClick={() => updateDesign("headerLayout", opt.value)}
+                                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateDesign("headerLayout", opt.value); }}}
+                                >
+                                  {opt.preview}
+                                  <p className="mt-2 truncate text-xs font-semibold">{opt.label}</p>
+                                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{opt.desc}</p>
+                                  <Button
+                                    className="mt-2 h-8 w-full text-xs"
+                                    type="button"
+                                    variant={draft.design.headerLayout === opt.value ? "default" : "outline"}
+                                    onClick={(e) => { e.stopPropagation(); updateDesign("headerLayout", opt.value); }}
+                                  >
+                                    {draft.design.headerLayout === opt.value ? <><Check className="size-3.5" /> 적용됨</> : "적용"}
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {headerSettingsTab === "color" && (
+                          <>
+                            <div className="mb-3">
+                              <p className="text-sm font-semibold">헤더 색상</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              {[
+                                { key: "headerBgColor", label: "배경", value: draft.design.headerBgColor },
+                                { key: "headerTextColor", label: "메뉴 텍스트", value: draft.design.headerTextColor },
+                                { key: "headerButtonBgColor", label: "버튼 배경", value: draft.design.headerButtonBgColor },
+                                { key: "headerButtonTextColor", label: "버튼 텍스트", value: draft.design.headerButtonTextColor },
+                              ].map((item) => (
+                                <label key={item.key} className="space-y-1.5">
+                                  <span className="text-[11px] text-slate-500">{item.label}</span>
+                                  <div className="relative h-9 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                    <input className="absolute inset-0 h-full w-full cursor-pointer opacity-0" type="color" value={item.value}
+                                      onChange={(e) => updateDesign(item.key as keyof DesignSettings, e.target.value)}
+                                      onInput={(e) => updateDesign(item.key as keyof DesignSettings, e.currentTarget.value)} />
+                                    <div className="pointer-events-none flex h-full items-center gap-2 px-2">
+                                      <span className="inline-block size-4 rounded border border-slate-200" style={{ backgroundColor: item.value }} />
+                                      <span className="font-mono text-[11px] uppercase text-slate-500">{item.value}</span>
+                                    </div>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {headerSettingsTab === "menu" && (
+                          <>
+                            <div className="mb-3 flex items-center justify-between">
+                              <p className="text-sm font-semibold">GNB 메뉴</p>
+                              <Button className="h-6 px-2 text-[11px]" size="sm" type="button" variant="outline" onClick={addNavigationItem}>
+                                <Plus className="size-3" /> 추가
+                              </Button>
+                            </div>
+                            <div className="space-y-1.5">
+                              {draft.navigation.map((item, index) => {
+                                const linkedPage = pageById.get(item.pageId);
+
+                                return (
+                                  <div key={item.id} className="grid gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2 md:grid-cols-[64px_1fr_1.1fr_74px_72px] md:items-center">
+                                    <div className="flex items-center gap-1">
+                                      <Button className="size-6" disabled={index === 0} size="icon" type="button" variant="ghost" onClick={() => moveNavigationItem(item.id, -1)}>
+                                        <ArrowUp className="size-3" />
+                                      </Button>
+                                      <Button className="size-6" disabled={index === draft.navigation.length - 1} size="icon" type="button" variant="ghost" onClick={() => moveNavigationItem(item.id, 1)}>
+                                        <ArrowDown className="size-3" />
+                                      </Button>
+                                    </div>
+                                    <Input className="h-8 text-xs" value={item.label} onChange={(event) => updateNavigationItem(item.id, { label: event.target.value })} />
+                                    <select
+                                      className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs"
+                                      value={item.pageId}
+                                      onChange={(event) => updateNavigationItem(item.id, { pageId: event.target.value })}
+                                    >
+                                      {draft.pages.map((page) => (
+                                        <option key={page.id} value={page.id}>
+                                          {page.title}{page.status === "private" ? " (비공개)" : ""}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      className={cn(
+                                        "h-8 rounded-md border px-2 text-xs font-semibold",
+                                        item.enabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-500",
+                                      )}
+                                      type="button"
+                                      onClick={() => updateNavigationItem(item.id, { enabled: !item.enabled })}
+                                    >
+                                      {item.enabled ? "노출" : "숨김"}
+                                    </button>
+                                    <Button className="h-8 px-2 text-xs" type="button" variant="outline" onClick={() => removeNavigationItem(item.id)}>
+                                      삭제
+                                    </Button>
+                                    <p className="md:col-span-5 text-[10px] text-slate-400">
+                                      연결 페이지: {linkedPage?.title ?? "없음"} {linkedPage?.status === "private" ? "· 공개 페이지에서는 메뉴 숨김" : ""}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* 하단 정보 설정 floating 패널 */}
+            {isFooterSettingsMode ? (
+              <div className="fixed bottom-5 left-[340px] right-[380px] z-40">
+                <div className="rounded-2xl border border-blue-100 bg-white/95 shadow-2xl shadow-blue-950/10 backdrop-blur">
+                  <div className="max-h-[360px] overflow-hidden p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">하단 정보 설정</p>
+                        <p className="mt-0.5 text-xs text-slate-500">푸터 레이아웃과 색상을 편집합니다.</p>
+                      </div>
+                      <Button size="icon" type="button" variant="ghost" onClick={() => setSettingsSubPanel(null)}>
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-[100px_1fr]">
+                      {/* 좌측 탭 */}
+                      <div className="space-y-1">
+                        {(["layout", "color"] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            className={cn(
+                              "block h-8 w-full rounded-md px-3 text-left text-sm",
+                              footerSettingsTab === tab ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-50",
+                            )}
+                            type="button"
+                            onClick={() => setFooterSettingsTab(tab)}
+                          >
+                            {tab === "layout" ? "레이아웃" : "색상"}
+                          </button>
+                        ))}
+                      </div>
+                      {/* 우측 컨텐츠 */}
+                      <div className="max-h-[260px] overflow-auto pr-1">
+                        {footerSettingsTab === "layout" && (
+                          <>
+                            <div className="mb-3 flex items-center justify-between">
+                              <p className="text-sm font-semibold">하단 정보 섹션</p>
+                              <span className="text-xs text-slate-400">3개 레이아웃</span>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-3">
+                              {[
+                                { label: "정보형", value: "info", desc: "회사 소개 + 링크 컬럼 구성", preview: (
+                                  <div className="rounded-lg bg-slate-800 px-3 py-3">
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                      {[1,2,3].map(i=>(
+                                        <div key={i} className="space-y-1">
+                                          <div className="h-1.5 w-8 rounded-full bg-white/40" />
+                                          <div className="h-1 w-6 rounded-full bg-white/20" />
+                                          <div className="h-1 w-7 rounded-full bg-white/20" />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="mt-2 h-px bg-white/10" />
+                                    <div className="mt-1.5 h-1 w-16 rounded-full bg-white/15" />
+                                  </div>
+                                )},
+                                { label: "미니멀형", value: "minimal", desc: "로고와 카피라이트만 표시", preview: (
+                                  <div className="flex h-16 items-center justify-between rounded-lg bg-slate-800 px-3">
+                                    <div className="h-2 w-10 rounded-full bg-white/40" />
+                                    <div className="h-1.5 w-16 rounded-full bg-white/20" />
+                                  </div>
+                                )},
+                                { label: "소셜형", value: "social", desc: "SNS 링크를 중앙에 배치", preview: (
+                                  <div className="rounded-lg bg-slate-800 px-3 py-3">
+                                    <div className="flex justify-center gap-2">
+                                      {[1,2,3,4].map(i=><div key={i} className="size-5 rounded bg-white/20" />)}
+                                    </div>
+                                    <div className="mt-2 h-1 w-20 mx-auto rounded-full bg-white/15" />
+                                  </div>
+                                )},
+                              ].map((opt) => (
+                                <div
+                                  key={opt.value}
+                                  role="button"
+                                  tabIndex={0}
+                                  className={cn(
+                                    "rounded-lg border p-2 text-left transition hover:border-blue-300 hover:bg-blue-50/40",
+                                    draft.design.footerLayout === opt.value ? "border-blue-500" : "border-slate-100",
+                                  )}
+                                  onClick={() => updateDesign("footerLayout", opt.value)}
+                                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateDesign("footerLayout", opt.value); }}}
+                                >
+                                  {opt.preview}
+                                  <p className="mt-2 truncate text-xs font-semibold">{opt.label}</p>
+                                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{opt.desc}</p>
+                                  <Button
+                                    className="mt-2 h-8 w-full text-xs"
+                                    type="button"
+                                    variant={draft.design.footerLayout === opt.value ? "default" : "outline"}
+                                    onClick={(e) => { e.stopPropagation(); updateDesign("footerLayout", opt.value); }}
+                                  >
+                                    {draft.design.footerLayout === opt.value ? <><Check className="size-3.5" /> 적용됨</> : "적용"}
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {footerSettingsTab === "color" && (
+                          <>
+                            <div className="mb-3">
+                              <p className="text-sm font-semibold">하단 정보 색상</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              {[
+                                { key: "footerBgColor", label: "배경", value: draft.design.footerBgColor },
+                                { key: "footerTextColor", label: "텍스트", value: draft.design.footerTextColor },
+                                { key: "footerAccentColor", label: "강조색", value: draft.design.footerAccentColor },
+                              ].map((item) => (
+                                <label key={item.key} className="space-y-1.5">
+                                  <span className="text-[11px] text-slate-500">{item.label}</span>
+                                  <div className="relative h-9 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                    <input className="absolute inset-0 h-full w-full cursor-pointer opacity-0" type="color" value={item.value}
+                                      onChange={(e) => updateDesign(item.key as keyof DesignSettings, e.target.value)}
+                                      onInput={(e) => updateDesign(item.key as keyof DesignSettings, e.currentTarget.value)} />
+                                    <div className="pointer-events-none flex h-full items-center gap-2 px-2">
+                                      <span className="inline-block size-4 rounded border border-slate-200" style={{ backgroundColor: item.value }} />
+                                      <span className="font-mono text-[11px] uppercase text-slate-500">{item.value}</span>
+                                    </div>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {!settingsSubPanel ? (
               <div className="fixed bottom-5 left-[340px] right-[380px] z-40">

@@ -14,7 +14,7 @@ type AdminTableProps = {
 
 export function AdminTable({ columns, rows }: AdminTableProps) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       <Table className="min-w-[760px]">
         <TableHeader className="bg-muted/60">
           <TableRow>

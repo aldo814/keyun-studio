@@ -1,9 +1,17 @@
+import { redirect } from "next/navigation";
 import { ThemeEditor } from "@/features/dashboard/theme-editor";
+import { canAccessDesignMode } from "@/features/dashboard/queries";
 
-export default function ThemePage() {
+export default async function ThemePage() {
+  const canAccessDesign = await canAccessDesignMode();
+
+  if (!canAccessDesign) {
+    redirect("/dashboard/content");
+  }
+
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         <div className="flex items-end justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">디자인 / 테마</p>

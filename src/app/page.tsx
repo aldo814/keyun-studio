@@ -66,9 +66,9 @@ export default function Home() {
 
         <div className="relative min-h-[420px] lg:min-h-[620px]">
           <div className="absolute inset-0 rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_35%_20%,rgba(37,99,235,0.85),transparent_28%),radial-gradient(circle_at_80%_65%,rgba(124,58,237,0.55),transparent_30%),linear-gradient(145deg,#020617,#050505)] shadow-2xl" />
-          <div className="absolute left-[12%] top-[14%] h-36 w-64 rotate-[-10deg] rounded-lg border border-blue-300/25 bg-blue-500/15 backdrop-blur" />
-          <div className="absolute right-[10%] top-[32%] h-48 w-72 rotate-6 rounded-lg border border-violet-300/20 bg-white/[0.06] backdrop-blur" />
-          <div className="absolute bottom-[14%] left-[18%] h-44 w-80 rotate-[-4deg] rounded-lg border border-white/10 bg-zinc-950/70 p-5 backdrop-blur">
+          <div className="absolute left-[12%] top-[14%] h-36 w-64 rotate-[-10deg] rounded-lg border border-blue-300/25 bg-blue-500/15" />
+          <div className="absolute right-[10%] top-[32%] h-48 w-72 rotate-6 rounded-lg border border-violet-300/20 bg-white/[0.06]" />
+          <div className="absolute bottom-[14%] left-[18%] h-44 w-80 rotate-[-4deg] rounded-lg border border-white/10 bg-zinc-950/70 p-5">
             <p className="text-xs text-blue-300">Builder Flow</p>
             <p className="mt-4 text-2xl font-semibold">Create. Edit. Publish.</p>
             <div className="mt-6 space-y-2">

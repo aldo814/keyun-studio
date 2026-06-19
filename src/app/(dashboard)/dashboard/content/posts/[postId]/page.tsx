@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowLeft, Eye, Pencil, Pin } from "lucide-react";
 
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -11,39 +10,42 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  initialPosts,
-  statusLabel,
-  statusTone,
-} from "@/features/dashboard/content-posts-data";
+import { statusLabel, statusTone } from "@/features/dashboard/content-posts-data";
+import { getDashboardPost } from "@/features/dashboard/queries";
 import { cn } from "@/lib/utils";
 
-type DashboardPostViewPageProps = {
-  params: Promise<{
-    postId: string;
-  }>;
+type Props = {
+  params: Promise<{ postId: string }>;
 };
 
-export default async function DashboardPostViewPage({
-  params,
-}: DashboardPostViewPageProps) {
+export default async function DashboardPostViewPage({ params }: Props) {
   const { postId } = await params;
-  const post = initialPosts.find((item) => String(item.id) === postId);
+  const post = await getDashboardPost(postId);
 
   if (!post) {
-    notFound();
+    return (
+      <main className="px-4 py-8 sm:px-6 lg:px-8">
+        <div>
+          <Link
+            className={cn(buttonVariants({ size: "sm", variant: "ghost" }), "mb-5")}
+            href="/dashboard/content/posts"
+          >
+            <ArrowLeft />
+            게시글 목록
+          </Link>
+          <p className="mt-4 text-sm text-muted-foreground">게시글을 찾을 수 없습니다.</p>
+        </div>
+      </main>
+    );
   }
 
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Link
-              className={cn(
-                buttonVariants({ size: "sm", variant: "ghost" }),
-                "mb-5",
-              )}
+              className={cn(buttonVariants({ size: "sm", variant: "ghost" }), "mb-5")}
               href="/dashboard/content/posts"
             >
               <ArrowLeft />
@@ -60,14 +62,14 @@ export default async function DashboardPostViewPage({
                 {post.board}
               </span>
               <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                {post.category}
+                {post.category || "일반"}
               </span>
-              {post.pinned ? (
+              {post.pinned && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">
                   <Pin className="size-3" />
                   상단 고정
                 </span>
-              ) : null}
+              )}
             </div>
             <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-normal">
               {post.title}
@@ -80,7 +82,7 @@ export default async function DashboardPostViewPage({
           <div className="flex flex-wrap gap-2">
             <Link
               className={buttonVariants({ size: "default", variant: "outline" })}
-              href="/dashboard/content/posts/new"
+              href={"/dashboard/content/posts/" + post.id + "/edit"}
             >
               <Pencil />
               수정
@@ -93,47 +95,43 @@ export default async function DashboardPostViewPage({
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>본문</CardTitle>
               <CardDescription>사이트 게시판에 노출될 게시글 내용입니다.</CardDescription>
             </CardHeader>
             <CardContent>
-              <article className="min-h-[360px] rounded-lg border border-border bg-white p-6 text-sm leading-7 text-foreground">
-                {post.content.split("\n").map((line, index) => (
-                  <p key={`${line}-${index}`} className={cn(index ? "mt-4" : "")}>
-                    {line || "\u00a0"}
-                  </p>
-                ))}
-              </article>
+              <article
+                className="min-h-[360px] rounded-lg border border-border bg-white p-6 text-sm leading-7 text-foreground [&_blockquote]:border-l-4 [&_blockquote]:border-slate-200 [&_blockquote]:pl-4 [&_h2]:mb-3 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p+_p]:mt-4 [&_ul]:list-disc"
+                dangerouslySetInnerHTML={{ __html: post.contentHtml || "<p>본문이 없습니다.</p>" }}
+              />
             </CardContent>
           </Card>
 
           <aside className="space-y-4">
-            <Card className="rounded-lg shadow-sm">
+            <Card className="rounded-lg">
               <CardHeader>
                 <CardTitle>게시 정보</CardTitle>
                 <CardDescription>운영자가 확인하는 기본 메타 정보입니다.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-                  <span className="text-muted-foreground">작성자</span>
-                  <span className="font-medium">{post.author}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-                  <span className="text-muted-foreground">수정일</span>
-                  <span className="font-medium">{post.updatedAt}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-                  <span className="text-muted-foreground">조회수</span>
-                  <span className="font-medium">{post.views.toLocaleString()}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">고정</span>
-                  <span className="font-medium">
-                    {post.pinned ? "사용 중" : "미사용"}
-                  </span>
-                </div>
+                {[
+                  { label: "작성자", value: post.author },
+                  { label: "수정일", value: post.updatedAt },
+                  { label: "조회수", value: post.views.toLocaleString("ko-KR") },
+                  { label: "고정", value: post.pinned ? "사용 중" : "미사용" },
+                ].map(({ label, value }, i, arr) => (
+                  <div
+                    key={label}
+                    className={cn(
+                      "flex items-center justify-between gap-3",
+                      i < arr.length - 1 && "border-b border-border pb-3",
+                    )}
+                  >
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-medium">{value}</span>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </aside>

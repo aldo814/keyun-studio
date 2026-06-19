@@ -1,11 +1,5 @@
-import { PageShell } from "@/components/layout/page-shell";
+import { ResetPasswordForm } from "@/features/auth/reset-password-form";
 
 export default function ResetPasswordPage() {
-  return (
-    <PageShell
-      eyebrow="Auth"
-      title="비밀번호 재설정"
-      description="Supabase Auth 이메일 플로우와 연결될 계정 복구 화면입니다."
-    />
-  );
+  return <ResetPasswordForm />;
 }

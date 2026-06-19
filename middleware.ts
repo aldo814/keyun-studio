@@ -1,0 +1,110 @@
+import { createServerClient } from "@supabase/ssr";
+import { type NextRequest, NextResponse } from "next/server";
+
+const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
+const SUPER_ADMIN_PREFIXES = ["/admin", "/dashboard/design"];
+
+function hasSupabaseEnv() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+}
+
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+function isSuperAdminPath(pathname: string) {
+  return SUPER_ADMIN_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+function getSafeNext(request: NextRequest) {
+  return `${request.nextUrl.pathname}${request.nextUrl.search}`;
+}
+
+function redirectToLogin(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  url.pathname = "/login";
+  url.search = "";
+  url.searchParams.set("next", getSafeNext(request));
+
+  return NextResponse.redirect(url);
+}
+
+function redirectToContent(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  url.pathname = "/dashboard/content";
+  url.search = "";
+
+  return NextResponse.redirect(url);
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (!isProtectedPath(pathname) || !hasSupabaseEnv()) {
+    return NextResponse.next();
+  }
+
+  let response = NextResponse.next({
+    request,
+  });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+
+          response = NextResponse.next({
+            request,
+          });
+
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    },
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return redirectToLogin(request);
+  }
+
+  if (!isSuperAdminPath(pathname)) {
+    return response;
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profile?.role !== "super_admin") {
+    return redirectToContent(request);
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/admin/:path*"],
+};

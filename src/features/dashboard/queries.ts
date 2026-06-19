@@ -57,6 +57,22 @@ type EditorPageRow = {
   updated_at: string;
 };
 
+type CurrentDashboardProfile = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  role: string | null;
+};
+
+type ContentBoardRow = {
+  id: string;
+  site_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  sort_order: number;
+};
+
 const demoUpdatedAt = new Date("2026-05-13T09:00:00+09:00").toISOString();
 
 const demoTemplateJson: Json = {
@@ -155,6 +171,50 @@ async function isAuthenticated() {
   } = await supabase.auth.getUser();
 
   return Boolean(user);
+}
+
+export async function getCurrentDashboardProfile() {
+  if (!hasSupabaseEnv()) {
+    return null;
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("id,email,name,role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const profile = data as CurrentDashboardProfile | null;
+
+  return {
+    email: profile?.email ?? user.email ?? "",
+    id: user.id,
+    name: profile?.name ?? user.user_metadata?.name ?? user.email ?? "사용자",
+    role: profile?.role ?? "user",
+  };
+}
+
+export async function canAccessDesignMode() {
+  const profile = await getCurrentDashboardProfile();
+
+  return profile?.role === "super_admin";
+}
+
+export async function canUseContentPostDatabase() {
+  if (!hasSupabaseEnv()) {
+    return false;
+  }
+
+  return isAuthenticated();
 }
 
 export async function getDashboardTemplates() {
@@ -451,4 +511,147 @@ export async function getPublishedSitesForSitemap() {
       lastModified: site.published_at ?? site.updated_at,
     }),
   );
+}
+
+
+type ContentPostRow = {
+  id: string;
+  site_id: string;
+  board_id: string | null;
+  board_name: string;
+  category: string | null;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content_json: Json;
+  content_html: string;
+  author_name: string | null;
+  status: string;
+  is_pinned: boolean;
+  views: number;
+  scheduled_at: string | null;
+  updated_at: string;
+};
+
+function htmlToText(html: string) {
+  return html
+    .replace(/<br\s*\/?>(\s*)/gi, "\n")
+    .replace(/<\/(p|h[1-6]|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+function normalizePostStatus(status: string): import("@/features/dashboard/content-posts-data").PostStatus {
+  if (status === "published" || status === "scheduled") return status;
+  return "draft";
+}
+
+function mapContentPost(row: ContentPostRow): import("@/features/dashboard/content-posts-data").DashboardPost {
+  const content = htmlToText(row.content_html);
+
+  return {
+    id: row.id,
+    siteId: row.site_id,
+    boardId: row.board_id,
+    board: row.board_name || "공지사항",
+    category: row.category ?? "",
+    title: row.title,
+    slug: row.slug,
+    summary: row.excerpt ?? "",
+    content,
+    contentHtml: row.content_html || "",
+    contentJson: row.content_json ?? {},
+    author: row.author_name || "관리자",
+    status: normalizePostStatus(row.status),
+    updatedAt: formatDateTime(row.updated_at),
+    updatedAtRaw: row.updated_at,
+    views: row.views ?? 0,
+    pinned: row.is_pinned,
+    scheduledAt: row.scheduled_at ?? "",
+  };
+}
+
+export async function getDashboardPosts() {
+  const { initialPosts } = await import("@/features/dashboard/content-posts-data");
+
+  if (!hasSupabaseEnv()) {
+    return initialPosts;
+  }
+
+  const authenticated = await isAuthenticated();
+
+  if (!authenticated) {
+    return initialPosts;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("content_posts")
+    .select(
+      "id,site_id,board_id,board_name,category,title,slug,excerpt,content_json,content_html,author_name,status,is_pinned,views,scheduled_at,updated_at",
+    )
+    .order("is_pinned", { ascending: false })
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error(error.message);
+    return initialPosts;
+  }
+
+  return ((data ?? []) as ContentPostRow[]).map(mapContentPost);
+}
+
+export async function getDashboardPost(postId: string) {
+  const posts = await getDashboardPosts();
+  return posts.find((post) => post.id === postId) ?? null;
+}
+
+export async function getDashboardContentBoards() {
+  const { initialBoards } = await import("@/features/dashboard/content-posts-data");
+
+  if (!hasSupabaseEnv()) {
+    return initialBoards;
+  }
+
+  const authenticated = await isAuthenticated();
+
+  if (!authenticated) {
+    return initialBoards;
+  }
+
+  const sites = await getDashboardSites();
+  const siteIds = sites
+    .filter((site) => !site.id.startsWith("demo_"))
+    .map((site) => site.id);
+
+  if (!siteIds.length) {
+    return initialBoards;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("content_boards")
+    .select("id,site_id,name,slug,description,sort_order")
+    .in("site_id", siteIds)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error(error.message);
+    return initialBoards;
+  }
+
+  const boards = ((data ?? []) as ContentBoardRow[]).map((board) => ({
+    id: board.id,
+    siteId: board.site_id,
+    name: board.name,
+    slug: board.slug,
+    description: board.description ?? "",
+  }));
+
+  return boards.length ? boards : initialBoards;
 }

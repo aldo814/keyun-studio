@@ -32,7 +32,7 @@ export function EditPanel({
   children,
 }: EditPanelProps) {
   return (
-    <Card className="rounded-lg border-border bg-card shadow-sm">
+    <Card className="rounded-lg border-border bg-card">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
@@ -82,7 +82,7 @@ export function NotesPanel({
   targetId,
 }: NotesPanelProps) {
   return (
-    <Card className="rounded-lg border-border bg-card shadow-sm">
+    <Card className="rounded-lg border-border bg-card">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>
@@ -120,7 +120,7 @@ type ActionPanelProps = {
 
 export function ActionPanel({ title, description, actions }: ActionPanelProps) {
   return (
-    <Card className="rounded-lg border-border bg-card shadow-sm">
+    <Card className="rounded-lg border-border bg-card">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>

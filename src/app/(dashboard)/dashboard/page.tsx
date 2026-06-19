@@ -3,11 +3,11 @@ import {
   ArrowRight,
   Bot,
   Clock,
-  Edit3,
   FileText,
   ImageIcon,
+  Inbox,
   LayoutTemplate,
-  Search,
+  Megaphone,
   Send,
   Settings,
   Sparkles,
@@ -82,17 +82,17 @@ const notifications = [
 ];
 
 const quickActions = [
-  { label: "텍스트 수정", href: "/dashboard/editor/demo_site_keyun", icon: Edit3 },
-  { label: "이미지 관리", href: "/dashboard/content/media", icon: ImageIcon },
-  { label: "게시판", href: "/dashboard/content/posts", icon: FileText },
-  { label: "SEO", href: "/dashboard/sites/demo_site_keyun/settings", icon: Search },
-  { label: "도메인", href: "/dashboard/settings", icon: Settings },
+  { label: "새 게시물", href: "/dashboard/content/posts/new", icon: FileText },
+  { label: "문의 확인", href: "/dashboard/content/forms", icon: Inbox },
+  { label: "미디어 관리", href: "/dashboard/content/media", icon: ImageIcon },
+  { label: "팝업 관리", href: "/dashboard/content/popups", icon: Megaphone },
+  { label: "사이트 설정", href: "/dashboard/settings", icon: Settings },
 ];
 
 const recentEdits = [
-  { date: "06.05", title: "메인 비주얼 수정", type: "디자인 편집", typeKey: "design" },
-  { date: "06.04", title: "회사소개 섹션 추가", type: "페이지", typeKey: "page" },
-  { date: "06.03", title: "문의폼 생성", type: "콘텐츠", typeKey: "content" },
+  { date: "06.05", title: "공지사항 게시", type: "게시글", typeKey: "content" },
+  { date: "06.04", title: "문의폼 응답 처리", type: "문의", typeKey: "form" },
+  { date: "06.03", title: "이벤트 팝업 노출 설정", type: "팝업", typeKey: "popup" },
 ];
 
 const dotColorMap: Record<string, string> = {
@@ -102,15 +102,15 @@ const dotColorMap: Record<string, string> = {
 };
 
 const editIconBgMap: Record<string, string> = {
-  design: "bg-blue-100",
-  page: "bg-violet-100",
   content: "bg-emerald-100",
+  form: "bg-amber-100",
+  popup: "bg-blue-100",
 };
 
 const editIconColorMap: Record<string, string> = {
-  design: "text-blue-600",
-  page: "text-violet-600",
   content: "text-emerald-600",
+  form: "text-amber-600",
+  popup: "text-blue-600",
 };
 
 export default async function DashboardPage() {
@@ -126,13 +126,13 @@ export default async function DashboardPage() {
 
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-5">
+      <div className="space-y-5">
         {/* 섹션 0: 운영 지표 카드 (최상단) */}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {operationMetrics.map((metric, idx) => (
             <Link key={metric.id} href={metric.href} className="group" id={metric.id}>
               <Card className={cn(
-                "relative overflow-hidden rounded-xl shadow-sm transition-all group-hover:shadow-md group-hover:-translate-y-0.5",
+                "relative overflow-hidden rounded-xl transition-all group-hover:-translate-y-0.5",
                 idx === 0 && "bg-gradient-to-br from-blue-600 to-blue-500 text-white border-blue-500",
               )}>
                 {idx === 0 && (
@@ -174,7 +174,7 @@ export default async function DashboardPage() {
         </section>
 
         {/* 섹션 1: 히어로 배너 */}
-        <section className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <section className="relative overflow-hidden rounded-2xl border border-border bg-card">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_60%_-10%,rgba(59,110,240,0.08),transparent)]" />
           <div className="relative grid gap-8 p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:p-8">
             <div className="flex flex-col justify-center">
@@ -186,15 +186,15 @@ export default async function DashboardPage() {
                 안녕하세요 은영님
               </h1>
               <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
-                오늘도 사이트를 성장시켜보세요. 편집, 콘텐츠, 문의, 게시 상태를
-                한 화면에서 빠르게 확인할 수 있습니다.
+                오늘도 사이트를 성장시켜보세요. 게시글, 문의, 팝업, 미디어를
+                한 화면에서 빠르게 운영할 수 있습니다.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 <Link
                   className={buttonVariants({ size: "lg", variant: "default" })}
-                  href={`/dashboard/editor/${site.id}`}
+                  href="/dashboard/content/posts/new"
                 >
-                  사이트 편집하기
+                  게시글 작성하기
                   <ArrowRight />
                 </Link>
                 <Link
@@ -215,7 +215,7 @@ export default async function DashboardPage() {
                 </div>
                 <StatusBadge tone={site.status}>{site.status}</StatusBadge>
               </div>
-              <div className="mt-5 aspect-[16/10] overflow-hidden rounded-xl border border-white bg-white shadow-sm">
+              <div className="mt-5 aspect-[16/10] overflow-hidden rounded-xl border border-white bg-white">
                 <div className="flex h-8 items-center gap-1.5 border-b border-border px-3">
                   <span className="size-2 rounded-full bg-red-300" />
                   <span className="size-2 rounded-full bg-amber-300" />
@@ -232,7 +232,7 @@ export default async function DashboardPage() {
                     <div className="mt-4 h-2 w-44 rounded bg-slate-200" />
                     <div className="mt-2 h-2 w-32 rounded bg-slate-200" />
                   </div>
-                  <div className="self-center rounded-2xl border border-blue-100 bg-white/70 p-4 shadow-sm">
+                  <div className="self-center rounded-2xl border border-blue-100 bg-white/70 p-4">
                     <LayoutTemplate className="size-10 text-blue-600" />
                     <div className="mt-4 h-2 w-full rounded bg-blue-100" />
                     <div className="mt-2 h-2 w-2/3 rounded bg-blue-100" />
@@ -256,7 +256,7 @@ export default async function DashboardPage() {
 
         {/* 섹션 3: 운영 현황 + 알림 */}
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>운영 현황</CardTitle>
               <CardDescription>
@@ -352,7 +352,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl border-0 bg-gradient-to-b from-slate-950 to-slate-900 text-white shadow-md">
+          <Card className="rounded-xl border-0 bg-gradient-to-b from-slate-950 to-slate-900 text-white">
             <CardHeader>
               <CardTitle className="text-white">최근 알림</CardTitle>
               <CardDescription className="text-white/50">오늘 확인하면 좋은 운영 이슈입니다.</CardDescription>
@@ -384,19 +384,19 @@ export default async function DashboardPage() {
 
         {/* 섹션 4: 사이트 미리보기 + 빠른 작업 */}
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle>사이트 미리보기</CardTitle>
                 <CardDescription className="mt-1">현재 대표 사이트의 PC 화면 기준 미리보기입니다.</CardDescription>
               </div>
-              <Button render={<Link href={`/dashboard/editor/${site.id}`} />} size="sm">
-                편집하기
+              <Button render={<Link href="/dashboard/content/posts" />} size="sm">
+                게시글 관리
                 <ArrowRight />
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="aspect-[16/9] overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+              <div className="aspect-[16/9] overflow-hidden rounded-xl border border-border bg-white">
                 <div className="flex h-10 items-center justify-between border-b border-border px-4">
                   <span className="text-xs font-semibold">KEYUN Preview</span>
                   <span className="text-xs text-muted-foreground">PC</span>
@@ -410,7 +410,7 @@ export default async function DashboardPage() {
                     <div className="mt-2 h-2 w-48 rounded bg-slate-200" />
                     <div className="mt-8 h-10 w-32 rounded-lg bg-blue-600" />
                   </div>
-                  <div className="self-center rounded-3xl border border-blue-100 bg-white/70 p-8 shadow-sm">
+                  <div className="self-center rounded-3xl border border-blue-100 bg-white/70 p-8">
                     <LayoutTemplate className="size-16 text-blue-600" />
                     <div className="mt-8 h-3 w-full rounded bg-blue-100" />
                     <div className="mt-3 h-3 w-2/3 rounded bg-blue-100" />
@@ -420,7 +420,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl border border-blue-100/60 bg-gradient-to-b from-blue-50/40 to-white shadow-sm">
+          <Card className="rounded-xl border border-blue-100/60 bg-gradient-to-b from-blue-50/40 to-white">
             <CardHeader>
               <CardTitle>빠른 작업</CardTitle>
               <CardDescription>자주 쓰는 기능으로 바로 이동합니다.</CardDescription>
@@ -431,7 +431,7 @@ export default async function DashboardPage() {
                 return (
                   <Link
                     key={action.label}
-                    className="group flex h-11 items-center justify-between rounded-lg border border-border bg-white px-3 text-sm font-medium shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50/60 hover:shadow"
+                    className="group flex h-11 items-center justify-between rounded-lg border border-border bg-white px-3 text-sm font-medium transition-all hover:border-blue-200 hover:bg-blue-50/60 hover:shadow"
                     href={action.href}
                   >
                     <span className="flex items-center gap-2.5">
@@ -456,7 +456,7 @@ export default async function DashboardPage() {
 
         {/* 섹션 5: AI 도우미 + 최근 수정 내역 */}
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <Card className="relative overflow-hidden rounded-lg bg-slate-950 text-white shadow-sm" id="ai-helper">
+          <Card className="relative overflow-hidden rounded-lg bg-slate-950 text-white" id="ai-helper">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_30%_60%,rgba(59,110,240,0.18),transparent)]" />
             <CardHeader className="relative">
               <div className="flex items-center gap-2">
@@ -464,7 +464,7 @@ export default async function DashboardPage() {
                 <CardTitle>AI 도우미</CardTitle>
               </div>
               <CardDescription className="text-white/60">
-                문구 작성, 섹션 아이디어, SEO 초안을 빠르게 요청합니다.
+                공지사항, 블로그, FAQ 초안을 빠르게 요청합니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="relative">
@@ -480,7 +480,7 @@ export default async function DashboardPage() {
                 </Button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                {["히어로 문구", "블로그 제목", "FAQ 생성"].map((item) => (
+                {["공지사항", "블로그 제목", "FAQ 생성"].map((item) => (
                   <button
                     key={item}
                     type="button"
@@ -494,7 +494,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>최근 수정 내역</CardTitle>
               <CardDescription>최근 작업한 변경 사항입니다.</CardDescription>

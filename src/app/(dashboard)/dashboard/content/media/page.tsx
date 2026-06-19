@@ -15,7 +15,7 @@ const mediaItems = [
 export default function DashboardMediaPage() {
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">
@@ -25,7 +25,7 @@ export default function DashboardMediaPage() {
               미디어
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              이미지와 파일을 업로드하고 디자인 에디터에서 재사용합니다.
+              게시글, 팝업, 문의 안내에 사용할 이미지와 파일을 관리합니다.
             </p>
           </div>
           <Button>
@@ -36,7 +36,7 @@ export default function DashboardMediaPage() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {mediaItems.map(([name, size, tag]) => (
-            <Card key={name} className="overflow-hidden rounded-lg shadow-sm">
+            <Card key={name} className="overflow-hidden rounded-lg">
               <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-blue-50 via-white to-slate-100">
                 <ImageIcon className="size-10 text-blue-500" />
               </div>

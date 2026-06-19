@@ -80,7 +80,7 @@ export function AdminShell({
       </aside>
 
       <div className="lg:pl-72">
-        <header className="sticky top-0 z-10 border-b border-border bg-card/90 backdrop-blur">
+        <header className="sticky top-0 z-10 border-b border-border bg-card">
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
             <Button variant="outline" size="icon-lg" className="lg:hidden">
               <Menu className="size-5" />

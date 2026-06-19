@@ -3,212 +3,348 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { MoreHorizontal, Pin, Plus, Search } from "lucide-react";
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+} from "@tanstack/react-table";
+import { Pencil, Pin, Plus, Search } from "lucide-react";
 
 import { StatusBadge } from "@/components/admin/status-badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  initialPosts,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toggleContentPostPinned } from "@/features/dashboard/actions";
+import {
+  type DashboardPost,
   statusLabel,
   statusOptions,
   statusTone,
 } from "@/features/dashboard/content-posts-data";
+import { usePosts } from "@/lib/posts-store";
 import { cn } from "@/lib/utils";
 
-export function ContentPostsManager() {
+type Props = {
+  posts: DashboardPost[];
+  useLocalFallback?: boolean;
+};
+
+export function ContentPostsManager({ posts, useLocalFallback = false }: Props) {
   const router = useRouter();
-  const [posts, setPosts] = useState(initialPosts);
+  const localPosts = usePosts();
+  const visiblePosts = useLocalFallback ? localPosts.posts : posts;
   const [activeStatus, setActiveStatus] = useState("all");
-  const [searchText, setSearchText] = useState("");
-  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
 
-  const searchedPosts = useMemo(() => {
-    const keyword = query.trim().toLowerCase();
-
-    return posts.filter((post) => {
-      const keywordMatched =
+  const filteredPosts = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    return visiblePosts.filter((post) => {
+      const matchesKeyword =
         !keyword ||
-        [post.title, post.summary, post.category, post.author]
+        [post.title, post.summary, post.category, post.author, post.board]
           .join(" ")
           .toLowerCase()
           .includes(keyword);
-
-      return keywordMatched;
+      const matchesStatus =
+        activeStatus === "all" || post.status === activeStatus;
+      return matchesKeyword && matchesStatus;
     });
-  }, [posts, query]);
-
-  const filteredPosts = useMemo(() => {
-    return searchedPosts.filter((post) => {
-      return activeStatus === "all" || post.status === activeStatus;
-    });
-  }, [activeStatus, searchedPosts]);
+  }, [visiblePosts, search, activeStatus]);
 
   function getStatusCount(statusValue: string) {
-    if (statusValue === "all") return searchedPosts.length;
-    return searchedPosts.filter((post) => post.status === statusValue).length;
+    const keyword = search.trim().toLowerCase();
+    const base = visiblePosts.filter((post) => {
+      const matchesKeyword =
+        !keyword ||
+        [post.title, post.summary, post.category, post.author, post.board]
+          .join(" ")
+          .toLowerCase()
+          .includes(keyword);
+      return matchesKeyword;
+    });
+    if (statusValue === "all") return base.length;
+    return base.filter((p) => p.status === statusValue).length;
   }
 
-  function togglePinned(postId: number) {
-    setPosts((current) =>
-      current.map((post) =>
-        post.id === postId ? { ...post, pinned: !post.pinned } : post,
-      ),
-    );
-  }
+  const columns = useMemo<ColumnDef<DashboardPost>[]>(
+    () => [
+      {
+        accessorKey: "title",
+        header: "제목",
+        cell: ({ row }) => {
+          const post = row.original;
+          return (
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-1.5">
+                {post.pinned && (
+                  <Pin className="size-3 shrink-0 fill-blue-500 text-blue-500" />
+                )}
+                <span className="truncate text-sm font-semibold text-foreground">
+                  {post.title}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="font-medium text-blue-500">{post.board}</span>
+                {post.category && (
+                  <>
+                    <span className="text-border">·</span>
+                    <span>{post.category}</span>
+                  </>
+                )}
+                {post.summary && (
+                  <>
+                    <span className="text-border">·</span>
+                    <span className="truncate">{post.summary}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "author",
+        header: "작성자",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">{row.original.author}</span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "상태",
+        cell: ({ row }) => (
+          <StatusBadge tone={statusTone(row.original.status)}>
+            {statusLabel(row.original.status)}
+          </StatusBadge>
+        ),
+      },
+      {
+        accessorKey: "views",
+        header: "조회",
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {row.original.views.toLocaleString("ko-KR")}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "updatedAt",
+        header: "수정일",
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {row.original.updatedAt}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => null,
+        cell: ({ row }) => {
+          const post = row.original;
+          return (
+            <div
+              className="flex items-center justify-end gap-0.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {useLocalFallback ? (
+                <button
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-md transition-colors hover:bg-muted",
+                    post.pinned ? "text-blue-500" : "text-muted-foreground",
+                  )}
+                  title="상단 고정"
+                  type="button"
+                  onClick={() => localPosts.togglePinned(post.id)}
+                >
+                  <Pin className={cn("size-3.5", post.pinned && "fill-blue-500")} />
+                </button>
+              ) : (
+                <form action={toggleContentPostPinned}>
+                  <input name="post_id" type="hidden" value={post.id} />
+                  <input name="pinned" type="hidden" value={String(!post.pinned)} />
+                  <button
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-md transition-colors hover:bg-muted",
+                      post.pinned ? "text-blue-500" : "text-muted-foreground",
+                    )}
+                    title="상단 고정"
+                    type="submit"
+                  >
+                    <Pin className={cn("size-3.5", post.pinned && "fill-blue-500")} />
+                  </button>
+                </form>
+              )}
+              <button
+                className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="수정"
+                type="button"
+                onClick={() =>
+                  router.push("/dashboard/content/posts/" + post.id + "/edit")
+                }
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [router, useLocalFallback, localPosts],
+  );
+
+  const table = useReactTable({
+    data: filteredPosts,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="space-y-6">
+
+        {/* 헤더 */}
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">
-              콘텐츠 / 게시글
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal">
-              게시판
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              공지사항, 블로그, FAQ, 이벤트 글을 작성하고 사이트에 노출되는
-              상태를 관리합니다.
-            </p>
+            <p className="text-xs font-medium text-muted-foreground">콘텐츠 / 게시글</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">게시글 관리</h1>
           </div>
           <Link
-            className={buttonVariants({ size: "default", variant: "default" })}
+            className={buttonVariants({ size: "sm" })}
             href="/dashboard/content/posts/new"
           >
-            <Plus />
+            <Plus className="size-4" />
             새 게시물
           </Link>
         </div>
 
-        <section className="space-y-4">
-          <Card className="rounded-lg p-4 shadow-sm">
-            <form
-              className="flex flex-col gap-3 lg:flex-row lg:items-center"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setQuery(searchText);
-              }}
-            >
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  placeholder="제목, 작성자, 카테고리 검색"
-                  value={searchText}
-                  onChange={(event) => setSearchText(event.target.value)}
-                />
-              </div>
-              <Button type="submit">
-                <Search />
-                검색
-              </Button>
-            </form>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {statusOptions.map((status) => (
-                <button
-                  key={status.value}
+        {/* 검색 + 필터 */}
+        <div className="space-y-3">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-9 bg-white pl-9"
+              placeholder="제목, 작성자, 카테고리 검색"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-1 border-b border-border">
+            {statusOptions.map((s) => (
+              <button
+                key={s.value}
+                className={cn(
+                  "relative -mb-px flex items-center gap-1.5 border-b-2 px-3 pb-2.5 pt-1 text-sm font-medium transition-colors",
+                  activeStatus === s.value
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+                type="button"
+                onClick={() => setActiveStatus(s.value)}
+              >
+                {s.label}
+                <span
                   className={cn(
-                    "h-8 rounded-full px-3 text-xs font-semibold transition-colors",
-                    activeStatus === status.value
-                      ? "bg-slate-950 text-white"
-                      : "bg-muted text-muted-foreground hover:bg-slate-200",
+                    "rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+                    activeStatus === s.value
+                      ? "bg-blue-50 text-blue-600"
+                      : "bg-muted text-muted-foreground",
                   )}
-                  type="button"
-                  onClick={() => setActiveStatus(status.value)}
                 >
-                  {status.label} ({getStatusCount(status.value)}건)
-                </button>
+                  {getStatusCount(s.value)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 테이블 */}
+        <div className="overflow-hidden rounded-xl border border-border bg-white">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id} className="bg-muted/40 hover:bg-muted/40">
+                  {hg.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        "h-10 px-4 text-xs font-semibold text-muted-foreground",
+                        header.column.id === "title" && "min-w-[320px]",
+                        header.column.id === "actions" && "w-[72px]",
+                        header.column.id === "views" && "w-[80px]",
+                        header.column.id === "status" && "w-[100px]",
+                        header.column.id === "author" && "w-[100px]",
+                        header.column.id === "updatedAt" && "w-[100px]",
+                      )}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
               ))}
-            </div>
-          </Card>
-
-          <Card className="overflow-hidden rounded-lg shadow-sm">
-            <div className="grid grid-cols-[88px_minmax(260px,1fr)_110px_96px_92px] border-b border-border bg-muted/50 px-4 py-3 text-xs font-semibold text-muted-foreground">
-              <span>게시판</span>
-              <span>제목</span>
-              <span>상태</span>
-              <span>조회</span>
-              <span className="text-right">관리</span>
-            </div>
-
-            <div className="divide-y divide-border">
-              {filteredPosts.length ? (
-                filteredPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className={cn(
-                      "grid w-full cursor-pointer grid-cols-[88px_minmax(260px,1fr)_110px_96px_92px] items-center px-4 py-4 text-left transition-colors",
-                      "bg-card hover:bg-blue-50/70",
-                    )}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className="cursor-pointer border-b border-border/60 last:border-0 hover:bg-blue-50/40"
                     role="link"
                     tabIndex={0}
-                    onClick={() => router.push(`/dashboard/content/posts/${post.id}`)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        router.push(`/dashboard/content/posts/${post.id}`);
+                    onClick={() =>
+                      router.push("/dashboard/content/posts/" + row.original.id)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push("/dashboard/content/posts/" + row.original.id);
                       }
                     }}
                   >
-                    <span className="text-sm font-medium text-blue-600">
-                      {post.board}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-2">
-                        {post.pinned ? (
-                          <Pin className="size-3.5 fill-blue-600 text-blue-600" />
-                        ) : null}
-                        <span className="truncate font-semibold">{post.title}</span>
-                      </span>
-                      <span className="mt-1 block truncate text-xs text-muted-foreground">
-                        {post.category} · {post.summary}
-                      </span>
-                    </span>
-                    <StatusBadge tone={statusTone(post.status)}>
-                      {statusLabel(post.status)}
-                    </StatusBadge>
-                    <span className="text-sm text-muted-foreground">
-                      {post.views.toLocaleString()}
-                    </span>
-                    <span className="flex justify-end gap-1">
-                      <Button
-                        size="icon"
-                        type="button"
-                        variant="ghost"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          togglePinned(post.id);
-                        }}
-                      >
-                        <Pin />
-                      </Button>
-                      <Button
-                        size="icon"
-                        type="button"
-                        variant="ghost"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <MoreHorizontal />
-                      </Button>
-                    </span>
-                  </div>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-4 py-3.5">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
                 ))
               ) : (
-                <div className="px-4 py-16 text-center">
-                  <p className="text-sm font-medium">
-                    조건에 맞는 게시글이 없습니다.
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    검색어를 바꾸거나 필터를 초기화해 주세요.
-                  </p>
-                </div>
+                <TableRow>
+                  <TableCell
+                    className="py-20 text-center"
+                    colSpan={columns.length}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Search className="size-8 text-muted-foreground/30" />
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {search ? "검색 결과가 없습니다" : "게시글이 없습니다"}
+                      </p>
+                      {!search && (
+                        <Link
+                          className={buttonVariants({ size: "sm", variant: "outline" })}
+                          href="/dashboard/content/posts/new"
+                        >
+                          <Plus className="size-4" />
+                          첫 게시물 작성하기
+                        </Link>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
               )}
-            </div>
-          </Card>
-        </section>
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </main>
   );

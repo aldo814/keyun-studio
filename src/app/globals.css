@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Jua&family=Lora:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&family=Sunflower:wght@300;500;700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -66,4 +66,59 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+
+.theme-range {
+  --range-progress: 0%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.theme-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #2563eb 0 var(--range-progress),
+    #e5e7eb var(--range-progress) 100%
+  );
+}
+
+.theme-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.theme-range::-moz-range-track {
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.theme-range::-moz-range-progress {
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.theme-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #2563eb;
 }

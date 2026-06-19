@@ -11,7 +11,7 @@ export default async function SitesPage() {
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Dashboard</p>
@@ -21,7 +21,7 @@ export default async function SitesPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>전체 사이트</CardTitle>
             </CardHeader>
@@ -29,7 +29,7 @@ export default async function SitesPage() {
               <p className="text-3xl font-semibold">{sites.length}</p>
             </CardContent>
           </Card>
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>공개</CardTitle>
             </CardHeader>
@@ -39,7 +39,7 @@ export default async function SitesPage() {
               </p>
             </CardContent>
           </Card>
-          <Card className="rounded-lg shadow-sm">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>초안</CardTitle>
             </CardHeader>
@@ -71,16 +71,16 @@ export default async function SitesPage() {
               <Button
                 size="sm"
                 variant="outline"
-                render={<Link href={`/dashboard/editor/${site.id}`} />}
+                render={<Link href="/dashboard/content/posts" />}
               >
-                에디터
+                콘텐츠
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 render={<Link href={`/dashboard/sites/${site.id}/settings`} />}
               >
-                SEO
+                설정
               </Button>
             </div>,
           ])}

@@ -38,7 +38,7 @@ export default async function SiteSettingsPage({
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Site Settings</p>
@@ -52,7 +52,7 @@ export default async function SiteSettingsPage({
           </Button>
         </div>
 
-        <Card className="rounded-lg border-border bg-card shadow-sm">
+        <Card className="rounded-lg border-border bg-card">
           <CardHeader>
             <CardTitle>SEO 설정</CardTitle>
             <CardDescription>

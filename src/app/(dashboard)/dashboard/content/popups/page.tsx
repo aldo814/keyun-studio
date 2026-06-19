@@ -14,7 +14,7 @@ const popups = [
 export default function DashboardPopupsPage() {
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">
@@ -34,12 +34,11 @@ export default function DashboardPopupsPage() {
           </Button>
         </div>
 
-        <Card className="rounded-lg p-5 shadow-sm">
+        <Card className="rounded-lg p-5">
           <div className="mb-5 flex items-center gap-3 rounded-lg bg-blue-50 p-4 text-blue-700">
             <Megaphone className="size-5" />
             <p className="text-sm">
-              페이지 안 배너는 디자인 에디터에서, 운영 팝업은 이곳에서
-              관리합니다.
+              운영 팝업은 이곳에서 먼저 관리하고, 페이지 안 배너 편집은 추후 디자인 모드에서 제공합니다.
             </p>
           </div>
           <AdminTable

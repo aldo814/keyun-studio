@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Template = {
@@ -87,7 +87,7 @@ export function TemplateGallery({ templates }: TemplateGalleryProps) {
           {filtered.map((template) => (
             <div
               key={template.id}
-              className="group overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
+              className="group overflow-hidden rounded-xl border border-border bg-card transition-shadow"
             >
               {/* 썸네일 */}
               <div

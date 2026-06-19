@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { resolvePostLoginPath, sanitizeDashboardNext } from "@/features/auth/post-login-redirect";
+import { hasAnySiteForUser } from "@/features/auth/session-context";
 import { createClient } from "@/lib/supabase/server";
 
 function getCookieValue(request: NextRequest, key: string) {
@@ -13,9 +15,7 @@ function getCallbackValue(request: NextRequest, key: string, cookieKey: string) 
 }
 
 function getSafeNext(request: NextRequest) {
-  const next = request.nextUrl.searchParams.get("next");
-
-  return next?.startsWith("/") ? next : "/dashboard";
+  return sanitizeDashboardNext(request.nextUrl.searchParams.get("next"));
 }
 
 export async function GET(request: NextRequest) {
@@ -41,25 +41,63 @@ export async function GET(request: NextRequest) {
           user.email ||
           "";
 
-        const enhancedProfile = await supabase
+        const { data: existingProfile } = await supabase
           .from("profiles")
-          .upsert({
-            id: user.id,
-            email: user.email ?? preferredEmail,
-            name: preferredName || user.email || "",
-            username: preferredName,
-            last_seen_at: new Date().toISOString(),
-          });
+          .select("id,role")
+          .eq("id", user.id)
+          .maybeSingle();
 
-        if (enhancedProfile.error) {
-          await supabase.from("profiles").upsert({
-            id: user.id,
+        const profilePayload = {
+          email: user.email ?? preferredEmail,
+          name: preferredName || user.email || "",
+          username: preferredName,
+          last_seen_at: new Date().toISOString(),
+        };
+
+        const profileResult = existingProfile?.id
+          ? await supabase.from("profiles").update(profilePayload).eq("id", user.id)
+          : await supabase.from("profiles").insert({
+              id: user.id,
+              ...profilePayload,
+              role: "user",
+            });
+
+        if (profileResult.error) {
+          const fallbackPayload = {
             email: user.email ?? preferredEmail,
             name: preferredName || user.email || "",
-          });
+          };
+
+          if (existingProfile?.id) {
+            await supabase.from("profiles").update(fallbackPayload).eq("id", user.id);
+          } else {
+            await supabase.from("profiles").insert({
+              id: user.id,
+              ...fallbackPayload,
+              role: "user",
+            });
+          }
         }
 
         await supabase.rpc("track_profile_visit");
+
+        const { data: freshProfile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        const destination = resolvePostLoginPath({
+          hasSites: await hasAnySiteForUser(supabase, user.id),
+          requestedNext: next,
+          role: freshProfile?.role ?? existingProfile?.role ?? "user",
+        });
+
+        const response = NextResponse.redirect(`${origin}${destination}`);
+        response.cookies.delete("keyun_oauth_name");
+        response.cookies.delete("keyun_oauth_email");
+
+        return response;
       }
 
       const response = NextResponse.redirect(`${origin}${next}`);
