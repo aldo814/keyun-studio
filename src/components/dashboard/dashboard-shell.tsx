@@ -12,11 +12,6 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-const mockSites = [
-  { id: "demo_site_keyun", name: "KEYUN Official", url: "https://keyun.io", active: true },
-  { id: "site_2", name: "키운 블로그", url: "https://blog.keyun.io", active: false },
-];
-
 const dashboardNavItems = [
   { label: "개요", href: "/dashboard", icon: Globe2 },
   { label: "사이트", href: "/dashboard/sites", icon: Globe2 },
@@ -46,6 +41,12 @@ type DashboardShellProps = {
     name: string;
     role: string;
   } | null;
+  sites?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+  }>;
 };
 
 const roleLabelMap: Record<string, string> = {
@@ -63,16 +64,28 @@ function getRoleLabel(role?: string | null) {
   return roleLabelMap[role] ?? role;
 }
 
-export function DashboardShell({ canAccessDesign = false, children, profile }: DashboardShellProps) {
+function getSiteIdFromPath(pathname: string) {
+  const match = pathname.match(/\/dashboard\/(?:sites|editor|preview)\/([^/]+)/);
+
+  return match?.[1] ?? "";
+}
+
+export function DashboardShell({
+  canAccessDesign = false,
+  children,
+  profile,
+  sites = [],
+}: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [siteOpen, setSiteOpen] = useState(false);
-  const [activeSite, setActiveSite] = useState(mockSites[0]);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const displayName = profile?.name || profile?.email || "사용자";
   const displayEmail = profile?.email || "로그인 계정";
   const roleLabel = getRoleLabel(profile?.role);
+  const selectedSiteId = getSiteIdFromPath(pathname);
+  const activeSite = sites.find((site) => site.id === selectedSiteId) ?? sites[0] ?? null;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -122,8 +135,12 @@ export function DashboardShell({ canAccessDesign = false, children, profile }: D
               <Globe2 className="size-5 text-blue-600" />
             </div>
             <div className="min-w-0 flex-1 text-left">
-              <p className="truncate text-sm font-semibold">{activeSite.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{activeSite.url}</p>
+              <p className="truncate text-sm font-semibold">
+                {activeSite?.name ?? "사이트를 만들어주세요"}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {activeSite ? `/s/${activeSite.slug}` : "첫 사이트 만들기"}
+              </p>
             </div>
             <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", siteOpen && "rotate-180")} />
           </button>
@@ -132,26 +149,34 @@ export function DashboardShell({ canAccessDesign = false, children, profile }: D
             <div className="absolute left-4 right-4 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-white shadow-xl">
               <div className="p-1.5">
                 <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">내 사이트</p>
-                {mockSites.map((site) => (
-                  <button
-                    key={site.id}
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-blue-50"
-                    onClick={() => {
-                      setActiveSite(site);
-                      setSiteOpen(false);
-                    }}
-                  >
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-blue-50">
-                      <Globe2 className="size-4 text-blue-500" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{site.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">{site.url}</p>
-                    </div>
-                    {activeSite.id === site.id && <Check className="size-4 shrink-0 text-blue-500" />}
-                  </button>
-                ))}
+                {sites.length ? (
+                  sites.map((site) => (
+                    <button
+                      key={site.id}
+                      type="button"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-blue-50"
+                      onClick={() => {
+                        setSiteOpen(false);
+                        router.push(`/dashboard/sites/${site.id}`);
+                      }}
+                    >
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-blue-50">
+                        <Globe2 className="size-4 text-blue-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{site.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">/s/{site.slug}</p>
+                      </div>
+                      {activeSite?.id === site.id ? (
+                        <Check className="size-4 shrink-0 text-blue-500" />
+                      ) : null}
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-lg px-3 py-5 text-sm text-muted-foreground">
+                    아직 등록된 사이트가 없습니다.
+                  </div>
+                )}
               </div>
               <div className="border-t border-border p-1.5">
                 <button

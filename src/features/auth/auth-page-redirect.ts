@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { resolvePostLoginPath } from "@/features/auth/post-login-redirect";
 import { hasAnySiteForUser } from "@/features/auth/session-context";
+import { resolveEffectiveRole } from "@/lib/auth/super-admin";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -41,7 +42,7 @@ export async function redirectAuthenticatedUser(searchParams?: SearchParams) {
     resolvePostLoginPath({
       hasSites: await hasAnySiteForUser(supabase, user.id),
       requestedNext,
-      role: profile?.role ?? "user",
+      role: resolveEffectiveRole(profile?.role, user.email),
     }),
   );
 }

@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getSiteEditorState } from "@/features/dashboard/queries";
+import { canAccessDesignMode, getSiteEditorState } from "@/features/dashboard/queries";
 import { PublicSiteRenderer } from "@/features/site/public-site-renderer";
 
 type DraftPreviewPageProps = {
   params: Promise<{
     siteId: string;
+  }>;
+  searchParams?: Promise<{
+    pageId?: string | string[];
   }>;
 };
 
@@ -19,13 +22,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function DraftPreviewPage({ params }: DraftPreviewPageProps) {
+function firstSearchValue(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function DraftPreviewPage({
+  params,
+  searchParams,
+}: DraftPreviewPageProps) {
   const { siteId } = await params;
-  const state = await getSiteEditorState(siteId);
+  const query = await searchParams;
+  const pageId = firstSearchValue(query?.pageId);
+  const canAccessDesign = await canAccessDesignMode();
+  const state = await getSiteEditorState(siteId, pageId);
 
   if (!state) {
     notFound();
   }
+
+  const publicPath =
+    state.page.path === "/"
+      ? `/s/${state.site.slug}`
+      : `/s/${state.site.slug}${state.page.path}`;
 
   return (
     <div className="min-h-screen bg-white">
@@ -36,20 +54,29 @@ export default async function DraftPreviewPage({ params }: DraftPreviewPageProps
               Draft Preview
             </p>
             <h1 className="text-sm font-semibold text-slate-950">
-              {state.site.name} 초안 미리보기
+              {state.site.name} · {state.page.title} 초안
             </h1>
+            <p className="mt-1 text-xs text-slate-500">{publicPath}</p>
           </div>
           <div className="flex items-center gap-2">
             <Link
               className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-              href={`/dashboard/editor/${state.site.id}`}
+              href={`/dashboard/sites/${state.site.id}/sitemap`}
             >
-              편집기로 돌아가기
+              사이트맵으로
             </Link>
+            {canAccessDesign ? (
+              <Link
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                href={`/dashboard/editor/${state.site.id}`}
+              >
+                편집기로 돌아가기
+              </Link>
+            ) : null}
             {state.site.status === "published" ? (
               <Link
                 className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-3 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-                href={`/s/${state.site.slug}`}
+                href={publicPath}
                 target="_blank"
               >
                 게시된 페이지 보기
@@ -61,6 +88,7 @@ export default async function DraftPreviewPage({ params }: DraftPreviewPageProps
       <PublicSiteRenderer
         publishedJson={state.page.draftJson}
         siteName={state.site.name}
+        siteSlug={state.site.slug}
       />
     </div>
   );

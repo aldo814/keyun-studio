@@ -10,7 +10,6 @@ import {
   Megaphone,
   Send,
   Settings,
-  Sparkles,
   TrendingUp,
 } from "lucide-react";
 
@@ -23,47 +22,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getDashboardOverview } from "@/features/dashboard/queries";
+import {
+  getDashboardContactSubmissions,
+  getDashboardOverview,
+  getDashboardSitePages,
+} from "@/features/dashboard/queries";
 import { cn } from "@/lib/utils";
-
-const operationMetrics = [
-  {
-    id: "visitors",
-    label: "방문자수",
-    value: "1,245",
-    caption: "최근 7일",
-    href: "#visitors",
-    delta: "+12%",
-    positive: true,
-  },
-  {
-    id: "inquiries",
-    label: "문의현황",
-    value: "12",
-    caption: "미확인 3건",
-    href: "#inquiries",
-    delta: "3건 대기",
-    positive: false,
-  },
-  {
-    id: "pages",
-    label: "페이지수",
-    value: "18",
-    caption: "게시 14개",
-    href: "#pages",
-    delta: "+2",
-    positive: true,
-  },
-  {
-    id: "storage",
-    label: "저장공간",
-    value: "2.3GB",
-    caption: "전체 10GB",
-    href: "#storage",
-    delta: "23% 사용",
-    positive: true,
-  },
-];
 
 const chartBars = [
   { day: "월", value: 38 },
@@ -73,12 +37,6 @@ const chartBars = [
   { day: "금", value: 88 },
   { day: "토", value: 63 },
   { day: "일", value: 79 },
-];
-
-const notifications = [
-  { title: "새 문의 3건", description: "문의폼 확인이 필요합니다.", type: "danger", href: "#inquiries" },
-  { title: "도메인 만료 D-30", description: "연결된 도메인 갱신 일정을 확인하세요.", type: "warning", href: "/dashboard/settings" },
-  { title: "업데이트 안내", description: "게시글 관리 화면이 개선되었습니다.", type: "info", href: "/dashboard/content/posts" },
 ];
 
 const quickActions = [
@@ -123,6 +81,107 @@ export default async function DashboardPage() {
     updatedAt: "2026.06.05",
     publishedAt: "-",
   };
+  const [submissions, sitemapPages] = await Promise.all([
+    getDashboardContactSubmissions(),
+    getDashboardSitePages(site.id),
+  ]);
+  const flatPages = sitemapPages.flatMap(function flatten(page): typeof sitemapPages {
+    return [page, ...page.children.flatMap(flatten)];
+  });
+  const newInquiryCount = submissions.filter((submission) => submission.status === "new").length;
+  const inProgressInquiryCount = submissions.filter((submission) => submission.status === "in_progress").length;
+  const publicPageCount = flatPages.filter((page) => !page.isHidden).length;
+  const operationMetrics = [
+    {
+      id: "sites",
+      label: "사이트수",
+      value: sites.length.toLocaleString("ko-KR"),
+      caption: site.status === "published" ? "대표 사이트 공개 중" : "대표 사이트 초안",
+      href: "/dashboard/sites",
+      delta: site.status,
+      positive: site.status === "published",
+    },
+    {
+      id: "inquiries",
+      label: "문의현황",
+      value: submissions.length.toLocaleString("ko-KR"),
+      caption: `신규 ${newInquiryCount.toLocaleString("ko-KR")}건 · 처리 중 ${inProgressInquiryCount.toLocaleString("ko-KR")}건`,
+      href: "/dashboard/content/forms",
+      delta: newInquiryCount ? `${newInquiryCount}건 확인` : "대기 없음",
+      positive: newInquiryCount === 0,
+    },
+    {
+      id: "pages",
+      label: "페이지수",
+      value: flatPages.length.toLocaleString("ko-KR"),
+      caption: `노출 ${publicPageCount.toLocaleString("ko-KR")}개`,
+      href: `/dashboard/sites/${site.id}/sitemap`,
+      delta: "+ 관리",
+      positive: true,
+    },
+    {
+      id: "storage",
+      label: "운영상태",
+      value: site.status === "published" ? "공개" : "초안",
+      caption: `최근 수정 ${site.updatedAt}`,
+      href: `/dashboard/sites/${site.id}`,
+      delta: site.publishedAt === "-" ? "게시 필요" : "게시 완료",
+      positive: site.status === "published",
+    },
+  ];
+  const notifications = [
+    {
+      title: newInquiryCount ? `새 문의 ${newInquiryCount}건` : "새 문의 없음",
+      description: newInquiryCount
+        ? "문의폼 확인 후 처리 상태를 변경하세요."
+        : "신규 문의가 접수되면 이 영역과 문의폼 메뉴에서 바로 확인됩니다.",
+      type: newInquiryCount ? "danger" : "info",
+      href: "/dashboard/content/forms",
+    },
+    {
+      title: site.status === "published" ? "공개 사이트 점검" : "게시 전 초안 확인",
+      description:
+        site.status === "published"
+          ? "공개 페이지와 문의폼이 정상 동작하는지 확인하세요."
+          : "사이트맵 페이지별 초안 미리보기 후 게시하세요.",
+      type: site.status === "published" ? "info" : "warning",
+      href: site.status === "published" ? `/s/${site.slug}` : `/dashboard/sites/${site.id}/sitemap`,
+    },
+    {
+      title: "고객 운영 안내",
+      description: "게시글, 문의, 미디어, 팝업은 콘텐츠 메뉴에서 관리합니다.",
+      type: "info",
+      href: "/dashboard/content",
+    },
+  ];
+  const launchChecklist = [
+    {
+      title: "권한 확인",
+      description: "고객 계정으로 로그인했을 때 내 사이트와 콘텐츠만 보이는지 확인하세요.",
+      href: "/dashboard/settings",
+      done: true,
+    },
+    {
+      title: "문의 관리",
+      description: newInquiryCount
+        ? `신규 문의 ${newInquiryCount}건을 처리하세요.`
+        : "문의 접수 후 상태 변경과 메모 저장이 가능한지 확인하세요.",
+      href: "/dashboard/content/forms",
+      done: newInquiryCount === 0,
+    },
+    {
+      title: "공개 페이지 QA",
+      description: "메인, 회사소개, 게시글, 문의폼, 팝업을 모바일/PC에서 확인하세요.",
+      href: `/dashboard/sites/${site.id}/sitemap`,
+      done: site.status === "published",
+    },
+    {
+      title: "고객 운영 안내",
+      description: "고객에게 게시글 작성, 문의 처리, 이미지 업로드 위치를 안내하세요.",
+      href: "/dashboard/content",
+      done: true,
+    },
+  ];
 
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
@@ -192,17 +251,17 @@ export default async function DashboardPage() {
               <div className="mt-6 flex flex-wrap gap-2">
                 <Link
                   className={buttonVariants({ size: "lg", variant: "default" })}
-                  href="/dashboard/content/posts/new"
+                  href={`/dashboard/sites/${site.id}/sitemap`}
                 >
-                  게시글 작성하기
+                  오픈 전 확인하기
                   <ArrowRight />
                 </Link>
                 <Link
                   className={buttonVariants({ size: "lg", variant: "outline" })}
-                  href="#ai-helper"
+                  href="/dashboard/content/forms"
                 >
-                  <Sparkles />
-                  AI로 콘텐츠 생성
+                  <Inbox />
+                  문의 확인
                 </Link>
               </div>
             </div>
@@ -252,6 +311,35 @@ export default async function DashboardPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-4">
+          {launchChecklist.map((item) => (
+            <Link
+              className="group rounded-xl border border-border bg-white p-4 transition-colors hover:border-zinc-950 hover:bg-zinc-50"
+              href={item.href}
+              key={item.title}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">{item.title}</p>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                    {item.description}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "mt-0.5 rounded-full px-2 py-1 text-[11px] font-semibold",
+                    item.done
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-amber-50 text-amber-600",
+                  )}
+                >
+                  {item.done ? "확인" : "필요"}
+                </span>
+              </div>
+            </Link>
+          ))}
         </section>
 
         {/* 섹션 3: 운영 현황 + 알림 */}

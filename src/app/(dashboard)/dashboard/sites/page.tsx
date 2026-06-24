@@ -78,6 +78,13 @@ export default async function SitesPage() {
               <Button
                 size="sm"
                 variant="outline"
+                render={<Link href={`/dashboard/sites/${site.id}/sitemap`} />}
+              >
+                페이지
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
                 render={<Link href={`/dashboard/sites/${site.id}/settings`} />}
               >
                 설정

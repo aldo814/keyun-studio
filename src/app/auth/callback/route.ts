@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { resolvePostLoginPath, sanitizeDashboardNext } from "@/features/auth/post-login-redirect";
 import { hasAnySiteForUser } from "@/features/auth/session-context";
+import { isConfiguredSuperAdminEmail, resolveEffectiveRole } from "@/lib/auth/super-admin";
 import { createClient } from "@/lib/supabase/server";
 
 function getCookieValue(request: NextRequest, key: string) {
@@ -55,11 +56,21 @@ export async function GET(request: NextRequest) {
         };
 
         const profileResult = existingProfile?.id
-          ? await supabase.from("profiles").update(profilePayload).eq("id", user.id)
+          ? await supabase
+              .from("profiles")
+              .update({
+                ...profilePayload,
+                ...(isConfiguredSuperAdminEmail(user.email ?? preferredEmail)
+                  ? { role: "super_admin" }
+                  : {}),
+              })
+              .eq("id", user.id)
           : await supabase.from("profiles").insert({
               id: user.id,
               ...profilePayload,
-              role: "user",
+              role: isConfiguredSuperAdminEmail(user.email ?? preferredEmail)
+                ? "super_admin"
+                : "user",
             });
 
         if (profileResult.error) {
@@ -90,7 +101,10 @@ export async function GET(request: NextRequest) {
         const destination = resolvePostLoginPath({
           hasSites: await hasAnySiteForUser(supabase, user.id),
           requestedNext: next,
-          role: freshProfile?.role ?? existingProfile?.role ?? "user",
+          role: resolveEffectiveRole(
+            freshProfile?.role ?? existingProfile?.role,
+            user.email ?? preferredEmail,
+          ),
         });
 
         const response = NextResponse.redirect(`${origin}${destination}`);

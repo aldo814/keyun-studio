@@ -221,10 +221,11 @@ export function ContentPostEditor({
 
     if (isEdit && post?.id) {
       localPosts.updatePost(post.id, payload);
+      router.push("/dashboard/content/posts/" + post.id + "?notice=post_updated");
     } else {
-      localPosts.createPost(payload);
+      const created = localPosts.createPost(payload);
+      router.push("/dashboard/content/posts/" + created.id + "?notice=post_created");
     }
-    router.push("/dashboard/content/posts");
   }
 
   const toolbarItems = [

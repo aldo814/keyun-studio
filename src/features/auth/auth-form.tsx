@@ -16,6 +16,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { resolvePostLoginPath, sanitizeDashboardNext } from "@/features/auth/post-login-redirect";
 import { hasAnySiteForUser } from "@/features/auth/session-context";
+import {
+  getConfiguredSuperAdminEmail,
+  isConfiguredSuperAdminEmail,
+  resolveEffectiveRole,
+} from "@/lib/auth/super-admin";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup";
@@ -24,6 +29,18 @@ type SocialProvider = "google" | "kakao" | "custom:naver";
 type AuthFormProps = {
   mode: AuthMode;
 };
+
+const SUPER_ADMIN_LOGIN_ID = "admin";
+
+function normalizeLoginEmail(input: string) {
+  const trimmed = input.trim();
+
+  if (trimmed.toLowerCase() === SUPER_ADMIN_LOGIN_ID) {
+    return getConfiguredSuperAdminEmail();
+  }
+
+  return trimmed;
+}
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
@@ -77,7 +94,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     return callbackUrl.toString();
   }
 
-  async function trackProfileLogin() {
+  async function trackProfileLogin(authEmail: string) {
     const supabase = createClient();
     const {
       data: { user },
@@ -91,7 +108,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
 
     const profilePayload = {
-      email: user.email ?? email,
+      email: user.email ?? authEmail,
       name: name || socialName || user.user_metadata?.name || user.email || "",
       username: name || socialName || user.user_metadata?.name || "",
       last_seen_at: new Date().toISOString(),
@@ -104,16 +121,24 @@ export function AuthForm({ mode }: AuthFormProps) {
       .maybeSingle();
 
     const profileResult = existingProfile?.id
-      ? await supabase.from("profiles").update(profilePayload).eq("id", user.id)
+      ? await supabase
+          .from("profiles")
+          .update({
+            ...profilePayload,
+            ...(isConfiguredSuperAdminEmail(user.email ?? authEmail)
+              ? { role: "super_admin" }
+              : {}),
+          })
+          .eq("id", user.id)
       : await supabase.from("profiles").insert({
           id: user.id,
           ...profilePayload,
-          role: "user",
+          role: isConfiguredSuperAdminEmail(user.email ?? authEmail) ? "super_admin" : "user",
         });
 
     if (profileResult.error) {
       const fallbackPayload = {
-        email: user.email ?? email,
+        email: user.email ?? authEmail,
         name: name || socialName || user.user_metadata?.name || user.email || "",
       };
 
@@ -138,7 +163,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     return {
       hasSites: await hasAnySiteForUser(supabase, user.id),
-      role: freshProfile?.role ?? "user",
+      role: resolveEffectiveRole(freshProfile?.role, user.email ?? authEmail),
     };
   }
 
@@ -148,9 +173,11 @@ export function AuthForm({ mode }: AuthFormProps) {
     setMessage("");
 
     try {
-      if (!email || !password) {
+      const authEmail = isSignup ? email.trim() : normalizeLoginEmail(email);
+
+      if (!authEmail || !password) {
         setMessageTone("error");
-        setMessage("이메일과 비밀번호를 입력해줘.");
+        setMessage(isSignup ? "이메일과 비밀번호를 입력해줘." : "아이디 또는 이메일과 비밀번호를 입력해줘.");
         return;
       }
 
@@ -164,7 +191,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       if (isSignup) {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: authEmail,
           password,
           options: {
             emailRedirectTo: getAuthCallbackUrl(),
@@ -186,7 +213,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: authEmail,
         password,
       });
 
@@ -196,7 +223,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
-      const loginContext = await trackProfileLogin();
+      const loginContext = await trackProfileLogin(authEmail);
 
       if (rememberEmail) {
         window.localStorage.setItem("keyun_login_email", email);
@@ -340,13 +367,15 @@ export function AuthForm({ mode }: AuthFormProps) {
               </label>
             ) : null}
             <label className="space-y-2">
-              <span className="text-sm font-medium text-foreground">이메일</span>
+              <span className="text-sm font-medium text-foreground">
+                {isSignup ? "이메일" : "아이디 또는 이메일"}
+              </span>
               <Input
                 required
-                type="email"
+                type={isSignup ? "email" : "text"}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="eunyo@example.com"
+                placeholder={isSignup ? "eunyo@example.com" : "admin 또는 eunyo@example.com"}
               />
             </label>
             <label className="space-y-2">

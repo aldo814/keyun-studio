@@ -6,6 +6,7 @@ import {
   Bell,
   ChevronRight,
   Command,
+  LayoutDashboard,
   Menu,
   Search,
   ShieldCheck,
@@ -94,6 +95,14 @@ export function AdminShell({
             </div>
             <Button variant="outline" size="icon-lg" className="ml-auto md:ml-0">
               <Bell className="size-5" />
+            </Button>
+            <Button
+              className="hidden gap-2 sm:inline-flex"
+              render={<Link href="/dashboard" />}
+              variant="outline"
+            >
+              <LayoutDashboard className="size-4" />
+              일반 관리자 보기
             </Button>
             <div className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
               <div className="size-8 rounded-full bg-primary" />

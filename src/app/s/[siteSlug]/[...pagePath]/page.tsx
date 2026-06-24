@@ -4,12 +4,13 @@ import { notFound } from "next/navigation";
 import {
   getActivePopupsBySiteSlug,
   getPublishedPostsBySiteSlug,
-  getPublishedSiteBySlug,
+  getPublishedSitePageBySlug,
 } from "@/features/dashboard/queries";
 import { PublicSiteRenderer } from "@/features/site/public-site-renderer";
 
-type PublishedSitePageProps = {
+type PublishedSubPageProps = {
   params: Promise<{
+    pagePath: string[];
     siteSlug: string;
   }>;
   searchParams?: Promise<{
@@ -25,44 +26,41 @@ function firstSearchValue(value: string | string[] | undefined) {
   return value ?? "";
 }
 
+function pathFromSegments(segments: string[]) {
+  return `/${segments.map((segment) => decodeURIComponent(segment)).join("/")}`;
+}
+
 export async function generateMetadata({
   params,
-}: PublishedSitePageProps): Promise<Metadata> {
-  const { siteSlug } = await params;
-  const published = await getPublishedSiteBySlug(siteSlug);
+}: PublishedSubPageProps): Promise<Metadata> {
+  const { pagePath, siteSlug } = await params;
+  const published = await getPublishedSitePageBySlug(siteSlug, pathFromSegments(pagePath));
 
-  if (!published) {
+  if (!published || !published.page) {
     return {
       title: "Not Found",
       robots: {
-        index: false,
         follow: false,
+        index: false,
       },
     };
   }
 
-  const { site, seo } = published;
-  const title = seo?.title || site.name;
+  const { page, seo, site } = published;
+  const title = page.title ? `${page.title} | ${site.name}` : seo?.title || site.name;
   const description = seo?.description || "";
-  const ogTitle = seo?.ogTitle || title;
-  const ogDescription = seo?.ogDescription || description;
 
   return {
     title,
     description,
-    alternates: seo?.canonicalUrl
-      ? {
-          canonical: seo.canonicalUrl,
-        }
-      : undefined,
     openGraph: {
-      title: ogTitle,
-      description: ogDescription,
+      title,
+      description,
       images: seo?.ogImageUrl ? [seo.ogImageUrl] : undefined,
     },
     robots: {
-      index: seo?.robotsIndex ?? true,
       follow: seo?.robotsFollow ?? true,
+      index: seo?.robotsIndex ?? true,
     },
     icons: seo?.faviconUrl
       ? {
@@ -72,14 +70,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function PublishedSitePage({
+export default async function PublishedSubPage({
   params,
   searchParams,
-}: PublishedSitePageProps) {
-  const { siteSlug } = await params;
+}: PublishedSubPageProps) {
+  const { pagePath, siteSlug } = await params;
   const query = await searchParams;
+  const publicPath = pathFromSegments(pagePath);
   const [published, posts, popups] = await Promise.all([
-    getPublishedSiteBySlug(siteSlug),
+    getPublishedSitePageBySlug(siteSlug, publicPath),
     getPublishedPostsBySiteSlug(siteSlug),
     getActivePopupsBySiteSlug(siteSlug),
   ]);

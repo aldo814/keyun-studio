@@ -1,4 +1,5 @@
 export const FALLBACK_DASHBOARD_PATH = "/dashboard";
+export const SUPER_ADMIN_PATH = "/admin";
 export const USER_CONTENT_PATH = "/dashboard/content";
 export const SITE_ONBOARDING_PATH = "/dashboard/sites/new";
 
@@ -47,6 +48,14 @@ export function resolvePostLoginPath({
   const isSuperAdmin = role === "super_admin";
 
   if (isSuperAdmin) {
+    if (
+      safeNext === FALLBACK_DASHBOARD_PATH ||
+      safeNext === USER_CONTENT_PATH ||
+      safeNext === SITE_ONBOARDING_PATH
+    ) {
+      return SUPER_ADMIN_PATH;
+    }
+
     return safeNext;
   }
 

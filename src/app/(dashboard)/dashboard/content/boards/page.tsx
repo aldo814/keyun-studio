@@ -1,16 +1,26 @@
-import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Save } from "lucide-react";
 
+import { ActionFeedback } from "@/components/dashboard/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   createContentBoard,
-  deleteContentBoard,
   moveContentBoard,
   updateContentBoard,
 } from "@/features/dashboard/actions";
+import { DeleteBoardButton } from "@/features/dashboard/delete-board-button";
 import { getDashboardContentBoards } from "@/features/dashboard/queries";
 
-export default async function DashboardBoardsPage() {
+type Props = {
+  searchParams?: Promise<{ notice?: string | string[] }>;
+};
+
+function firstSearchValue(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function DashboardBoardsPage({ searchParams }: Props) {
+  const query = await searchParams;
   const boards = await getDashboardContentBoards();
   const editableBoards = boards.filter((board) => Boolean(board.id));
   const fallbackMode = editableBoards.length === 0;
@@ -18,6 +28,8 @@ export default async function DashboardBoardsPage() {
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-6">
+        <ActionFeedback notice={firstSearchValue(query?.notice)} />
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-medium text-muted-foreground">콘텐츠 / 게시판</p>
@@ -144,17 +156,7 @@ export default async function DashboardBoardsPage() {
                               <ArrowDown />
                             </Button>
                           </form>
-                          <form action={deleteContentBoard}>
-                            <input name="board_id" type="hidden" value={board.id || ""} />
-                            <Button
-                              size="icon"
-                              title="삭제"
-                              type="submit"
-                              variant="destructive"
-                            >
-                              <Trash2 />
-                            </Button>
-                          </form>
+                          <DeleteBoardButton boardId={board.id || ""} name={board.name} />
                         </>
                       ) : (
                         <span className="rounded-full bg-muted px-3 py-2 text-xs text-muted-foreground">

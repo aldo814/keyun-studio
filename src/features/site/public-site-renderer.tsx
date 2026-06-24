@@ -1,5 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 
+import type { DashboardPost } from "@/features/dashboard/content-posts-data";
+import type { DashboardPopup } from "@/features/dashboard/queries";
+import { submitPublicContact } from "@/features/site/actions";
+import { PublicPopups } from "@/features/site/public-popups";
 import type { Json } from "@/types/database";
 
 type PublicSection = Record<string, unknown>;
@@ -48,9 +52,14 @@ type PublicPageJson = {
 };
 
 type PublicSiteRendererProps = {
+  contactResult?: string;
+  contactEnabled?: boolean;
   description?: string;
+  popups?: DashboardPopup[];
   publishedJson: Json;
+  posts?: DashboardPost[];
   siteName: string;
+  siteSlug?: string;
 };
 
 const defaultDesign: PublicDesign = {
@@ -469,11 +478,13 @@ function PublicHeader({
   navigation,
   pages,
   siteName,
+  siteSlug,
 }: {
   design: PublicDesign;
   navigation: PublicNavigationItem[];
   pages: PublicPageItem[];
   siteName: string;
+  siteSlug: string;
 }) {
   const pageById = new Map(pages.map((page) => [page.id, page]));
   const navItems = navigation
@@ -481,6 +492,17 @@ function PublicHeader({
     .map((item) => ({ ...item, page: pageById.get(item.pageId) }))
     .filter((item) => item.page?.status === "public");
   const headerLayout = design.headerLayout;
+  const publicHref = (path?: string) => {
+    if (!siteSlug) return path || "#";
+    if (!path || path === "#") return "#";
+    if (path.startsWith("http") || path.startsWith("tel:") || path.startsWith("mailto:")) {
+      return path;
+    }
+    if (path.startsWith("#")) return path;
+    if (path === "/") return `/s/${siteSlug}`;
+
+    return `/s/${siteSlug}${path.startsWith("/") ? path : `/${path}`}`;
+  };
 
   return (
     <header
@@ -496,7 +518,7 @@ function PublicHeader({
         style={{ maxWidth: siteWidth(design.innerWidth) }}
       >
         <div className={`flex min-w-0 items-center ${headerLayout === "left" ? "flex-1 gap-10" : "gap-4"}`}>
-          <a className="flex shrink-0 items-center gap-2 text-xl font-bold" href="#">
+          <a className="flex shrink-0 items-center gap-2 text-xl font-bold" href={publicHref("/")}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img alt={siteName} className="h-8 w-auto" src="/keyun-logo.svg" />
             <span className="sr-only">{siteName}</span>
@@ -504,7 +526,7 @@ function PublicHeader({
           {headerLayout === "left" ? (
             <nav className="hidden min-w-0 items-center gap-8 text-sm font-semibold md:flex">
               {navItems.map((item) => (
-                <a key={item.id} href={item.page?.path ?? "#"}>
+                <a key={item.id} href={publicHref(item.page?.path)}>
                   {item.label}
                 </a>
               ))}
@@ -515,7 +537,7 @@ function PublicHeader({
         {headerLayout !== "left" ? (
           <nav className={`hidden items-center text-sm font-semibold md:flex ${headerLayout === "cta" ? "gap-7" : "gap-10"}`}>
             {navItems.slice(0, 4).map((item) => (
-              <a key={item.id} href={item.page?.path ?? "#"}>
+              <a key={item.id} href={publicHref(item.page?.path)}>
                 {item.label}
               </a>
             ))}
@@ -752,6 +774,20 @@ function ContentSection({
           <p className="mt-5" style={descriptionStyle(section, design)}>
             {stringValue(section, "description")}
           </p>
+          {stringValue(section, "bodyText") ? (
+            <div
+              className="mt-8 max-w-3xl whitespace-pre-line text-base leading-8"
+              style={{
+                color: stringValue(section, "descriptionColor", design.textColor),
+                fontFamily: fontStack(
+                  stringValue(section, "descriptionFontFamily", design.bodyFontFamily),
+                  design.bodyFontFamily,
+                ),
+              }}
+            >
+              {stringValue(section, "bodyText")}
+            </div>
+          ) : null}
         </div>
         {mediaPosition !== "left" ? <div className="lg:order-2">{visual}</div> : null}
       </div>
@@ -785,6 +821,224 @@ function CtaSection({ design, section }: { design: PublicDesign; section: Public
         ) : null}
       </div>
     </SectionShell>
+  );
+}
+
+function LatestPostsSection({
+  design,
+  posts,
+  siteSlug,
+}: {
+  design: PublicDesign;
+  posts: DashboardPost[];
+  siteSlug: string;
+}) {
+  if (!posts.length) {
+    return null;
+  }
+
+  const visiblePosts = posts.slice(0, 3);
+
+  return (
+    <section className="px-6 py-4">
+      <div
+        className="mx-auto rounded-[24px] border border-slate-200 bg-white px-6 py-12 md:px-10"
+        style={{ maxWidth: siteWidth(design.innerWidth) }}
+      >
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-bold" style={{ color: design.mainColor }}>
+              News
+            </p>
+            <h2
+              className="mt-3 text-3xl font-bold tracking-normal"
+              style={{
+                color: design.textColor,
+                fontFamily: fontStack(design.headingFontFamily, "system"),
+              }}
+            >
+              최근 게시글
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-slate-500">
+              관리자에서 게시한 글이 사용자 페이지에 자동으로 노출됩니다.
+            </p>
+          </div>
+          <a
+            className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 px-5 text-sm font-bold"
+            href={`/s/${siteSlug}/posts`}
+          >
+            전체 보기
+          </a>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {visiblePosts.map((post) => (
+            <a
+              className="group flex min-h-56 flex-col rounded-2xl border border-slate-200 bg-slate-50/60 p-6 transition hover:-translate-y-1 hover:border-blue-200 hover:bg-white"
+              href={`/s/${siteSlug}/posts/${post.slug || post.id}`}
+              key={post.id}
+            >
+              <div className="flex flex-wrap gap-2 text-xs font-bold">
+                <span
+                  className="rounded-full px-2.5 py-1"
+                  style={{
+                    backgroundColor: `${design.mainColor}12`,
+                    color: design.mainColor,
+                  }}
+                >
+                  {post.board}
+                </span>
+                {post.category ? (
+                  <span className="rounded-full bg-white px-2.5 py-1 text-slate-500">
+                    {post.category}
+                  </span>
+                ) : null}
+              </div>
+              <h3
+                className="mt-5 text-xl font-bold leading-snug tracking-normal transition group-hover:text-blue-600"
+                style={{ fontFamily: fontStack(design.headingFontFamily, "system") }}
+              >
+                {post.title}
+              </h3>
+              <p className="mt-4 line-clamp-3 text-sm leading-7 text-slate-500">
+                {post.summary || post.content}
+              </p>
+              <div className="mt-auto pt-6 text-sm font-semibold text-slate-400">
+                {post.updatedAt}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ContactSection({
+  contactEnabled,
+  contactResult,
+  design,
+  siteName,
+  siteSlug,
+}: {
+  contactEnabled: boolean;
+  contactResult?: string;
+  design: PublicDesign;
+  siteName: string;
+  siteSlug: string;
+}) {
+  return (
+    <section className="px-6 py-4" id="contact">
+      <div
+        className="mx-auto grid gap-8 rounded-[24px] border border-slate-200 bg-slate-950 p-6 text-white md:grid-cols-[0.9fr_1.1fr] md:p-10"
+        style={{ maxWidth: siteWidth(design.innerWidth) }}
+      >
+        <div>
+          <p className="text-sm font-bold" style={{ color: design.footerAccentColor }}>
+            Contact
+          </p>
+          <h2
+            className="mt-3 text-3xl font-bold tracking-normal"
+            style={{ fontFamily: fontStack(design.headingFontFamily, "system") }}
+          >
+            문의를 남겨주세요
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-slate-300">
+            {siteName} 담당자가 문의 내용을 확인한 뒤 연락드립니다.
+          </p>
+          {contactResult === "sent" ? (
+            <p className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100">
+              문의가 접수되었습니다.
+            </p>
+          ) : null}
+          {contactResult === "failed" ? (
+            <p className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm font-semibold text-rose-100">
+              문의 접수에 실패했습니다. 이름, 연락처, 문의 내용을 확인해 주세요.
+            </p>
+          ) : null}
+          {!contactEnabled ? (
+            <p className="mt-6 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-semibold text-amber-100">
+              이 화면은 DB에 연결되지 않은 데모 미리보기입니다. 실제 문의 저장은 게시된 사이트에서 동작합니다.
+            </p>
+          ) : null}
+        </div>
+
+        <form action={submitPublicContact} className="grid gap-3 rounded-2xl bg-white p-4 text-slate-950 md:p-5">
+          <input name="site_slug" type="hidden" value={siteSlug} />
+          <input name="source_path" type="hidden" value={`/s/${siteSlug}`} />
+          <input
+            aria-hidden="true"
+            autoComplete="off"
+            className="hidden"
+            name="company"
+            tabIndex={-1}
+            type="text"
+          />
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="grid gap-1.5 text-xs font-bold text-slate-500">
+              이름
+              <input
+                autoComplete="name"
+                className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-950 outline-none focus:border-slate-950"
+                name="name"
+                placeholder="홍길동"
+                required
+              />
+            </label>
+            <label className="grid gap-1.5 text-xs font-bold text-slate-500">
+              연락처
+              <input
+                autoComplete="tel"
+                className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-950 outline-none focus:border-slate-950"
+                name="phone"
+                placeholder="010-0000-0000"
+              />
+            </label>
+          </div>
+          <label className="grid gap-1.5 text-xs font-bold text-slate-500">
+            이메일
+            <input
+              autoComplete="email"
+              className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-950 outline-none focus:border-slate-950"
+              name="email"
+              placeholder="hello@example.com"
+              type="email"
+            />
+          </label>
+          <label className="grid gap-1.5 text-xs font-bold text-slate-500">
+            제목
+            <input
+              className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-950 outline-none focus:border-slate-950"
+              name="subject"
+              placeholder="문의 제목"
+            />
+          </label>
+          <label className="grid gap-1.5 text-xs font-bold text-slate-500">
+            문의 내용
+            <textarea
+              className="min-h-32 resize-y rounded-xl border border-slate-200 px-3 py-3 text-sm leading-6 text-slate-950 outline-none focus:border-slate-950"
+              name="message"
+              placeholder="궁금한 내용을 남겨주세요."
+              required
+            />
+          </label>
+          <p className="text-xs leading-5 text-slate-500">
+            연락처 또는 이메일 중 하나는 꼭 입력해 주세요.
+          </p>
+          <button
+            className="mt-2 inline-flex h-12 items-center justify-center rounded-xl px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!contactEnabled}
+            style={{ backgroundColor: contactEnabled ? design.mainColor : "#94a3b8" }}
+            type="submit"
+          >
+            {contactEnabled ? "문의 보내기" : "데모에서는 저장 불가"}
+          </button>
+          <p className="text-xs leading-5 text-slate-400">
+            제출한 정보는 문의 응대 목적으로만 사용됩니다.
+          </p>
+        </form>
+      </div>
+    </section>
   );
 }
 
@@ -890,9 +1144,14 @@ function PublicSectionRenderer({
 }
 
 export function PublicSiteRenderer({
+  contactEnabled = true,
+  contactResult,
   description,
+  popups = [],
   publishedJson,
+  posts = [],
   siteName,
+  siteSlug = "",
 }: PublicSiteRendererProps) {
   const page = normalizePageJson(publishedJson);
   const { design, navigation, pages, sections } = page;
@@ -905,7 +1164,13 @@ export function PublicSiteRenderer({
         fontFamily: fontStack(design.bodyFontFamily, "system"),
       }}
     >
-      <PublicHeader design={design} navigation={navigation} pages={pages} siteName={siteName} />
+      <PublicHeader
+        design={design}
+        navigation={navigation}
+        pages={pages}
+        siteName={siteName}
+        siteSlug={siteSlug}
+      />
       <main style={{ display: "grid", gap: `${Math.max(0, Number(design.sectionGap) || 0)}px` }}>
         {sections.map((section, index) => (
           <PublicSectionRenderer
@@ -923,8 +1188,19 @@ export function PublicSiteRenderer({
             </div>
           </section>
         ) : null}
+        {siteSlug ? <LatestPostsSection design={design} posts={posts} siteSlug={siteSlug} /> : null}
+        {siteSlug ? (
+          <ContactSection
+            contactEnabled={contactEnabled}
+            contactResult={contactResult}
+            design={design}
+            siteName={siteName}
+            siteSlug={siteSlug}
+          />
+        ) : null}
       </main>
       <PublicFooter design={design} siteName={siteName} />
+      {siteSlug ? <PublicPopups popups={popups} siteSlug={siteSlug} /> : null}
     </div>
   );
 }

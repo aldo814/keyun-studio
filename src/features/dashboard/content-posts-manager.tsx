@@ -9,9 +9,20 @@ import {
   useReactTable,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { Pencil, Pin, Plus, Search } from "lucide-react";
+import {
+  CalendarClock,
+  CheckCircle2,
+  DraftingCompass,
+  Eye,
+  FileText,
+  Pencil,
+  Pin,
+  Plus,
+  Search,
+} from "lucide-react";
 
 import { StatusBadge } from "@/components/admin/status-badge";
+import { ActionFeedback } from "@/components/dashboard/action-feedback";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,16 +44,27 @@ import { usePosts } from "@/lib/posts-store";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  notice?: string;
   posts: DashboardPost[];
   useLocalFallback?: boolean;
 };
 
-export function ContentPostsManager({ posts, useLocalFallback = false }: Props) {
+export function ContentPostsManager({ notice, posts, useLocalFallback = false }: Props) {
   const router = useRouter();
   const localPosts = usePosts();
   const visiblePosts = useLocalFallback ? localPosts.posts : posts;
   const [activeStatus, setActiveStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const summary = useMemo(() => {
+    return {
+      all: visiblePosts.length,
+      draft: visiblePosts.filter((post) => post.status === "draft").length,
+      pinned: visiblePosts.filter((post) => post.pinned).length,
+      published: visiblePosts.filter((post) => post.status === "published").length,
+      scheduled: visiblePosts.filter((post) => post.status === "scheduled").length,
+      views: visiblePosts.reduce((total, post) => total + post.views, 0),
+    };
+  }, [visiblePosts]);
 
   const filteredPosts = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -149,11 +171,26 @@ export function ContentPostsManager({ posts, useLocalFallback = false }: Props) 
         header: () => null,
         cell: ({ row }) => {
           const post = row.original;
+          const publicHref =
+            post.status === "published" && post.siteSlug
+              ? `/s/${post.siteSlug}/posts/${post.slug || post.id}`
+              : "";
+
           return (
             <div
               className="flex items-center justify-end gap-0.5"
               onClick={(e) => e.stopPropagation()}
             >
+              {publicHref ? (
+                <Link
+                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  href={publicHref}
+                  target="_blank"
+                  title="공개 글 보기"
+                >
+                  <Eye className="size-3.5" />
+                </Link>
+              ) : null}
               {useLocalFallback ? (
                 <button
                   className={cn(
@@ -225,6 +262,90 @@ export function ContentPostsManager({ posts, useLocalFallback = false }: Props) 
           </Link>
         </div>
 
+        <ActionFeedback notice={notice} />
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <button
+            className={cn(
+              "rounded-xl border bg-white p-4 text-left transition-colors hover:border-foreground",
+              activeStatus === "all" ? "border-foreground" : "border-border",
+            )}
+            type="button"
+            onClick={() => setActiveStatus("all")}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-muted-foreground">전체 글</p>
+              <FileText className="size-5 text-muted-foreground" />
+            </div>
+            <p className="mt-3 text-2xl font-bold tracking-tight">
+              {summary.all.toLocaleString("ko-KR")}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              고정글 {summary.pinned.toLocaleString("ko-KR")}개
+            </p>
+          </button>
+
+          <button
+            className={cn(
+              "rounded-xl border bg-white p-4 text-left transition-colors hover:border-foreground",
+              activeStatus === "published" ? "border-foreground" : "border-border",
+            )}
+            type="button"
+            onClick={() => setActiveStatus("published")}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-muted-foreground">게시 중</p>
+              <CheckCircle2 className="size-5 text-emerald-500" />
+            </div>
+            <p className="mt-3 text-2xl font-bold tracking-tight">
+              {summary.published.toLocaleString("ko-KR")}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              방문자에게 공개된 글
+            </p>
+          </button>
+
+          <button
+            className={cn(
+              "rounded-xl border bg-white p-4 text-left transition-colors hover:border-foreground",
+              activeStatus === "draft" ? "border-foreground" : "border-border",
+            )}
+            type="button"
+            onClick={() => setActiveStatus("draft")}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-muted-foreground">임시저장</p>
+              <DraftingCompass className="size-5 text-slate-500" />
+            </div>
+            <p className="mt-3 text-2xl font-bold tracking-tight">
+              {summary.draft.toLocaleString("ko-KR")}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              아직 공개하지 않은 글
+            </p>
+          </button>
+
+          <button
+            className={cn(
+              "rounded-xl border bg-white p-4 text-left transition-colors hover:border-foreground",
+              activeStatus === "scheduled" ? "border-foreground" : "border-border",
+            )}
+            type="button"
+            onClick={() => setActiveStatus("scheduled")}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-muted-foreground">예약</p>
+              <CalendarClock className="size-5 text-amber-500" />
+            </div>
+            <p className="mt-3 text-2xl font-bold tracking-tight">
+              {summary.scheduled.toLocaleString("ko-KR")}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              총 조회 {summary.views.toLocaleString("ko-KR")}
+            </p>
+          </button>
+        </div>
+
         {/* 검색 + 필터 */}
         <div className="space-y-3">
           <div className="relative max-w-sm">
@@ -278,7 +399,7 @@ export function ContentPostsManager({ posts, useLocalFallback = false }: Props) 
                       className={cn(
                         "h-10 px-4 text-xs font-semibold text-muted-foreground",
                         header.column.id === "title" && "min-w-[320px]",
-                        header.column.id === "actions" && "w-[72px]",
+                        header.column.id === "actions" && "w-[100px]",
                         header.column.id === "views" && "w-[80px]",
                         header.column.id === "status" && "w-[100px]",
                         header.column.id === "author" && "w-[100px]",

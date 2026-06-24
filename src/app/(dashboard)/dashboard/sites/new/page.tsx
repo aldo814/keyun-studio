@@ -35,8 +35,22 @@ const launchSteps = [
 const businessTypes = ["병원/의료", "교육", "전문서비스", "브랜드/쇼핑", "포트폴리오", "기타"];
 const launchGoals = ["회사 소개", "문의 수집", "콘텐츠 운영", "예약/상담", "서비스 홍보"];
 
-export default async function NewSitePage() {
+type NewSitePageProps = {
+  searchParams?: Promise<{ templateId?: string | string[] }>;
+};
+
+function firstSearchValue(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function NewSitePage({ searchParams }: NewSitePageProps) {
+  const query = await searchParams;
+  const selectedTemplateId = firstSearchValue(query?.templateId);
   const templates = await getDashboardTemplates();
+  const selectedTemplateIndex = Math.max(
+    0,
+    templates.findIndex((template) => template.id === selectedTemplateId),
+  );
 
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
@@ -87,7 +101,7 @@ export default async function NewSitePage() {
         </section>
 
         <form action={createDashboardSite} className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <input name="completion_path" type="hidden" value="/dashboard/content/posts" />
+          <input name="completion_path" type="hidden" value="/dashboard/sites/:siteId" />
 
           <div className="space-y-6">
             <Card className="rounded-xl border-border bg-card">
@@ -211,7 +225,7 @@ export default async function NewSitePage() {
                       <div className="flex items-start gap-3">
                         <input
                           className="mt-1"
-                          defaultChecked={index === 0}
+                          defaultChecked={index === selectedTemplateIndex}
                           name="template_id"
                           type="radio"
                           value={template.id}

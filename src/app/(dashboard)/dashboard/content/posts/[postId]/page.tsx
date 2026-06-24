@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Eye, Pencil, Pin } from "lucide-react";
 
 import { StatusBadge } from "@/components/admin/status-badge";
+import { ActionFeedback } from "@/components/dashboard/action-feedback";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -11,15 +12,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { statusLabel, statusTone } from "@/features/dashboard/content-posts-data";
+import { DeletePostButton } from "@/features/dashboard/delete-post-button";
 import { getDashboardPost } from "@/features/dashboard/queries";
 import { cn } from "@/lib/utils";
 
 type Props = {
   params: Promise<{ postId: string }>;
+  searchParams?: Promise<{ notice?: string | string[] }>;
 };
 
-export default async function DashboardPostViewPage({ params }: Props) {
+function firstSearchValue(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function DashboardPostViewPage({ params, searchParams }: Props) {
   const { postId } = await params;
+  const query = await searchParams;
   const post = await getDashboardPost(postId);
 
   if (!post) {
@@ -39,9 +47,17 @@ export default async function DashboardPostViewPage({ params }: Props) {
     );
   }
 
+  const notice = firstSearchValue(query?.notice);
+  const publicHref =
+    post.status === "published" && post.siteSlug
+      ? `/s/${post.siteSlug}/posts/${post.slug || post.id}`
+      : "";
+
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-6">
+        <ActionFeedback notice={notice} />
+
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Link
@@ -87,10 +103,22 @@ export default async function DashboardPostViewPage({ params }: Props) {
               <Pencil />
               수정
             </Link>
-            <Button variant="outline">
-              <Eye />
-              미리보기
-            </Button>
+            {publicHref ? (
+              <Link
+                className={buttonVariants({ size: "default", variant: "outline" })}
+                href={publicHref}
+                target="_blank"
+              >
+                <Eye />
+                공개 글 보기
+              </Link>
+            ) : (
+              <Button disabled variant="outline">
+                <Eye />
+                공개 전
+              </Button>
+            )}
+            <DeletePostButton postId={post.id} title={post.title} />
           </div>
         </div>
 

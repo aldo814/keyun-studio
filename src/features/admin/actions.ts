@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { resolveEffectiveRole } from "@/lib/auth/super-admin";
 import { createClient } from "@/lib/supabase/server";
 
 async function getCurrentAdminId() {
@@ -17,11 +18,13 @@ async function getCurrentAdminId() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id,role")
+    .select("id,email,role")
     .eq("id", user.id)
     .single();
 
-  if (error || !profile || !["admin", "super_admin"].includes(profile.role)) {
+  const effectiveRole = resolveEffectiveRole(profile?.role, user.email ?? profile?.email);
+
+  if (error || !profile || !["admin", "super_admin"].includes(effectiveRole)) {
     throw new Error("슈퍼관리자 권한이 필요합니다.");
   }
 

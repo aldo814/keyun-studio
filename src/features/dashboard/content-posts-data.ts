@@ -5,6 +5,7 @@ export type PostStatus = "published" | "draft" | "scheduled";
 export type DashboardPost = {
   id: string;
   siteId: string;
+  siteSlug?: string;
   boardId: string | null;
   board: string;
   category: string;
@@ -91,6 +92,7 @@ export const initialPosts: DashboardPost[] = [
   {
     id: "demo-post-1",
     siteId: "demo_site_keyun",
+    siteSlug: "keyun-demo",
     boardId: null,
     board: "공지사항",
     category: "업데이트",
@@ -111,6 +113,7 @@ export const initialPosts: DashboardPost[] = [
   {
     id: "demo-post-2",
     siteId: "demo_site_keyun",
+    siteSlug: "keyun-demo",
     boardId: null,
     board: "블로그",
     category: "가이드",
@@ -131,6 +134,7 @@ export const initialPosts: DashboardPost[] = [
   {
     id: "demo-post-3",
     siteId: "demo_site_keyun",
+    siteSlug: "keyun-demo",
     boardId: null,
     board: "FAQ",
     category: "결제",
@@ -151,6 +155,7 @@ export const initialPosts: DashboardPost[] = [
   {
     id: "demo-post-4",
     siteId: "demo_site_keyun",
+    siteSlug: "keyun-demo",
     boardId: null,
     board: "이벤트",
     category: "프로모션",
