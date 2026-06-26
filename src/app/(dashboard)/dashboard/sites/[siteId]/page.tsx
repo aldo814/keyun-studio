@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CheckCircle2, ExternalLink, Globe2 } from "lucide-react";
 
 import { StatusBadge } from "@/components/admin/status-badge";
 import { ActionFeedback } from "@/components/dashboard/action-feedback";
@@ -157,6 +158,65 @@ export default async function SiteDetailPage({ params, searchParams }: SiteDetai
             </Button>
           </div>
         ) : null}
+
+        <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <Card className="rounded-lg border-border bg-card">
+            <CardHeader>
+              <CardTitle>고객 전달 전 확인</CardTitle>
+              <CardDescription>
+                제작자가 사이트를 세팅한 뒤 고객에게 관리자 접근을 넘기기 전 확인할 항목입니다.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              {[
+                "사이트맵에 필요한 1차 메뉴가 모두 등록됨",
+                "메인/서브페이지 초안 미리보기 확인",
+                "게시글 기본 게시판 확인",
+                "문의폼 접수 후 관리자 노출 확인",
+                "SEO 제목과 설명 입력",
+                "게시 후 공개 주소 확인",
+              ].map((item) => (
+                <div
+                  className="flex items-start gap-2 rounded-lg border border-border bg-white p-3 text-sm"
+                  key={item}
+                >
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg border-border bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe2 className="size-5" />
+                도메인 연결
+              </CardTitle>
+              <CardDescription>
+                기본 공개 주소는 즉시 사용할 수 있고, 커스텀 도메인은 별도 연결 단계가 필요합니다.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                <p className="text-xs font-medium text-muted-foreground">기본 공개 주소</p>
+                <p className="mt-1 font-semibold">/s/{site.slug}</p>
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">
+                고객 도메인을 연결하려면 도메인 구매처, DNS 접근 권한, 연결할 주소를 확인해야 합니다.
+                자동 연결 기능 전까지는 제작자가 설정 후 고객에게 안내하는 흐름을 권장합니다.
+              </p>
+              <Button
+                className="w-full"
+                variant="outline"
+                render={<Link href={`/s/${site.slug}`} target="_blank" />}
+              >
+                현재 공개 주소 확인
+                <ExternalLink />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </main>
   );

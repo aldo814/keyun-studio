@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowRight, Bell, Check, ChevronDown, CreditCard, Globe2, Image as ImageIcon, Inbox,
+  ArrowRight, Bell, BookOpen, Check, ChevronDown, CreditCard, Globe2, Image as ImageIcon, Inbox,
   LogOut, Megaphone, Menu, Newspaper, Palette, Plus, Search, Settings, Users,
 } from "lucide-react";
 
@@ -30,6 +30,7 @@ const dashboardNavItems = [
   },
   { label: "멤버", href: "/dashboard/members", icon: Users },
   { label: "구독", href: "/dashboard/billing", icon: CreditCard },
+  { label: "운영 가이드", href: "/dashboard/help", icon: BookOpen },
   { label: "설정", href: "/dashboard/settings", icon: Settings },
 ];
 
@@ -79,7 +80,9 @@ export function DashboardShell({
   const pathname = usePathname();
   const router = useRouter();
   const [siteOpen, setSiteOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [quickSearch, setQuickSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const displayName = profile?.name || profile?.email || "사용자";
   const displayEmail = profile?.email || "로그인 계정";
@@ -108,6 +111,30 @@ export function DashboardShell({
     } finally {
       setIsSigningOut(false);
     }
+  }
+
+  function handleQuickSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const keyword = quickSearch.trim().toLowerCase();
+
+    if (!keyword) return;
+
+    const routes = [
+      { href: "/dashboard/content/posts", keywords: ["게시", "글", "post", "blog", "공지", "faq"] },
+      { href: "/dashboard/content/forms", keywords: ["문의", "form", "상담", "응답"] },
+      { href: "/dashboard/content/media", keywords: ["미디어", "이미지", "파일", "media", "image"] },
+      { href: "/dashboard/content/popups", keywords: ["팝업", "popup", "공지팝업"] },
+      { href: "/dashboard/sites", keywords: ["사이트", "페이지", "메뉴", "sitemap"] },
+      { href: "/dashboard/settings", keywords: ["설정", "계정", "권한"] },
+      { href: "/dashboard/help", keywords: ["도움", "가이드", "help", "사용법"] },
+    ];
+    const matched = routes.find((route) =>
+      route.keywords.some((routeKeyword) => keyword.includes(routeKeyword)),
+    );
+
+    router.push(matched?.href ?? "/dashboard/content/posts");
+    setQuickSearch("");
   }
 
   if (pathname.startsWith("/dashboard/editor")) {
@@ -282,13 +309,28 @@ export function DashboardShell({
       <div className="lg:pl-72">
         <header className="sticky top-0 z-10 border-b border-border bg-card">
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
-            <Button variant="outline" size="icon-lg" className="lg:hidden">
+            <Button
+              variant="outline"
+              size="icon-lg"
+              className="lg:hidden"
+              type="button"
+              onClick={() => setMobileOpen((value) => !value)}
+              aria-label="모바일 메뉴 열기"
+            >
               <Menu className="size-5" />
             </Button>
-            <div className="hidden h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-muted/60 px-3 text-sm text-muted-foreground md:flex">
+            <form
+              className="hidden h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-muted/60 px-3 text-sm text-muted-foreground md:flex"
+              onSubmit={handleQuickSearch}
+            >
               <Search className="size-4" />
-              게시글, 문의, 미디어, 사이트 설정 검색
-            </div>
+              <input
+                className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                placeholder="게시글, 문의, 미디어, 사이트 설정 검색"
+                value={quickSearch}
+                onChange={(event) => setQuickSearch(event.target.value)}
+              />
+            </form>
             <Button variant="outline" size="icon-lg" className="ml-auto md:ml-0">
               <Bell className="size-5" />
             </Button>
@@ -312,6 +354,120 @@ export function DashboardShell({
             </Button>
           </div>
         </header>
+
+        {mobileOpen ? (
+          <div
+            className="fixed inset-0 z-30 bg-zinc-950/40 lg:hidden"
+            role="presentation"
+            onClick={() => setMobileOpen(false)}
+          >
+            <div
+              className="flex h-full w-[min(88vw,320px)] flex-col border-r border-border bg-card shadow-2xl"
+              role="presentation"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex h-16 items-center justify-between border-b border-border px-4">
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-3"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img alt="keyun" className="h-8 w-auto" src="/keyun-logo.svg" />
+                </Link>
+                <Button
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  닫기
+                </Button>
+              </div>
+
+              <div className="border-b border-border px-4 py-4">
+                <p className="truncate text-sm font-semibold">
+                  {activeSite?.name ?? "사이트를 만들어주세요"}
+                </p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {activeSite ? `/s/${activeSite.slug}` : "첫 사이트 만들기"}
+                </p>
+                <Button
+                  className="mt-3 w-full"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    router.push(activeSite ? `/dashboard/sites/${activeSite.id}` : "/dashboard/sites/new");
+                  }}
+                >
+                  {activeSite ? "사이트 관리" : "첫 사이트 만들기"}
+                </Button>
+              </div>
+
+              <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+                {dashboardNavItems
+                  .filter((item) => item.href !== "/dashboard/design" || canAccessDesign)
+                  .map((item) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      item.href === "/dashboard"
+                        ? pathname === item.href
+                        : pathname.startsWith(item.href);
+
+                    return (
+                      <div key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+                            isActive
+                              ? "bg-blue-50 text-blue-600"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                        >
+                          <Icon className="size-4" />
+                          <span className="min-w-0 flex-1">{item.label}</span>
+                        </Link>
+
+                        {"children" in item && item.children && isActive ? (
+                          <div className="mt-1 space-y-1 pl-5">
+                            {item.children.map((child) => {
+                              const ChildIcon = child.icon;
+                              const childActive = pathname.startsWith(child.href);
+
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  onClick={() => setMobileOpen(false)}
+                                  className={cn(
+                                    "flex h-9 items-center gap-2 rounded-md px-3 text-sm transition-colors",
+                                    childActive
+                                      ? "bg-white text-blue-600 shadow-sm"
+                                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                                  )}
+                                >
+                                  <ChildIcon className="size-3.5" />
+                                  {child.label}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+              </nav>
+
+              <div className="border-t border-border p-4">
+                <p className="truncate text-sm font-semibold">{displayName}</p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">{displayEmail}</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {children}
       </div>

@@ -1,51 +1,69 @@
 import Link from "next/link";
 import { ChevronRight, ImageIcon, Inbox, Megaphone, Newspaper } from "lucide-react";
 
-const contentItems = [
-  {
-    title: "게시글",
-    description: "공지사항, 블로그, FAQ 등 사이트에 노출되는 글",
-    href: "/dashboard/content/posts",
-    icon: Newspaper,
-    metric: "12개 글",
-    metricLabel: "전체",
-  },
-  {
-    title: "게시판",
-    description: "공지사항, 블로그, FAQ 등 게시글을 담는 공간",
-    href: "/dashboard/content/boards",
-    icon: Newspaper,
-    metric: "4개",
-    metricLabel: "기본",
-  },
-  {
-    title: "문의폼",
-    description: "상담 신청, 견적 문의, 일반 문의 응답",
-    href: "/dashboard/content/forms",
-    icon: Inbox,
-    metric: "8개",
-    metricLabel: "응답",
-    badge: 3,
-  },
-  {
-    title: "미디어",
-    description: "이미지, 파일 업로드 및 섹션 재사용",
-    href: "/dashboard/content/media",
-    icon: ImageIcon,
-    metric: "34개",
-    metricLabel: "파일",
-  },
-  {
-    title: "팝업",
-    description: "기간·노출 위치·링크 설정이 있는 운영 팝업",
-    href: "/dashboard/content/popups",
-    icon: Megaphone,
-    metric: "2개",
-    metricLabel: "활성",
-  },
-];
+import {
+  getDashboardContactSubmissions,
+  getDashboardContentBoards,
+  getDashboardMediaAssets,
+  getDashboardPopups,
+  getDashboardPosts,
+} from "@/features/dashboard/queries";
 
-export default function DashboardContentPage() {
+export default async function DashboardContentPage() {
+  const [posts, boards, submissions, mediaAssets, popups] = await Promise.all([
+    getDashboardPosts(),
+    getDashboardContentBoards(),
+    getDashboardContactSubmissions(),
+    getDashboardMediaAssets(),
+    getDashboardPopups(),
+  ]);
+  const publishedPosts = posts.filter((post) => post.status === "published").length;
+  const newSubmissions = submissions.filter((submission) => submission.status === "new").length;
+  const activePopups = popups.filter((popup) => popup.status === "active").length;
+  const contentItems = [
+    {
+      title: "게시글",
+      description: "공지사항, 블로그, FAQ 등 사이트에 노출되는 글",
+      href: "/dashboard/content/posts",
+      icon: Newspaper,
+      metric: `${posts.length.toLocaleString("ko-KR")}개`,
+      metricLabel: `게시 ${publishedPosts.toLocaleString("ko-KR")}개`,
+    },
+    {
+      title: "게시판",
+      description: "공지사항, 블로그, FAQ 등 게시글을 담는 공간",
+      href: "/dashboard/content/boards",
+      icon: Newspaper,
+      metric: `${boards.length.toLocaleString("ko-KR")}개`,
+      metricLabel: "분류",
+    },
+    {
+      title: "문의폼",
+      description: "상담 신청, 견적 문의, 일반 문의 응답",
+      href: "/dashboard/content/forms",
+      icon: Inbox,
+      metric: `${submissions.length.toLocaleString("ko-KR")}개`,
+      metricLabel: `신규 ${newSubmissions.toLocaleString("ko-KR")}개`,
+      badge: newSubmissions,
+    },
+    {
+      title: "미디어",
+      description: "이미지, 파일 업로드 및 섹션 재사용",
+      href: "/dashboard/content/media",
+      icon: ImageIcon,
+      metric: `${mediaAssets.length.toLocaleString("ko-KR")}개`,
+      metricLabel: "파일",
+    },
+    {
+      title: "팝업",
+      description: "기간·노출 위치·링크 설정이 있는 운영 팝업",
+      href: "/dashboard/content/popups",
+      icon: Megaphone,
+      metric: `${popups.length.toLocaleString("ko-KR")}개`,
+      metricLabel: `활성 ${activePopups.toLocaleString("ko-KR")}개`,
+    },
+  ];
+
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-6">

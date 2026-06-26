@@ -38,6 +38,13 @@ function checkboxValue(formData: FormData, key: string) {
   return value(formData, key) === "on";
 }
 
+function values(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+}
+
 function pagePathFromMenuCode(menuCode: string, parentPath?: string) {
   if (!menuCode || menuCode === "home") return "/";
   const cleanCode = slugify(menuCode) || "page";
@@ -105,6 +112,38 @@ function buildPageContentJson(formData: FormData, fallbackTitle: string, existin
     ],
     title: fallbackTitle,
     version: Number(existingRecord.version ?? 1),
+  } satisfies Json;
+}
+
+function buildGeneratedContentJson({
+  bodyText,
+  description,
+  title,
+}: {
+  bodyText: string;
+  description: string;
+  title: string;
+}) {
+  return {
+    pageType: "auto",
+    sections: [
+      {
+        backgroundType: "color",
+        badge: "",
+        bgColor: "#ffffff",
+        bodyText,
+        description,
+        layout: "text-focus",
+        mediaPosition: "right",
+        paddingBottom: "96",
+        paddingTop: "96",
+        title,
+        type: "content",
+        width: "960",
+      },
+    ],
+    title,
+    version: 1,
   } satisfies Json;
 }
 
@@ -187,105 +226,210 @@ function revalidateSiteSitemap(siteId: string) {
 }
 
 function buildInitialSiteJson({
+  brandMessage,
   businessType,
   contactPhone,
   launchGoal,
   name,
+  selectedFeatures,
+  siteStyle,
+  targetCustomer,
 }: {
+  brandMessage: string;
   businessType: string;
   contactPhone: string;
   launchGoal: string;
   name: string;
+  selectedFeatures: string[];
+  siteStyle: string;
+  targetCustomer: string;
 }) {
   const purpose = [businessType, launchGoal].filter(Boolean).join(" · ");
+  const style = ["simple", "brand", "interactive"].includes(siteStyle) ? siteStyle : "brand";
+  const featureSet = new Set(selectedFeatures.length ? selectedFeatures : ["notice", "blog", "faq", "booking"]);
+  const palette =
+    style === "simple"
+      ? {
+          accent: "#111827",
+          footer: "#111827",
+          gradientFrom: "#f8fafc",
+          gradientTo: "#ffffff",
+          sub: "#f3f4f6",
+        }
+      : style === "interactive"
+        ? {
+            accent: "#2563eb",
+            footer: "#0f172a",
+            gradientFrom: "#dbeafe",
+            gradientTo: "#ffffff",
+            sub: "#eff6ff",
+          }
+        : {
+            accent: "#1d4ed8",
+            footer: "#0f172a",
+            gradientFrom: "#eef4ff",
+            gradientTo: "#ffffff",
+            sub: "#e0edff",
+          };
   const description =
-    purpose || contactPhone
+    brandMessage ||
+    (purpose || contactPhone
       ? `${name}의 ${purpose || "서비스"} 정보를 한눈에 확인하고 문의할 수 있는 공식 사이트입니다.`
-      : `${name}의 소식과 서비스를 확인하고 문의할 수 있는 공식 사이트입니다.`;
+      : `${name}의 소식과 서비스를 확인하고 문의할 수 있는 공식 사이트입니다.`);
+  const audienceText = targetCustomer
+    ? `${targetCustomer}을 위한 정보와 상담 동선을 준비했습니다.`
+    : "방문자가 필요한 정보를 빠르게 찾고 문의까지 이어질 수 있도록 구성했습니다.";
+  const featureItems = [
+    businessType || "브랜드 소개",
+    launchGoal || "문의 운영",
+    featureSet.has("blog") ? "콘텐츠 발행" : "핵심 정보 정리",
+    featureSet.has("booking") || contactPhone ? "예약/상담 연결" : "고객 문의 연결",
+  ].slice(0, 4);
+  const navItems = [
+    { enabled: true, id: "nav-home", label: "홈", pageId: "home" },
+    { enabled: true, id: "nav-service", label: "서비스", pageId: "service" },
+    featureSet.has("portfolio")
+      ? { enabled: true, id: "nav-portfolio", label: "사례", pageId: "portfolio" }
+      : null,
+    featureSet.has("blog") || featureSet.has("notice") || featureSet.has("faq")
+      ? { enabled: true, id: "nav-blog", label: "게시글", pageId: "blog" }
+      : null,
+    featureSet.has("location")
+      ? { enabled: true, id: "nav-location", label: "오시는 길", pageId: "location" }
+      : null,
+    { enabled: true, id: "nav-contact", label: "문의", pageId: "contact" },
+  ].filter(
+    (item): item is { enabled: boolean; id: string; label: string; pageId: string } =>
+      Boolean(item),
+  );
+  const pageItems = [
+    { id: "home", path: "/", status: "public", title: "메인 페이지" },
+    { id: "service", path: "/service", status: "public", title: "서비스" },
+    featureSet.has("portfolio")
+      ? { id: "portfolio", path: "/portfolio", status: "public", title: "사례" }
+      : null,
+    featureSet.has("blog") || featureSet.has("notice") || featureSet.has("faq")
+      ? { id: "blog", path: "/posts", status: "public", title: "게시글" }
+      : null,
+    featureSet.has("location")
+      ? { id: "location", path: "/location", status: "public", title: "오시는 길" }
+      : null,
+    { id: "contact", path: "#contact", status: "public", title: "문의" },
+  ].filter(
+    (item): item is { id: string; path: string; status: string; title: string } =>
+      Boolean(item),
+  );
+  const sections: Array<Record<string, Json>> = [
+    {
+      backgroundType: "gradient",
+      badge: purpose || (style === "simple" ? "Official Website" : "Brand Website"),
+      buttonLabel: contactPhone ? "문의하기" : "상담 신청",
+      buttonLink: "#contact",
+      description,
+      gradientFrom: palette.gradientFrom,
+      gradientTo: palette.gradientTo,
+      layout: style === "simple" ? "text-focus" : "slide",
+      mediaPosition: "right",
+      paddingBottom: style === "interactive" ? "120" : "104",
+      paddingTop: style === "interactive" ? "120" : "104",
+      secondaryButtonLabel: featureSet.has("blog") ? "게시글 보기" : "서비스 보기",
+      title: brandMessage ? `${name}, ${brandMessage}` : `${name}, 이제 온라인에서 바로 시작하세요`,
+      type: "hero",
+      width: "1200",
+    },
+    {
+      backgroundType: "color",
+      badge: "Features",
+      bgColor: "#ffffff",
+      description: audienceText,
+      items: featureItems,
+      layout: "cards",
+      paddingBottom: "90",
+      paddingTop: "90",
+      title: "운영에 필요한 기본 구성을 준비했습니다",
+      type: "features",
+      width: "1200",
+    },
+  ];
+
+  if (featureSet.has("portfolio")) {
+    sections.push({
+      backgroundType: "color",
+      badge: "Portfolio",
+      bgColor: palette.sub,
+      bodyText:
+        "대표 사례, 프로젝트, 후기 콘텐츠를 이 영역에 정리할 수 있습니다. 초기 제작 후 페이지 관리에서 세부 내용을 수정하세요.",
+      description: "신뢰를 높이는 사례형 섹션입니다.",
+      layout: "text-focus",
+      mediaPosition: "right",
+      paddingBottom: "88",
+      paddingTop: "88",
+      title: "대표 사례를 보여주세요",
+      type: "content",
+      width: "960",
+    });
+  }
+
+  if (featureSet.has("location")) {
+    sections.push({
+      backgroundType: "color",
+      badge: "Location",
+      bgColor: "#ffffff",
+      bodyText:
+        "주소, 운영 시간, 주차 안내, 지도 링크를 넣는 영역입니다. 고객이 방문 전 필요한 정보를 한 번에 확인할 수 있습니다.",
+      description: "방문 상담이나 오프라인 운영이 필요한 경우 유용합니다.",
+      layout: "text-focus",
+      mediaPosition: "left",
+      paddingBottom: "88",
+      paddingTop: "88",
+      title: "오시는 길과 운영 정보를 안내하세요",
+      type: "content",
+      width: "960",
+    });
+  }
+
+  sections.push({
+    backgroundType: "gradient",
+    buttonLabel: contactPhone ? "전화 문의" : "문의 남기기",
+    buttonLink: contactPhone ? `tel:${contactPhone.replaceAll("-", "")}` : "#contact",
+    description:
+      featureSet.has("booking") || launchGoal === "예약/상담"
+        ? "방문자가 상담 또는 예약으로 바로 이어질 수 있도록 하단 문의폼과 연결됩니다."
+        : "관리자에서 게시글, 문의폼, 팝업을 추가하며 사이트를 바로 운영할 수 있습니다.",
+    gradientFrom: palette.footer,
+    gradientTo: palette.accent,
+    layout: "banner",
+    paddingBottom: "86",
+    paddingTop: "86",
+    title: featureSet.has("booking") ? "상담과 예약을 빠르게 연결하세요" : "첫 세팅은 완료됐습니다",
+    type: "cta",
+    width: "1200",
+  });
 
   return {
     design: {
       bodyFontFamily: "system",
       englishFontFamily: "inter",
-      footerAccentColor: "#2563eb",
-      footerBgColor: "#0f172a",
+      footerAccentColor: palette.accent,
+      footerBgColor: palette.footer,
       footerLayout: "simple",
       footerTextColor: "#e2e8f0",
       headerBgColor: "#ffffff",
-      headerButtonBgColor: "#0f172a",
+      headerButtonBgColor: palette.footer,
       headerButtonTextColor: "#ffffff",
       headerLayout: "center",
       headerPosition: "static",
       headerTextColor: "#0f172a",
       headingFontFamily: "system",
       innerWidth: "1200",
-      mainColor: "#2563eb",
-      sectionGap: "80",
-      subColor: "#eff6ff",
+      mainColor: palette.accent,
+      sectionGap: style === "interactive" ? "96" : "76",
+      subColor: palette.sub,
       textColor: "#0f172a",
     },
-    navigation: [
-      { enabled: true, id: "nav-home", label: "홈", pageId: "home" },
-      { enabled: true, id: "nav-service", label: "서비스", pageId: "service" },
-      { enabled: true, id: "nav-blog", label: "게시글", pageId: "blog" },
-      { enabled: true, id: "nav-contact", label: "문의", pageId: "contact" },
-    ],
-    pages: [
-      { id: "home", path: "/", status: "public", title: "메인 페이지" },
-      { id: "service", path: "/service", status: "public", title: "서비스" },
-      { id: "blog", path: "/posts", status: "public", title: "게시글" },
-      { id: "contact", path: "#contact", status: "public", title: "문의" },
-    ],
-    sections: [
-      {
-        backgroundType: "gradient",
-        badge: purpose || "Official Website",
-        buttonLabel: contactPhone ? "문의하기" : "상담 신청",
-        buttonLink: "#contact",
-        description,
-        gradientFrom: "#f3f7ff",
-        gradientTo: "#ffffff",
-        layout: "slide",
-        mediaPosition: "right",
-        paddingBottom: "110",
-        paddingTop: "110",
-        secondaryButtonLabel: "게시글 보기",
-        title: `${name}, 이제 온라인에서 바로 시작하세요`,
-        type: "hero",
-        width: "1200",
-      },
-      {
-        backgroundType: "color",
-        badge: "Features",
-        bgColor: "#ffffff",
-        description: `${name}의 핵심 정보를 방문자가 빠르게 이해할 수 있도록 정리했습니다.`,
-        items: [
-          businessType || "브랜드 소개",
-          launchGoal || "문의 운영",
-          contactPhone ? `대표 연락처 ${contactPhone}` : "콘텐츠 운영",
-        ],
-        layout: "cards",
-        paddingBottom: "90",
-        paddingTop: "90",
-        title: "운영에 필요한 기본 구성을 준비했습니다",
-        type: "features",
-        width: "1200",
-      },
-      {
-        backgroundType: "gradient",
-        buttonLabel: contactPhone ? "전화 문의" : "문의 남기기",
-        buttonLink: contactPhone ? `tel:${contactPhone.replaceAll("-", "")}` : "#contact",
-        description: "관리자에서 게시글, 문의폼, 팝업을 추가하며 사이트를 바로 운영할 수 있습니다.",
-        gradientFrom: "#0f172a",
-        gradientTo: "#1d4ed8",
-        layout: "banner",
-        paddingBottom: "86",
-        paddingTop: "86",
-        title: "첫 세팅은 완료됐습니다",
-        type: "cta",
-        width: "1200",
-      },
-    ],
+    navigation: navItems,
+    pages: pageItems,
+    sections,
     version: 1,
   } satisfies Json;
 }
@@ -378,10 +522,14 @@ export async function createDashboardSite(formData: FormData) {
   const businessType = value(formData, "business_type");
   const launchGoal = value(formData, "launch_goal");
   const contactPhone = value(formData, "contact_phone");
+  const brandMessage = value(formData, "brand_message");
+  const targetCustomer = value(formData, "target_customer");
+  const siteStyle = value(formData, "site_style");
+  const selectedFeatures = values(formData, "site_features");
   const seoTitle = value(formData, "seo_title") || name;
   const seoDescription =
     value(formData, "seo_description") ||
-    [businessType, launchGoal, contactPhone ? `문의 ${contactPhone}` : ""]
+    [brandMessage, businessType, launchGoal, contactPhone ? `문의 ${contactPhone}` : ""]
       .filter(Boolean)
       .join(" · ");
   const ogImageUrl = value(formData, "og_image_url") || null;
@@ -408,10 +556,14 @@ export async function createDashboardSite(formData: FormData) {
   }
 
   const initialSiteJson = buildInitialSiteJson({
+    brandMessage,
     businessType,
     contactPhone,
     launchGoal,
     name,
+    selectedFeatures,
+    siteStyle,
+    targetCustomer,
   });
 
   const { data: page, error: pageError } = await supabase
@@ -434,6 +586,83 @@ export async function createDashboardSite(formData: FormData) {
 
   if (pageError || !page) {
     throw new Error(pageError?.message ?? "홈 페이지 생성에 실패했어.");
+  }
+
+  const generatedPages = [
+    {
+      bodyText:
+        "제공 서비스, 진행 방식, 강점, 상담 절차를 정리하는 페이지입니다. 고객이 구매 또는 문의 전 필요한 정보를 확인할 수 있도록 구성하세요.",
+      description: `${name}의 서비스와 운영 방식을 소개합니다.`,
+      menuCode: "service",
+      menuName: "서비스",
+      path: "/service",
+      sortOrder: 1,
+      title: "서비스",
+    },
+    selectedFeatures.includes("portfolio")
+      ? {
+          bodyText:
+            "대표 프로젝트, 작업 사례, 고객 후기, 전후 비교 이미지를 정리하는 페이지입니다. 신뢰를 높이는 콘텐츠를 배치하세요.",
+          description: `${name}의 대표 사례를 소개합니다.`,
+          menuCode: "portfolio",
+          menuName: "사례",
+          path: "/portfolio",
+          sortOrder: 2,
+          title: "사례",
+        }
+      : null,
+    selectedFeatures.includes("location")
+      ? {
+          bodyText:
+            "주소, 운영 시간, 주차 안내, 지도 링크, 방문 전 확인 사항을 정리하는 페이지입니다.",
+          description: `${name}의 위치와 방문 정보를 안내합니다.`,
+          menuCode: "location",
+          menuName: "오시는 길",
+          path: "/location",
+          sortOrder: selectedFeatures.includes("portfolio") ? 3 : 2,
+          title: "오시는 길",
+        }
+      : null,
+  ].filter(
+    (item): item is {
+      bodyText: string;
+      description: string;
+      menuCode: string;
+      menuName: string;
+      path: string;
+      sortOrder: number;
+      title: string;
+    } => Boolean(item),
+  );
+
+  if (generatedPages.length) {
+    const { error: generatedPagesError } = await supabase.from("site_pages").insert(
+      generatedPages.map((generatedPage) => {
+        const generatedJson = buildGeneratedContentJson({
+          bodyText: generatedPage.bodyText,
+          description: generatedPage.description,
+          title: generatedPage.title,
+        });
+
+        return {
+          site_id: site.id,
+          title: generatedPage.title,
+          path: generatedPage.path,
+          menu_code: generatedPage.menuCode,
+          menu_name: generatedPage.menuName,
+          page_type: "auto",
+          is_hidden: false,
+          sort_order: generatedPage.sortOrder,
+          locale_json: {},
+          page_json: generatedJson,
+          draft_json: generatedJson,
+        } as never;
+      }),
+    );
+
+    if (generatedPagesError) {
+      throw new Error(generatedPagesError.message);
+    }
   }
 
   const { error: seoError } = await supabase.from("site_seo_settings").insert({
@@ -589,14 +818,14 @@ export async function publishSite(formData: FormData) {
 
   const { data: pages, error: pagesError } = await supabase
     .from("site_pages")
-    .select("id,draft_json")
+    .select("id,path,draft_json")
     .eq("site_id", siteId);
 
   if (pagesError) {
     throw new Error(pagesError.message);
   }
 
-  await Promise.all(
+  const pagePublishResults = await Promise.all(
     (pages ?? []).map((page) =>
       supabase
         .from("site_pages")
@@ -607,6 +836,11 @@ export async function publishSite(formData: FormData) {
         .eq("id", page.id),
     ),
   );
+  const pagePublishError = pagePublishResults.find((result) => result.error)?.error;
+
+  if (pagePublishError) {
+    throw new Error(pagePublishError.message);
+  }
 
   const { error } = await supabase
     .from("sites")
@@ -625,6 +859,12 @@ export async function publishSite(formData: FormData) {
   revalidatePath("/dashboard/sites");
   revalidatePath(`/dashboard/sites/${siteId}`);
   revalidatePath(`/s/${slug}`);
+  (pages ?? []).forEach((page) => {
+    const pagePath = String(page.path ?? "/");
+    if (pagePath !== "/") {
+      revalidatePath(`/s/${slug}${pagePath}`);
+    }
+  });
   revalidatePath("/sitemap.xml");
 
   if (returnTo.startsWith("/dashboard")) {

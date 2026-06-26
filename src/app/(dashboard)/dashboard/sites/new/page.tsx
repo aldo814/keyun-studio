@@ -34,6 +34,31 @@ const launchSteps = [
 
 const businessTypes = ["병원/의료", "교육", "전문서비스", "브랜드/쇼핑", "포트폴리오", "기타"];
 const launchGoals = ["회사 소개", "문의 수집", "콘텐츠 운영", "예약/상담", "서비스 홍보"];
+const siteStyles = [
+  {
+    description: "불필요한 장식을 줄이고 정보 전달을 우선합니다.",
+    label: "심플",
+    value: "simple",
+  },
+  {
+    description: "브랜드 첫인상과 신뢰감을 강하게 보여줍니다.",
+    label: "브랜딩",
+    value: "brand",
+  },
+  {
+    description: "섹션 리듬과 CTA를 강조해 전환을 유도합니다.",
+    label: "인터랙티브",
+    value: "interactive",
+  },
+];
+const siteFeatures = [
+  { label: "공지사항", value: "notice" },
+  { label: "블로그", value: "blog" },
+  { label: "FAQ", value: "faq" },
+  { label: "포트폴리오", value: "portfolio" },
+  { label: "예약/상담", value: "booking" },
+  { label: "오시는 길", value: "location" },
+];
 
 type NewSitePageProps = {
   searchParams?: Promise<{ templateId?: string | string[] }>;
@@ -134,6 +159,25 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                   </p>
                 </label>
 
+                <label className="space-y-2 md:col-span-2">
+                  <span className="text-sm font-medium">한 줄 소개</span>
+                  <Input
+                    name="brand_message"
+                    placeholder="예: 고객의 시간을 아끼는 맞춤 웹사이트 운영 솔루션"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    메인 비주얼과 검색 설명의 기본 문구로 사용됩니다.
+                  </p>
+                </label>
+
+                <label className="space-y-2 md:col-span-2">
+                  <span className="text-sm font-medium">주요 고객</span>
+                  <Input
+                    name="target_customer"
+                    placeholder="예: 예약 문의가 필요한 병원, 교육기관, 전문 서비스 브랜드"
+                  />
+                </label>
+
                 <label className="space-y-2">
                   <span className="text-sm font-medium">대표 연락처</span>
                   <Input name="contact_phone" placeholder="예: 02-1234-5678" />
@@ -174,6 +218,64 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                     ))}
                   </select>
                 </label>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-xl border-border bg-card">
+              <CardHeader>
+                <CardTitle>초기 화면 방향</CardTitle>
+                <CardDescription>
+                  선택값에 맞춰 메인 문구, 색상, 섹션 구성을 자동으로 잡습니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">원하는 분위기</p>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {siteStyles.map((style, index) => (
+                      <label
+                        className="cursor-pointer rounded-xl border border-border p-4 transition-colors hover:bg-muted/60 has-[:checked]:border-zinc-950 has-[:checked]:bg-zinc-50"
+                        key={style.value}
+                      >
+                        <input
+                          className="sr-only"
+                          defaultChecked={index === 1}
+                          name="site_style"
+                          type="radio"
+                          value={style.value}
+                        />
+                        <span className="text-sm font-semibold">{style.label}</span>
+                        <span className="mt-2 block text-xs leading-5 text-muted-foreground">
+                          {style.description}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">필요한 구성</p>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {siteFeatures.map((feature) => (
+                      <label
+                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-3 text-sm transition-colors hover:bg-muted/60 has-[:checked]:border-zinc-950 has-[:checked]:bg-zinc-50"
+                        key={feature.value}
+                      >
+                        <input
+                          className="size-4"
+                          defaultChecked={["notice", "blog", "faq", "booking"].includes(feature.value)}
+                          name="site_features"
+                          type="checkbox"
+                          value={feature.value}
+                        />
+                        {feature.label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    추후 페이지 관리에서 숨김/추가/순서 변경이 가능합니다.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
