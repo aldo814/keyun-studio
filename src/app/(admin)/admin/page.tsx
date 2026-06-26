@@ -1,8 +1,12 @@
+import Link from "next/link";
+import { ArrowRight, LayoutDashboard } from "lucide-react";
+
 import { AdminSection } from "@/components/admin/admin-section";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminTable } from "@/components/admin/admin-table";
 import { MetricCard } from "@/components/admin/metric-card";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { Button } from "@/components/ui/button";
 import { alertCards, reports } from "@/features/admin/data";
 import {
   getAdminLogs,
@@ -22,6 +26,34 @@ export default async function AdminPage() {
       title="운영 개요"
       description="키운 스튜디오 전체 사용량, 매출, 검수 상태, 시스템 이벤트를 한 화면에서 추적합니다."
     >
+      <section className="rounded-2xl border border-zinc-200 bg-zinc-950 p-6 text-white shadow-sm md:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
+              <LayoutDashboard className="size-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white/60">관리 화면 전환</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-normal">
+                일반 관리자 대시보드 확인
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">
+                고객이 실제로 사용하는 콘텐츠 운영 화면으로 이동합니다. 사이트 생성,
+                게시글, 문의폼, 미디어, 팝업 운영 흐름을 확인할 때 사용하세요.
+              </p>
+            </div>
+          </div>
+          <Button
+            className="w-full justify-center bg-white text-zinc-950 hover:bg-white/90 lg:w-auto"
+            render={<Link href="/dashboard" />}
+            size="lg"
+          >
+            일반 관리자 대시보드로 이동
+            <ArrowRight className="size-4" />
+          </Button>
+        </div>
+      </section>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {overviewStats.map((stat) => (
           <MetricCard key={stat.label} {...stat} />

@@ -97,7 +97,7 @@ export function AdminShell({
               <Bell className="size-5" />
             </Button>
             <Button
-              className="hidden gap-2 sm:inline-flex"
+              className="gap-2"
               render={<Link href="/dashboard" />}
               variant="outline"
             >
