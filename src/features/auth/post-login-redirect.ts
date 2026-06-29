@@ -59,7 +59,7 @@ export function resolvePostLoginPath({
     return safeNext;
   }
 
-  if (safeNext.startsWith("/dashboard/design") || safeNext.startsWith("/admin")) {
+  if (safeNext.startsWith("/admin")) {
     return hasSites ? USER_CONTENT_PATH : SITE_ONBOARDING_PATH;
   }
 

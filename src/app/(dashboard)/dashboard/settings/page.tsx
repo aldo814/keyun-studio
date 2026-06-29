@@ -97,13 +97,9 @@ export default async function DashboardSettingsPage() {
               <CardDescription>디자인 메뉴 노출 기준</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p className="font-medium">
-                {profile?.role === "super_admin"
-                  ? "디자인 모드 접근 가능"
-                  : "콘텐츠 운영 메뉴만 사용"}
-              </p>
+              <p className="font-medium">디자인 모드 접근 가능</p>
               <p className="leading-6 text-muted-foreground">
-                일반 고객 관리자에게는 디자인 편집 메뉴가 노출되지 않습니다.
+                로그인한 사이트 관리자는 베타 디자인 편집 기능을 사용할 수 있습니다.
               </p>
             </CardContent>
           </Card>

@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const dashboardNavItems = [
   { label: "개요", href: "/dashboard", icon: Globe2 },
   { label: "사이트", href: "/dashboard/sites", icon: Globe2 },
-  { label: "디자인", href: "/dashboard/design", icon: Palette, badge: "추후 오픈" },
+  { label: "디자인", href: "/dashboard/design", icon: Palette, badge: "Beta" },
   {
     label: "콘텐츠",
     href: "/dashboard/content",
@@ -35,7 +35,6 @@ const dashboardNavItems = [
 ];
 
 type DashboardShellProps = {
-  canAccessDesign?: boolean;
   children: React.ReactNode;
   profile?: {
     email: string;
@@ -72,7 +71,6 @@ function getSiteIdFromPath(pathname: string) {
 }
 
 export function DashboardShell({
-  canAccessDesign = false,
   children,
   profile,
   sites = [],
@@ -225,9 +223,7 @@ export function DashboardShell({
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {dashboardNavItems
-            .filter((item) => item.href !== "/dashboard/design" || canAccessDesign)
-            .map((item) => {
+          {dashboardNavItems.map((item) => {
             const Icon = item.icon;
             const isActive =
               item.href === "/dashboard"
@@ -406,9 +402,7 @@ export function DashboardShell({
               </div>
 
               <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-                {dashboardNavItems
-                  .filter((item) => item.href !== "/dashboard/design" || canAccessDesign)
-                  .map((item) => {
+                {dashboardNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive =
                       item.href === "/dashboard"

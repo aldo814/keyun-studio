@@ -1,14 +1,6 @@
-import { redirect } from "next/navigation";
 import { ThemeEditor } from "@/features/dashboard/theme-editor";
-import { canAccessDesignMode } from "@/features/dashboard/queries";
 
-export default async function ThemePage() {
-  const canAccessDesign = await canAccessDesignMode();
-
-  if (!canAccessDesign) {
-    redirect("/dashboard/content");
-  }
-
+export default function ThemePage() {
   return (
     <main className="px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-6">

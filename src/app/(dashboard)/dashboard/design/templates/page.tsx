@@ -1,14 +1,7 @@
-import { redirect } from "next/navigation";
-import { canAccessDesignMode, getPublicTemplates } from "@/features/dashboard/queries";
+import { getPublicTemplates } from "@/features/dashboard/queries";
 import { TemplateGallery } from "@/features/dashboard/template-gallery";
 
 export default async function TemplatesPage() {
-  const canAccessDesign = await canAccessDesignMode();
-
-  if (!canAccessDesign) {
-    redirect("/dashboard/content");
-  }
-
   const templates = await getPublicTemplates();
 
   return (

@@ -67,8 +67,8 @@ export default function DashboardHelpPage() {
             고객이 직접 운영해야 하는 기능만 빠르게 확인합니다.
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-            디자인 편집은 추후 오픈하고, 현재 MVP에서는 사이트 관리, 게시글, 문의, 미디어,
-            팝업 운영 흐름을 안정적으로 제공합니다.
+            사이트 디자인 편집과 함께 사이트 관리, 게시글, 문의, 미디어,
+            팝업 운영 흐름을 한곳에서 제공합니다.
           </p>
         </section>
 

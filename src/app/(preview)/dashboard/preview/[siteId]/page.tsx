@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { canAccessDesignMode, getSiteEditorState } from "@/features/dashboard/queries";
+import { getSiteEditorState } from "@/features/dashboard/queries";
 import { PublicSiteRenderer } from "@/features/site/public-site-renderer";
 
 type DraftPreviewPageProps = {
@@ -33,7 +33,6 @@ export default async function DraftPreviewPage({
   const { siteId } = await params;
   const query = await searchParams;
   const pageId = firstSearchValue(query?.pageId);
-  const canAccessDesign = await canAccessDesignMode();
   const state = await getSiteEditorState(siteId, pageId);
 
   if (!state) {
@@ -65,14 +64,12 @@ export default async function DraftPreviewPage({
             >
               사이트맵으로
             </Link>
-            {canAccessDesign ? (
-              <Link
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                href={`/dashboard/editor/${state.site.id}`}
-              >
-                편집기로 돌아가기
-              </Link>
-            ) : null}
+            <Link
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              href={`/dashboard/editor/${state.site.id}`}
+            >
+              편집기로 돌아가기
+            </Link>
             {state.site.status === "published" ? (
               <Link
                 className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-3 text-sm font-medium text-white transition-colors hover:bg-slate-800"

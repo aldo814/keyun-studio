@@ -163,7 +163,7 @@ export function SiteSitemapForm({
                 ))}
               </select>
               <span className="block text-xs text-muted-foreground">
-                추후 디자인 모드가 열리면 선택한 레이아웃 기준으로 페이지 템플릿을 연결합니다.
+                선택한 레이아웃은 디자인 에디터에서 이어서 조정할 수 있습니다.
               </span>
             </label>
           </div>
@@ -190,7 +190,7 @@ export function SiteSitemapForm({
         <CardHeader>
           <CardTitle>페이지 내용</CardTitle>
           <CardDescription>
-            디자인 모드 없이도 공개 페이지에 보여줄 기본 콘텐츠를 입력합니다.
+            공개 페이지에 보여줄 기본 콘텐츠를 입력한 뒤 디자인 에디터에서 꾸밀 수 있습니다.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">

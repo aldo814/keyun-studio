@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
-const SUPER_ADMIN_PREFIXES = ["/admin", "/dashboard/design"];
+const SUPER_ADMIN_PREFIXES = ["/admin"];
 
 function hasSupabaseEnv() {
   return Boolean(

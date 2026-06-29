@@ -20,10 +20,8 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect("/login?next=/dashboard");
   }
 
-  const canAccessDesign = profile?.role === "super_admin";
-
   return (
-    <DashboardShell canAccessDesign={canAccessDesign} profile={profile} sites={sites}>
+    <DashboardShell profile={profile} sites={sites}>
       {children}
     </DashboardShell>
   );

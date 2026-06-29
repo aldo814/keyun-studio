@@ -72,6 +72,12 @@ export default async function SitesPage() {
               <div key={`${site.id}-actions`} className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
+                  render={<Link href={`/dashboard/editor/${site.id}`} />}
+                >
+                  에디터
+                </Button>
+                <Button
+                  size="sm"
                   variant="outline"
                   render={<Link href="/dashboard/content/posts" />}
                 >

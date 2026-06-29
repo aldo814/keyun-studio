@@ -138,7 +138,7 @@ export default async function SiteDetailPage({ params, searchParams }: SiteDetai
           <CardHeader>
             <CardTitle>게시하기</CardTitle>
             <CardDescription>
-              현재 저장된 사이트 데이터를 공개 상태로 전환합니다. 디자인 편집 기능은 추후 오픈 예정입니다.
+              디자인 에디터에서 저장한 사이트 데이터를 공개 상태로 전환합니다.
             </CardDescription>
           </CardHeader>
           <CardContent>
