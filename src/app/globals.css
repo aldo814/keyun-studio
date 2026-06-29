@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Pretendard", "Noto Sans KR", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -121,4 +121,39 @@
   border: 0;
   border-radius: 999px;
   background: #2563eb;
+}
+
+@keyframes keyun-float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes keyun-float-fast {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+.keyun-float-slow {
+  animation: keyun-float-slow 5s ease-in-out infinite;
+}
+
+.keyun-float-fast {
+  animation: keyun-float-fast 3.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keyun-float-slow,
+  .keyun-float-fast {
+    animation: none;
+  }
 }

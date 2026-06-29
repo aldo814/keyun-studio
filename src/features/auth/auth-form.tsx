@@ -1,18 +1,20 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { resolvePostLoginPath, sanitizeDashboardNext } from "@/features/auth/post-login-redirect";
 import { hasAnySiteForUser } from "@/features/auth/session-context";
@@ -305,168 +307,176 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <main className="grid min-h-screen bg-muted/60 px-4 py-10 text-foreground lg:grid-cols-[1fr_480px]">
-      <section className="hidden min-h-full items-center justify-center rounded-[32px] bg-zinc-950 p-10 text-white lg:flex">
-        <div className="max-w-lg">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm text-zinc-300">
-            <Sparkles className="size-4 text-blue-300" />
-            KEYUN Admin
-          </div>
-          <h1 className="mt-6 text-5xl font-semibold tracking-normal text-balance">
-            고객은 콘텐츠를 운영하고, 디자인은 슈퍼관리자가 관리합니다.
-          </h1>
-          <p className="mt-5 text-sm leading-7 text-zinc-300">
-            판매용 관리자에서는 게시글, 문의폼, 미디어, 팝업을 먼저 제공합니다.
-            디자인 모드는 슈퍼관리자에게만 노출됩니다.
-          </p>
-          <div className="mt-8 grid gap-3">
-            {["게시글 작성 및 게시", "문의폼 응답 확인", "팝업과 미디어 운영", "슈퍼관리자 디자인 접근 제어"].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-zinc-200">
-                <ShieldCheck className="size-4 text-blue-300" />
-                {item}
-              </div>
-            ))}
-          </div>
+    <main className="grid min-h-screen bg-white text-slate-950 lg:grid-cols-[minmax(480px,0.82fr)_1.18fr]">
+      <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-14">
+        <div className="flex items-center justify-between">
+          <Link aria-label="KEYUN 홈" href="/">
+            <Image
+              alt="KEYUN"
+              className="h-7 w-auto"
+              height={30}
+              priority
+              src="/keyun-logo.svg"
+              width={126}
+            />
+          </Link>
+          <Link
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-950"
+            href="/"
+          >
+            <ArrowLeft className="size-3.5" />
+            홈으로
+          </Link>
         </div>
-      </section>
 
-      <div className="flex items-center justify-center">
-      <Card className="w-full max-w-md rounded-lg border-border bg-card shadow-sm">
-        <CardHeader>
-          <CardTitle>{isSignup ? "회원가입" : "로그인"}</CardTitle>
-          <CardDescription>
-            {isSignup
-              ? "키운 스튜디오 계정을 만들고 워크스페이스를 시작합니다."
-              : "Supabase Auth로 키운 스튜디오에 접속합니다."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50/70 p-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 size-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-semibold text-blue-950">
-                  {isSignup ? "관리자 계정 만들기" : "관리자 기능으로 바로 이동"}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-blue-700">
-                  일반 사용자는 콘텐츠 운영 메뉴를 사용하고, 디자인 메뉴는 슈퍼관리자에게만 표시됩니다.
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="mx-auto flex w-full max-w-md flex-1 items-center py-10">
+          <div className="w-full">
+            <p className="text-xs font-semibold text-blue-600">
+              {isSignup ? "무료로 시작하기" : "다시 만나서 반가워요"}
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-normal">
+              {isSignup ? "첫 사이트를 시작해볼까요?" : "작업을 이어서 완성하세요."}
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              {isSignup
+                ? "계정을 만들면 업종과 목적에 맞는 사이트 구성을 바로 추천해드려요."
+                : "로그인하면 최근 사이트와 콘텐츠 작업으로 바로 이동합니다."}
+            </p>
 
-          <form className="space-y-4" onSubmit={onSubmit}>
-            {isSignup ? (
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-foreground">이름</span>
-                <Input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="김은요"
-                />
-              </label>
-            ) : null}
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-foreground">
-                {isSignup ? "이메일" : "아이디 또는 이메일"}
-              </span>
-              <Input
-                required
-                type={isSignup ? "email" : "text"}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder={isSignup ? "eunyo@example.com" : "admin 또는 eunyo@example.com"}
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-foreground">비밀번호</span>
-              <div className="relative">
-                <Input
-                  required
-                  minLength={6}
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="6자 이상"
-                  className="pr-11"
-                />
-                <button
-                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  type="button"
-                  onClick={() => setShowPassword((value) => !value)}
-                >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-              {isSignup || password ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {passwordChecks.map((check) => (
-                    <span
-                      key={check.label}
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        check.ok
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {check.label}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </label>
-            {!isSignup ? (
-              <label className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <input
-                    checked={rememberEmail}
-                    className="size-4 rounded border-border"
-                    type="checkbox"
-                    onChange={(event) => setRememberEmail(event.target.checked)}
+            <form className="mt-8 space-y-4" onSubmit={onSubmit}>
+              {isSignup ? (
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-slate-700">이름</span>
+                  <Input
+                    className="h-11"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="김은영"
+                    required
                   />
-                  이메일 저장
+                </label>
+              ) : null}
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">
+                  {isSignup ? "이메일" : "아이디 또는 이메일"}
                 </span>
-                <Link className="font-medium text-foreground hover:underline" href="/reset-password">
-                  비밀번호 찾기
-                </Link>
+                <Input
+                  className="h-11"
+                  required
+                  type={isSignup ? "email" : "text"}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder={
+                    isSignup
+                      ? "hello@example.com"
+                      : "admin 또는 hello@example.com"
+                  }
+                />
               </label>
-            ) : null}
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">비밀번호</span>
+                <div className="relative">
+                  <Input
+                    className="h-11 pr-11"
+                    required
+                    minLength={6}
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="6자 이상"
+                  />
+                  <button
+                    aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </div>
+                {isSignup || password ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {passwordChecks.map((check) => (
+                      <span
+                        key={check.label}
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ${
+                          check.ok
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {check.ok && <Check className="size-3" />}
+                        {check.label}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </label>
 
-            {message ? (
-              <p
-                className={`rounded-lg px-3 py-2 text-sm ${
-                  messageTone === "success"
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-red-50 text-red-700"
-                }`}
+              {!isSignup ? (
+                <label className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-2 text-slate-500">
+                    <input
+                      checked={rememberEmail}
+                      className="size-4 rounded border-slate-300 accent-blue-600"
+                      type="checkbox"
+                      onChange={(event) => setRememberEmail(event.target.checked)}
+                    />
+                    이메일 저장
+                  </span>
+                  <Link
+                    className="font-medium text-slate-700 hover:text-blue-600"
+                    href="/reset-password"
+                  >
+                    비밀번호 찾기
+                  </Link>
+                </label>
+              ) : null}
+
+              {message ? (
+                <p
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    messageTone === "success"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-red-50 text-red-700"
+                  }`}
+                  role="status"
+                >
+                  {message}
+                </p>
+              ) : null}
+
+              <Button
+                className="h-11 w-full bg-blue-600 text-white hover:bg-blue-700"
+                disabled={isLoading}
               >
-                {message}
-              </p>
-            ) : null}
-            <Button className="w-full" disabled={isLoading}>
-              {isLoading ? "처리 중..." : isSignup ? "가입하기" : "로그인"}
-              <ArrowRight />
-            </Button>
-          </form>
+                {isLoading ? "처리 중..." : isSignup ? "무료로 가입하기" : "로그인"}
+                <ArrowRight />
+              </Button>
+            </form>
 
-          <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            SNS 로그인
-            <span className="h-px flex-1 bg-border" />
-          </div>
+            <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              간편 로그인
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
 
-          <div className="space-y-3">
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-foreground">
+            <label className="mb-4 block space-y-2">
+              <span className="text-sm font-medium text-slate-700">
                 SNS 표시 아이디/이름
               </span>
               <Input
+                className="h-11"
                 value={socialName}
                 onChange={(event) => setSocialName(event.target.value)}
                 placeholder="키운스튜디오에서 보여줄 이름"
               />
             </label>
+
             <div className="grid gap-2 sm:grid-cols-3">
               <Button
                 type="button"
@@ -478,6 +488,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 Google
               </Button>
               <Button
+                className="border-[#f5d000] bg-[#fee500] text-slate-950 hover:bg-[#f5d000]"
                 type="button"
                 variant="outline"
                 disabled={isLoading}
@@ -487,6 +498,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 Kakao
               </Button>
               <Button
+                className="border-[#03c75a] bg-[#03c75a] text-white hover:bg-[#02b351]"
                 type="button"
                 variant="outline"
                 disabled={isLoading}
@@ -497,33 +509,59 @@ export function AuthForm({ mode }: AuthFormProps) {
                 Naver
               </Button>
             </div>
-            <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-              <LockKeyhole className="mt-0.5 size-3.5" />
-              Google/Kakao는 Supabase 기본 Provider, Naver는 custom:naver
-              Provider 설정 후 연결됩니다.
-            </p>
-          </div>
 
-          <div className="mt-5 text-center text-sm text-muted-foreground">
-            {isSignup ? (
+            <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-400">
+              <LockKeyhole className="mt-0.5 size-3.5 shrink-0" />
+              계정 정보는 로그인과 사이트 저장을 위해서만 사용됩니다.
+            </p>
+
+            <div className="mt-7 border-t border-slate-200 pt-5 text-center text-sm text-slate-500">
+              {isSignup ? "이미 계정이 있나요? " : "KEYUN이 처음인가요? "}
               <Link
-                className="font-medium text-foreground hover:underline"
-                href="/login?next=/dashboard"
+                className="font-semibold text-blue-600 hover:text-blue-700"
+                href={
+                  isSignup
+                    ? "/login?next=/dashboard"
+                    : "/signup?next=/dashboard/sites/new"
+                }
               >
-                이미 계정이 있어요
+                {isSignup ? "로그인" : "무료 회원가입"}
               </Link>
-            ) : (
-              <Link
-                className="font-medium text-foreground hover:underline"
-                href="/signup?next=/dashboard"
-              >
-                새 계정 만들기
-              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative hidden min-h-screen overflow-hidden border-l border-slate-200 bg-slate-50 lg:block">
+        <Image
+          alt="KEYUN으로 웹사이트를 만드는 과정"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          fill
+          priority
+          sizes="55vw"
+          src="/keyun-builder-hero.png"
+        />
+        <div className="absolute inset-x-0 bottom-0 bg-slate-950/92 p-10 text-white">
+          <p className="text-sm font-semibold text-blue-300">
+            {isSignup ? "몇 분이면 첫 화면이 완성됩니다" : "최근 작업부터 바로 이어서"}
+          </p>
+          <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-normal">
+            {isSignup
+              ? "업종을 선택하면 페이지와 섹션을 추천해드려요."
+              : "사이트 편집과 콘텐츠 운영을 한곳에서 관리하세요."}
+          </h2>
+          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-300">
+            {["카드 등록 없이 시작", "반응형 자동 적용", "언제든 직접 수정"].map(
+              (item) => (
+                <span className="flex items-center gap-1.5" key={item}>
+                  <Check className="size-3.5 text-emerald-300" />
+                  {item}
+                </span>
+              ),
             )}
           </div>
-        </CardContent>
-      </Card>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }

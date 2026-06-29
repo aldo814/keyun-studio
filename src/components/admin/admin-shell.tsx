@@ -6,6 +6,7 @@ import {
   Bell,
   ChevronRight,
   Command,
+  ExternalLink,
   LayoutDashboard,
   Menu,
   Search,
@@ -103,6 +104,13 @@ export function AdminShell({
             >
               <LayoutDashboard className="size-4" />
               일반 관리자 보기
+            </Button>
+            <Button
+              variant="outline"
+              render={<Link href="/" target="_blank" />}
+            >
+              사용자 페이지
+              <ExternalLink className="size-4" />
             </Button>
             <div className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
               <div className="size-8 rounded-full bg-primary" />
