@@ -514,7 +514,20 @@ async function ensureWorkspace() {
 }
 
 export async function createDashboardSite(formData: FormData) {
-  const workspaceId = await ensureWorkspace();
+  let workspaceId: string;
+
+  try {
+    workspaceId = await ensureWorkspace();
+  } catch (error) {
+    console.error("[createDashboardSite] workspace provisioning failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    redirectWithNotice(
+      "/dashboard/sites/new",
+      "사이트 생성 준비 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
+    );
+  }
+
   const supabase = await createClient();
   const name = value(formData, "name");
   const templateId = value(formData, "template_id") || null;

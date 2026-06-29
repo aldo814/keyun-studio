@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FileText, Globe2, MessageSquareText, Search, Sparkles } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  FileText,
+  Globe2,
+  MessageSquareText,
+  Search,
+  Sparkles,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -61,7 +70,10 @@ const siteFeatures = [
 ];
 
 type NewSitePageProps = {
-  searchParams?: Promise<{ templateId?: string | string[] }>;
+  searchParams?: Promise<{
+    notice?: string | string[];
+    templateId?: string | string[];
+  }>;
 };
 
 function firstSearchValue(value?: string | string[]) {
@@ -70,6 +82,7 @@ function firstSearchValue(value?: string | string[]) {
 
 export default async function NewSitePage({ searchParams }: NewSitePageProps) {
   const query = await searchParams;
+  const notice = firstSearchValue(query?.notice);
   const selectedTemplateId = firstSearchValue(query?.templateId);
   const templates = await getDashboardTemplates();
   const selectedTemplateIndex = Math.max(
@@ -124,6 +137,16 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
             </div>
           </div>
         </section>
+
+        {notice ? (
+          <div
+            className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+            role="alert"
+          >
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            <p>{notice}</p>
+          </div>
+        ) : null}
 
         <form action={createDashboardSite} className="grid gap-6 lg:grid-cols-[1fr_380px]">
           <input name="completion_path" type="hidden" value="/dashboard/sites/:siteId" />
