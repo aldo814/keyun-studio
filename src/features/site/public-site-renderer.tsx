@@ -7,6 +7,7 @@ import { PublicPopups } from "@/features/site/public-popups";
 import type { Json } from "@/types/database";
 
 type PublicSection = Record<string, unknown>;
+type AlignmentValue = "left" | "center" | "right";
 
 type PublicDesign = {
   bodyFontFamily: string;
@@ -395,6 +396,7 @@ function childCardStyle(section: PublicSection): CSSProperties {
 
 function titleStyle(section: PublicSection, design: PublicDesign): CSSProperties {
   const type = stringValue(section, "type", "content");
+  const layoutAlign = alignmentValue(section, "align");
 
   return {
     color: stringValue(section, "titleColor", design.textColor),
@@ -405,11 +407,14 @@ function titleStyle(section: PublicSection, design: PublicDesign): CSSProperties
     fontSize: `${stringValue(section, "titleFontSize", type === "hero" ? "52" : "36")}px`,
     letterSpacing: `${stringValue(section, "titleLetterSpacing", "0")}px`,
     lineHeight: stringValue(section, "titleLineHeight", "1.15"),
+    textAlign: alignmentValue(section, "titleAlign", layoutAlign),
     whiteSpace: "pre-line",
   };
 }
 
 function descriptionStyle(section: PublicSection, design: PublicDesign): CSSProperties {
+  const layoutAlign = alignmentValue(section, "align");
+
   return {
     color: stringValue(section, "descriptionColor", "#64748b"),
     fontFamily: fontStack(
@@ -419,6 +424,7 @@ function descriptionStyle(section: PublicSection, design: PublicDesign): CSSProp
     fontSize: `${stringValue(section, "descriptionFontSize", "16")}px`,
     letterSpacing: `${stringValue(section, "descriptionLetterSpacing", "0")}px`,
     lineHeight: stringValue(section, "descriptionLineHeight", "1.72"),
+    textAlign: alignmentValue(section, "descriptionAlign", layoutAlign),
     whiteSpace: "pre-line",
   };
 }
@@ -445,20 +451,42 @@ function itemList(section: PublicSection) {
     : ["프리셋 기반 편집", "섹션 상하 이동", "실시간 미리보기"];
 }
 
+function alignmentValue(
+  section: PublicSection,
+  key: string,
+  fallback: AlignmentValue = "left",
+) {
+  const value = stringValue(section, key, fallback);
+
+  return value === "center" || value === "right" ? value : "left";
+}
+
 function alignClass(section: PublicSection) {
-  const align = stringValue(section, "align", "left");
+  const align = alignmentValue(section, "align");
 
   if (align === "center") return "text-center";
   if (align === "right") return "text-right";
   return "text-left";
 }
 
-function justifyClass(section: PublicSection) {
-  const align = stringValue(section, "align", "left");
+function justifyClass(section: PublicSection, key = "align") {
+  const align = alignmentValue(
+    section,
+    key,
+    alignmentValue(section, "align"),
+  );
 
   if (align === "center") return "justify-center";
   if (align === "right") return "justify-end";
-  return "";
+  return "justify-start";
+}
+
+function positionClass(section: PublicSection) {
+  const align = alignmentValue(section, "align");
+
+  if (align === "center") return "mx-auto";
+  if (align === "right") return "ml-auto";
+  return "mr-auto";
 }
 
 function sectionMediaPosition(section: PublicSection) {
@@ -653,11 +681,13 @@ function HeroSection({
     <SectionShell design={design} section={section}>
       <div
         className={`grid items-center gap-10 ${
-          isTextOnly ? "mx-auto max-w-3xl grid-cols-1" : "lg:grid-cols-[0.95fr_1.05fr]"
+          isTextOnly
+            ? `max-w-3xl grid-cols-1 ${positionClass(section)}`
+            : "lg:grid-cols-[0.95fr_1.05fr]"
         } ${alignClass(section)}`}
       >
         {mediaPosition === "left" && !isTextOnly ? <div className="lg:order-1">{visual}</div> : null}
-        <div className={`max-w-2xl ${stringValue(section, "align") === "center" ? "mx-auto" : ""} ${mediaPosition === "left" && !isTextOnly ? "lg:order-2" : "lg:order-1"}`}>
+        <div className={`max-w-2xl ${positionClass(section)} ${mediaPosition === "left" && !isTextOnly ? "lg:order-2" : "lg:order-1"}`}>
           {stringValue(section, "badge") ? (
             <p
               className="mb-5 inline-flex rounded-full px-4 py-2 text-sm font-semibold"
@@ -675,7 +705,7 @@ function HeroSection({
           <p className="mt-6 max-w-2xl" style={descriptionStyle(section, design)}>
             {stringValue(section, "description")}
           </p>
-          <div className={`mt-9 flex flex-wrap items-center gap-4 ${justifyClass(section)}`}>
+          <div className={`mt-9 flex flex-wrap items-center gap-4 ${justifyClass(section, "buttonAlign")}`}>
             {stringValue(section, "buttonLabel") ? (
               <a
                 className="inline-flex min-h-12 items-center justify-center px-6 font-semibold"
@@ -704,7 +734,7 @@ function FeaturesSection({ design, section }: { design: PublicDesign; section: P
 
   return (
     <SectionShell design={design} section={section}>
-      <div className={`mx-auto max-w-4xl ${alignClass(section)}`}>
+      <div className={`max-w-4xl ${positionClass(section)} ${alignClass(section)}`}>
         {stringValue(section, "badge") ? (
           <p className="mb-4 text-sm font-bold" style={{ color: design.mainColor }}>
             {stringValue(section, "badge")}
@@ -713,7 +743,10 @@ function FeaturesSection({ design, section }: { design: PublicDesign; section: P
         <h2 className="font-bold tracking-normal" style={titleStyle(section, design)}>
           {stringValue(section, "title")}
         </h2>
-        <p className="mx-auto mt-4 max-w-2xl" style={descriptionStyle(section, design)}>
+        <p
+          className={`mt-4 max-w-2xl ${positionClass(section)}`}
+          style={descriptionStyle(section, design)}
+        >
           {stringValue(section, "description")}
         </p>
       </div>
@@ -798,18 +831,21 @@ function ContentSection({
 function CtaSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
   return (
     <SectionShell design={design} section={section}>
-      <div className={`mx-auto max-w-4xl ${alignClass(section)}`}>
+      <div className={`max-w-4xl ${positionClass(section)} ${alignClass(section)}`}>
         <h2
           className="font-bold tracking-normal"
           style={titleStyle(section, design)}
         >
           {stringValue(section, "title")}
         </h2>
-        <p className="mx-auto mt-5 max-w-2xl" style={descriptionStyle(section, design)}>
+        <p
+          className={`mt-5 max-w-2xl ${positionClass(section)}`}
+          style={descriptionStyle(section, design)}
+        >
           {stringValue(section, "description")}
         </p>
         {stringValue(section, "buttonLabel") ? (
-          <div className={`mt-8 flex ${justifyClass(section)}`}>
+          <div className={`mt-8 flex ${justifyClass(section, "buttonAlign")}`}>
             <a
               className="inline-flex min-h-12 items-center justify-center px-6 font-semibold"
               href={stringValue(section, "buttonLink", "#")}

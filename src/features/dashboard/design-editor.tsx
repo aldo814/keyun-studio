@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import {
-  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, Copy, Eye,
-  FileText, GripVertical, Home, Image as ImageIcon, Laptop, Layers3, Monitor,
-  MoreHorizontal, Palette, Plus, Settings, Smartphone, Tablet, Trash2,
-  UploadCloud, X,
+  AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
+  Check, ChevronDown, Copy, Eye, FileText, GripVertical, Home,
+  Image as ImageIcon, Laptop, Layers3, Monitor, MoreHorizontal, Palette, Plus,
+  Settings, Smartphone, Tablet, Trash2, UploadCloud, X,
 } from "lucide-react";
 import {
   useEffect,
@@ -92,6 +92,7 @@ type ModulePreset = {
 
 type EditorViewport = "desktop" | "tablet" | "mobile";
 type RightPanelMode = "library" | "settings";
+type AlignmentValue = "left" | "center" | "right";
 type SelectedElement =
   | "site"
   | "section"
@@ -221,6 +222,16 @@ const radiusOptions = [
   { label: "기본", value: "24" },
   { label: "둥글게", value: "36" },
 ];
+
+const alignmentOptions = [
+  { icon: AlignLeft, label: "왼쪽", value: "left" },
+  { icon: AlignCenter, label: "가운데", value: "center" },
+  { icon: AlignRight, label: "오른쪽", value: "right" },
+] satisfies Array<{
+  icon: typeof AlignLeft;
+  label: string;
+  value: AlignmentValue;
+}>;
 
 const freeFontOptions = [
   {
@@ -362,6 +373,75 @@ function stringValue(record: Record<string, unknown>, key: string, fallback = ""
   const value = record[key];
 
   return typeof value === "string" ? value : fallback;
+}
+
+function alignmentValue(
+  section: EditorSection,
+  key: string,
+  fallback: AlignmentValue = "left",
+) {
+  const value = stringValue(section, key, fallback);
+
+  return value === "center" || value === "right" ? value : "left";
+}
+
+function alignmentTextClass(value: AlignmentValue) {
+  if (value === "center") return "text-center";
+  if (value === "right") return "text-right";
+  return "text-left";
+}
+
+function alignmentJustifyClass(value: AlignmentValue) {
+  if (value === "center") return "justify-center";
+  if (value === "right") return "justify-end";
+  return "justify-start";
+}
+
+function alignmentPositionClass(value: AlignmentValue) {
+  if (value === "center") return "mx-auto";
+  if (value === "right") return "ml-auto";
+  return "mr-auto";
+}
+
+function AlignmentControl({
+  label,
+  onChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: AlignmentValue) => void;
+  value: AlignmentValue;
+}) {
+  return (
+    <div className="space-y-2">
+      <span className="text-xs text-slate-500">{label}</span>
+      <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-slate-200">
+        {alignmentOptions.map((option) => {
+          const Icon = option.icon;
+          const isActive = option.value === value;
+
+          return (
+            <button
+              aria-label={`${label} ${option.label}`}
+              aria-pressed={isActive}
+              className={cn(
+                "flex h-10 items-center justify-center gap-1.5 border-r border-slate-200 text-xs font-semibold transition-colors last:border-r-0",
+                isActive
+                  ? "bg-blue-50 text-blue-600"
+                  : "bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+              )}
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+            >
+              <Icon className="size-4" />
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function numberValue(record: Record<string, unknown>, key: string, fallback: number) {
@@ -706,22 +786,28 @@ function defaultTitleSize(section: EditorSection) {
 }
 
 function titleTextStyle(section: EditorSection, design: DesignSettings): CSSProperties {
+  const layoutAlign = alignmentValue(section, "align");
+
   return {
     color: stringValue(section, "titleColor", design.textColor),
     fontFamily: fontStack(stringValue(section, "titleFontFamily", "site-heading"), design, "heading"),
     fontSize: `${stringValue(section, "titleFontSize", defaultTitleSize(section))}px`,
     letterSpacing: `${stringValue(section, "titleLetterSpacing", "0")}px`,
     lineHeight: stringValue(section, "titleLineHeight", "1.16"),
+    textAlign: alignmentValue(section, "titleAlign", layoutAlign),
   };
 }
 
 function descriptionTextStyle(section: EditorSection, design: DesignSettings): CSSProperties {
+  const layoutAlign = alignmentValue(section, "align");
+
   return {
     color: stringValue(section, "descriptionColor", "#64748b"),
     fontFamily: fontStack(stringValue(section, "descriptionFontFamily", "site-body"), design, "body"),
     fontSize: `${stringValue(section, "descriptionFontSize", "14")}px`,
     letterSpacing: `${stringValue(section, "descriptionLetterSpacing", "0")}px`,
     lineHeight: stringValue(section, "descriptionLineHeight", "1.72"),
+    textAlign: alignmentValue(section, "descriptionAlign", layoutAlign),
   };
 }
 
@@ -930,14 +1016,14 @@ function CanvasSection({
 }: CanvasSectionProps) {
   const type = stringValue(section, "type", "content");
   const layout = stringValue(section, "layout");
-  const align = stringValue(section, "align", "left");
+  const align = alignmentValue(section, "align");
+  const buttonAlign = alignmentValue(section, "buttonAlign", align);
   const backgroundType = stringValue(section, "backgroundType", "gradient");
   const imageUrl = stringValue(section, "imageUrl");
   const items = itemList(section);
   const mediaPosition = sectionMediaPosition(section);
   const videoUrl = stringValue(section, "videoUrl");
-  const alignClass =
-    align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
+  const alignClass = alignmentTextClass(align);
   const sectionStyle = {
     ...sectionBackground(section, design),
     ...sectionEffectStyle(section),
@@ -1042,14 +1128,14 @@ function CanvasSection({
             className={cn(
               "grid items-center gap-10",
               layout === "text-focus" || layout === "cta-focus"
-                ? "mx-auto max-w-3xl grid-cols-1"
+                ? cn("max-w-3xl grid-cols-1", alignmentPositionClass(align))
                 : "lg:grid-cols-[0.95fr_1.05fr]",
               alignClass,
             )}
           >
             <div
               className={cn(
-                align === "center" ? "mx-auto" : "",
+                alignmentPositionClass(align),
                 "max-w-2xl",
                 mediaPosition === "left" && layout !== "text-focus" && layout !== "cta-focus"
                   ? "lg:order-2"
@@ -1105,7 +1191,7 @@ function CanvasSection({
               <div
                 className={cn(
                   "mt-8 flex flex-wrap items-center gap-3",
-                  align === "center" ? "justify-center" : align === "right" ? "justify-end" : "",
+                  alignmentJustifyClass(buttonAlign),
                 )}
               >
                 <InlineEditFrame
@@ -1182,10 +1268,16 @@ function CanvasSection({
         ) : null}
 
         {type === "features" ? (
-          <div className={cn("mx-auto max-w-4xl", alignClass)}>
+          <div
+            className={cn(
+              "max-w-4xl",
+              alignmentPositionClass(align),
+              alignClass,
+            )}
+          >
             <InlineEditFrame
               active={activeElement("badge")}
-              className="mx-auto w-fit"
+              className={cn("w-fit", alignmentPositionClass(align))}
               label="배지 바로 수정"
               onContextMenu={(event) => openContextMenu(event, index, "badge")}
               onSelect={() => selectElementForSection("badge")}
@@ -1214,7 +1306,10 @@ function CanvasSection({
             </InlineEditFrame>
             <InlineEditFrame
               active={activeElement("description")}
-              className="mx-auto mt-3 max-w-2xl"
+              className={cn(
+                "mt-3 max-w-2xl",
+                alignmentPositionClass(align),
+              )}
               label="설명 바로 수정"
               onContextMenu={(event) => openContextMenu(event, index, "description")}
               onSelect={() => selectElementForSection("description")}
@@ -1341,7 +1436,13 @@ function CanvasSection({
         ) : null}
 
         {type === "cta" ? (
-          <div className={cn("mx-auto max-w-4xl", alignClass)}>
+          <div
+            className={cn(
+              "max-w-4xl",
+              alignmentPositionClass(align),
+              alignClass,
+            )}
+          >
             <InlineEditFrame
               active={activeElement("title")}
               label="제목 바로 수정"
@@ -1358,7 +1459,10 @@ function CanvasSection({
             </InlineEditFrame>
             <InlineEditFrame
               active={activeElement("description")}
-              className="mx-auto mt-4 max-w-2xl"
+              className={cn(
+                "mt-4 max-w-2xl",
+                alignmentPositionClass(align),
+              )}
               label="설명 바로 수정"
               onContextMenu={(event) => openContextMenu(event, index, "description")}
               onSelect={() => selectElementForSection("description")}
@@ -1373,23 +1477,29 @@ function CanvasSection({
                 }
               />
             </InlineEditFrame>
-            <InlineEditFrame
-              active={activeElement("button")}
-              className="mt-7 inline-block"
-              label="버튼 문구 수정"
-              onContextMenu={(event) => openContextMenu(event, index, "button")}
-              onSelect={() => selectElementForSection("button")}
+            <div
+              className={cn(
+                "mt-7 flex",
+                alignmentJustifyClass(buttonAlign),
+              )}
             >
-              <Input
-                className="h-12 w-40 rounded-lg border-0 px-5 text-center text-sm font-semibold text-white focus-visible:ring-2"
-                placeholder="버튼"
-                style={buttonStyle(section, design)}
-                value={stringValue(section, "buttonLabel")}
-                onChange={(event) =>
-                  updateField(index, "buttonLabel", event.target.value)
-                }
-              />
-            </InlineEditFrame>
+              <InlineEditFrame
+                active={activeElement("button")}
+                label="버튼 문구 수정"
+                onContextMenu={(event) => openContextMenu(event, index, "button")}
+                onSelect={() => selectElementForSection("button")}
+              >
+                <Input
+                  className="h-12 w-40 rounded-lg border-0 px-5 text-center text-sm font-semibold text-white focus-visible:ring-2"
+                  placeholder="버튼"
+                  style={buttonStyle(section, design)}
+                  value={stringValue(section, "buttonLabel")}
+                  onChange={(event) =>
+                    updateField(index, "buttonLabel", event.target.value)
+                  }
+                />
+              </InlineEditFrame>
+            </div>
           </div>
         ) : null}
       </div>
@@ -2158,6 +2268,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     const defaultSize = isTitle ? defaultTitleSize(selectedSection) : "14";
     const defaultLineHeight = isTitle ? "1.16" : "1.72";
     const fontValue = stringValue(selectedSection, fontKey, defaultFont);
+    const alignKey = isTitle ? "titleAlign" : "descriptionAlign";
+    const layoutAlign = alignmentValue(selectedSection, "align");
 
     return (
       <>
@@ -2195,6 +2307,13 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
           </section>
         ) : (
           <section className="space-y-4">
+            <AlignmentControl
+              label="텍스트 정렬"
+              value={alignmentValue(selectedSection, alignKey, layoutAlign)}
+              onChange={(value) =>
+                updateSectionField(selectedIndex, alignKey, value)
+              }
+            />
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">텍스트 스타일</h3>
               <span
@@ -2334,6 +2453,21 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
               />
             </label>
           </div>
+        </section>
+
+        <section className="space-y-4">
+          <h3 className="text-sm font-semibold">버튼 배치</h3>
+          <AlignmentControl
+            label="버튼 정렬"
+            value={alignmentValue(
+              selectedSection,
+              "buttonAlign",
+              alignmentValue(selectedSection, "align"),
+            )}
+            onChange={(value) =>
+              updateSectionField(selectedIndex, "buttonAlign", value)
+            }
+          />
         </section>
 
         {isSecondary ? (
@@ -4777,32 +4911,13 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
                       <section className="space-y-4">
                         <h3 className="text-sm font-semibold">정렬</h3>
-                        <div className="space-y-2">
-                          <span className="text-xs text-slate-500">텍스트 정렬</span>
-                          <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-slate-200">
-                            {[
-                              ["좌측", "left"],
-                              ["중앙", "center"],
-                              ["우측", "right"],
-                            ].map(([label, value]) => (
-                              <button
-                                key={value}
-                                className={cn(
-                                  "h-10 text-xs font-semibold",
-                                  stringValue(selectedSection, "align", "left") === value
-                                    ? "bg-blue-50 text-blue-600"
-                                    : "bg-white text-slate-500",
-                                )}
-                                type="button"
-                                onClick={() =>
-                                  updateSectionField(selectedIndex, "align", value)
-                                }
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        <AlignmentControl
+                          label="레이아웃 정렬"
+                          value={alignmentValue(selectedSection, "align")}
+                          onChange={(value) =>
+                            updateSectionField(selectedIndex, "align", value)
+                          }
+                        />
 
                         {["hero", "content"].includes(
                           stringValue(selectedSection, "type", "content"),
