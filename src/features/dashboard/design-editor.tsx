@@ -113,6 +113,7 @@ type ModulePreset = {
   category: string;
   description: string;
   layout: string;
+  pageType?: "main" | "sub" | "all";
   title: string;
   type: string;
 };
@@ -177,6 +178,8 @@ const sectionTypes = [
   { value: "pricing", label: "가격", icon: CreditCard },
   { value: "faq", label: "FAQ", icon: HelpCircle },
   { value: "team", label: "팀", icon: Users },
+  { value: "subhero", label: "서브 비주얼", icon: ImageIcon },
+  { value: "breadcrumb", label: "브레드크럼", icon: ChevronDown },
 ];
 
 const modulePresets: ModulePreset[] = [
@@ -184,6 +187,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "메시지와 실제 에디터 화면을 한눈에 보여주는 제품 중심 구성",
     layout: "product-canvas",
+    pageType: "main",
     title: "제품 캔버스",
     type: "hero",
   },
@@ -191,6 +195,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "중앙 메시지 아래 대형 제품 화면으로 신뢰를 만드는 구성",
     layout: "centered-showcase",
+    pageType: "main",
     title: "중앙 쇼케이스",
     type: "hero",
   },
@@ -198,6 +203,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "완성된 사이트 결과물을 갤러리처럼 먼저 보여주는 구성",
     layout: "template-showcase",
+    pageType: "main",
     title: "템플릿 쇼케이스",
     type: "hero",
   },
@@ -205,6 +211,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "섹션이 하나의 페이지로 조립되는 과정을 표현한 구성",
     layout: "modular-assembly",
+    pageType: "main",
     title: "모듈 조립형",
     type: "hero",
   },
@@ -212,6 +219,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "강한 타이포와 결과물 화면을 비대칭으로 배치한 구성",
     layout: "editorial-contrast",
+    pageType: "main",
     title: "에디토리얼",
     type: "hero",
   },
@@ -219,6 +227,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "첫 화면에 가장 적합한 슬라이드형 메인 비주얼",
     layout: "slide",
+    pageType: "main",
     title: "슬라이드 히어로",
     type: "hero",
   },
@@ -226,6 +235,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "강한 전환 버튼과 메시지를 함께 보여주는 구성",
     layout: "cta-focus",
+    pageType: "main",
     title: "CTA 강조형 히어로",
     type: "hero",
   },
@@ -233,6 +243,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "좌측 텍스트와 우측 비주얼이 균형 잡힌 구성",
     layout: "split-visual",
+    pageType: "main",
     title: "비주얼 강조 히어로",
     type: "hero",
   },
@@ -240,6 +251,7 @@ const modulePresets: ModulePreset[] = [
     category: "히어로",
     description: "문구 중심으로 빠르게 메시지를 전달하는 구성",
     layout: "text-focus",
+    pageType: "main",
     title: "텍스트 중심 히어로",
     type: "hero",
   },
@@ -368,6 +380,47 @@ const modulePresets: ModulePreset[] = [
     layout: "list",
     title: "팀 리스트",
     type: "team",
+  },
+  // ── 서브페이지 전용 ─────────────────────────────
+  {
+    category: "서브 비주얼",
+    description: "페이지 제목과 배경을 보여주는 컴팩트 배너",
+    layout: "banner",
+    pageType: "sub",
+    title: "페이지 배너",
+    type: "subhero",
+  },
+  {
+    category: "서브 비주얼",
+    description: "배경 이미지 위에 제목을 얹는 구성",
+    layout: "image-bg",
+    pageType: "sub",
+    title: "이미지 배경 배너",
+    type: "subhero",
+  },
+  {
+    category: "서브 비주얼",
+    description: "좌측 제목 + 우측 부가정보를 나란히 배치",
+    layout: "split",
+    pageType: "sub",
+    title: "좌우 분리형 배너",
+    type: "subhero",
+  },
+  {
+    category: "브레드크럼",
+    description: "현재 위치를 경로로 표시하는 네비게이션 바",
+    layout: "default",
+    pageType: "sub",
+    title: "브레드크럼",
+    type: "breadcrumb",
+  },
+  {
+    category: "브레드크럼",
+    description: "브레드크럼과 페이지 제목을 함께 보여주는 구성",
+    layout: "with-title",
+    pageType: "sub",
+    title: "제목 포함 브레드크럼",
+    type: "breadcrumb",
   },
 ];
 
@@ -734,7 +787,11 @@ function createSection(type: string, layout?: string): EditorSection {
                   ? "accordion"
                   : type === "team"
                     ? "grid"
-                    : "media-left");
+                    : type === "subhero"
+                      ? "banner"
+                      : type === "breadcrumb"
+                        ? "default"
+                        : "media-left");
 
   const base = {
     builderId: createSectionId(type),
@@ -876,6 +933,43 @@ function createSection(type: string, layout?: string): EditorSection {
         "최마케|CMO|브랜드 & 그로스",
       ],
       title: "팀을 소개합니다",
+    };
+  }
+
+  if (type === "subhero") {
+    return {
+      ...base,
+      align: "left",
+      backgroundType: "color",
+      bgColor: "#f8fafc",
+      description: "페이지에 대한 간단한 설명을 입력하세요.",
+      paddingBottom: "56",
+      paddingBottomDesktop: "56",
+      paddingBottomMobile: "40",
+      paddingBottomTablet: "48",
+      paddingTop: "56",
+      paddingTopDesktop: "56",
+      paddingTopMobile: "40",
+      paddingTopTablet: "48",
+      title: "페이지 제목",
+    };
+  }
+
+  if (type === "breadcrumb") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      items: ["홈|/", "서비스|/service"],
+      paddingBottom: "12",
+      paddingBottomDesktop: "12",
+      paddingBottomMobile: "10",
+      paddingBottomTablet: "10",
+      paddingTop: "12",
+      paddingTopDesktop: "12",
+      paddingTopMobile: "10",
+      paddingTopTablet: "10",
+      title: "",
     };
   }
 
@@ -1797,6 +1891,65 @@ function MiniModulePreview({ preset }: { preset: ModulePreset }) {
                 <div className="mt-0.5 h-0.5 w-3/4 mx-auto rounded bg-slate-200" />
               </div>
             ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "subhero") {
+    return (
+      <div className={cn(
+        "relative h-20 overflow-hidden rounded-md border p-2",
+        preset.layout === "image-bg"
+          ? "border-slate-600 bg-slate-700"
+          : "border-slate-200 bg-slate-50",
+      )}>
+        {preset.layout === "split" ? (
+          <div className="flex h-full items-center justify-between gap-2">
+            <div className="space-y-1">
+              <div className={cn("h-2.5 w-20 rounded", preset.layout === "split" ? "bg-slate-800" : "bg-white/80")} />
+              <div className="h-1 w-16 rounded bg-slate-300" />
+            </div>
+            <div className="space-y-1 text-right">
+              <div className="h-1 w-10 rounded bg-slate-200" />
+              <div className="h-1 w-8 rounded bg-slate-200" />
+            </div>
+          </div>
+        ) : (
+          <>
+            {preset.layout === "image-bg" && (
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900 opacity-60" />
+            )}
+            <div className="relative space-y-1.5">
+              <div className="flex items-center gap-1">
+                <div className="h-0.5 w-4 rounded bg-slate-400" />
+                <div className="h-0.5 w-6 rounded bg-slate-400" />
+                <div className="h-0.5 w-3 rounded bg-blue-400" />
+              </div>
+              <div className={cn("h-3 w-24 rounded", preset.layout === "image-bg" ? "bg-white/90" : "bg-slate-800")} />
+              <div className={cn("h-1 w-20 rounded", preset.layout === "image-bg" ? "bg-white/50" : "bg-slate-300")} />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "breadcrumb") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        <div className="flex items-center gap-1">
+          <div className="h-1 w-5 rounded bg-slate-400" />
+          <div className="size-1.5 rotate-45 border-r border-t border-slate-300" />
+          <div className="h-1 w-8 rounded bg-slate-400" />
+          <div className="size-1.5 rotate-45 border-r border-t border-slate-300" />
+          <div className="h-1 w-10 rounded bg-slate-700" />
+        </div>
+        {preset.layout === "with-title" && (
+          <div className="mt-3 border-t border-slate-100 pt-2">
+            <div className="h-3 w-28 rounded bg-slate-800" />
+            <div className="mt-1 h-1.5 w-20 rounded bg-slate-200" />
           </div>
         )}
       </div>
@@ -3474,6 +3627,92 @@ function CanvasSection({
             )}
           </div>
         ) : null}
+
+        {type === "subhero" ? (
+          <div className="w-full">
+            {layout === "image-bg" && imageUrl && (
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${imageUrl})` }}
+              >
+                <div className="absolute inset-0 bg-black/40" />
+              </div>
+            )}
+            <div className={cn("relative", layout === "image-bg" ? "text-white" : "")}>
+              <InlineEditFrame
+                active={activeElement("title")}
+                animationClass={previewAnimationClass("title")}
+                label="페이지 제목 수정"
+                onContextMenu={(event) => openContextMenu(event, index, "title")}
+                onSelect={() => selectElementForSection("title")}
+              >
+                <Input
+                  className={cn(
+                    "h-auto border-0 bg-transparent p-0 font-bold shadow-none focus-visible:ring-0",
+                    layout === "split" ? "text-2xl" : "text-4xl",
+                  )}
+                  placeholder="페이지 제목"
+                  style={titleTextStyle(section, design)}
+                  value={stringValue(section, "title")}
+                  onChange={(event) => updateField(index, "title", event.target.value)}
+                />
+              </InlineEditFrame>
+              {layout !== "split" && (
+                <InlineEditFrame
+                  active={activeElement("description")}
+                  animationClass={previewAnimationClass("description")}
+                  className="mt-3"
+                  label="설명 수정"
+                  onContextMenu={(event) => openContextMenu(event, index, "description")}
+                  onSelect={() => selectElementForSection("description")}
+                >
+                  <Textarea
+                    className="min-h-0 resize-none border-0 bg-transparent p-0 text-sm leading-6 text-slate-500 shadow-none focus-visible:ring-0"
+                    placeholder="페이지 설명을 입력하세요"
+                    style={descriptionTextStyle(section, design)}
+                    value={stringValue(section, "description")}
+                    onChange={(event) => updateField(index, "description", event.target.value)}
+                  />
+                </InlineEditFrame>
+              )}
+              {layout === "split" && (
+                <div className="mt-2 text-sm text-slate-400">
+                  {stringValue(section, "description", "페이지에 대한 간단한 설명")}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {type === "breadcrumb" ? (
+          <div className="w-full">
+            <nav className="flex items-center gap-1.5 text-sm">
+              {itemList(section).map((item, i) => {
+                const [label] = item.split("|");
+                const isLast = i === itemList(section).length - 1;
+                return (
+                  <span key={i} className="flex items-center gap-1.5">
+                    {i > 0 && <ChevronDown className="size-3 -rotate-90 text-slate-300" />}
+                    <span className={cn(isLast ? "font-semibold text-slate-800" : "text-slate-400 hover:text-blue-500")}>
+                      {label}
+                    </span>
+                  </span>
+                );
+              })}
+              {layout === "with-title" && (
+                <div className="mt-3 w-full border-t border-slate-100 pt-3">
+                  <Input
+                    className="h-auto border-0 bg-transparent p-0 text-xl font-bold shadow-none focus-visible:ring-0"
+                    placeholder="페이지 제목"
+                    style={titleTextStyle(section, design)}
+                    value={stringValue(section, "title")}
+                    onChange={(event) => updateField(index, "title", event.target.value)}
+                  />
+                </div>
+              )}
+            </nav>
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -3564,11 +3803,17 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
   const activePaddingTopValue = selectedSection
     ? responsivePaddingValue(selectedSection, "paddingTop", activeStyleViewport, "96")
     : "96";
-  const visibleModules = modulePresets.filter(
+  const isMainPage = page.path === "/";
+  const pageFilteredPresets = modulePresets.filter((preset) => {
+    const pt = preset.pageType ?? "all";
+    if (isMainPage) return pt === "main" || pt === "all";
+    return pt === "sub" || pt === "all";
+  });
+  const visibleModules = pageFilteredPresets.filter(
     (preset) => preset.category === activeLibraryCategory,
   );
   const availableLibraryCategories = Array.from(
-    new Set(modulePresets.map((preset) => preset.category)),
+    new Set(pageFilteredPresets.map((preset) => preset.category)),
   );
   const previewSection = useMemo(
     () => (previewPreset ? createSection(previewPreset.type, previewPreset.layout) : null),
