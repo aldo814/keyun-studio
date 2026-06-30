@@ -3,10 +3,10 @@
 import Link from "next/link";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
-  Check, ChevronDown, Copy, Eye, FileText, GripVertical, Home,
-  Image as ImageIcon, Languages, Laptop, Layers3, Monitor, MoreHorizontal, Palette, Plus,
-  Settings, Smartphone, Sparkles, Tablet, Trash2, UploadCloud, WandSparkles, X,
-  ZoomIn,
+  BarChart3, Check, ChevronDown, Copy, CreditCard, Eye, FileText, GripVertical,
+  HelpCircle, Home, Image as ImageIcon, Languages, Laptop, Layers3, Monitor,
+  MoreHorizontal, Palette, Plus, Settings, Smartphone, Sparkles, Star, Tablet,
+  Trash2, UploadCloud, Users, WandSparkles, X, ZoomIn,
 } from "lucide-react";
 import {
   useEffect,
@@ -164,6 +164,11 @@ const sectionTypes = [
   { value: "features", label: "기능", icon: Layers3 },
   { value: "content", label: "서비스", icon: FileText },
   { value: "cta", label: "CTA", icon: ArrowRight },
+  { value: "review", label: "후기", icon: Star },
+  { value: "stats", label: "데이터", icon: BarChart3 },
+  { value: "pricing", label: "가격", icon: CreditCard },
+  { value: "faq", label: "FAQ", icon: HelpCircle },
+  { value: "team", label: "팀", icon: Users },
 ];
 
 const modulePresets: ModulePreset[] = [
@@ -257,6 +262,104 @@ const modulePresets: ModulePreset[] = [
     layout: "banner",
     title: "와이드 CTA",
     type: "cta",
+  },
+  {
+    category: "CTA",
+    description: "어두운 배경으로 강한 전환을 유도하는 구성",
+    layout: "dark",
+    title: "다크 CTA",
+    type: "cta",
+  },
+  {
+    category: "CTA",
+    description: "이메일 입력 + 구독 버튼으로 리드를 수집하는 구성",
+    layout: "newsletter",
+    title: "뉴스레터 구독",
+    type: "cta",
+  },
+  {
+    category: "후기",
+    description: "여러 고객 후기를 카드 그리드로 나열하는 구성",
+    layout: "grid",
+    title: "후기 카드 그리드",
+    type: "review",
+  },
+  {
+    category: "후기",
+    description: "대표 고객 후기를 크게 부각하는 구성",
+    layout: "featured",
+    title: "추천 후기 강조",
+    type: "review",
+  },
+  {
+    category: "후기",
+    description: "별점과 함께 후기를 나열하는 구성",
+    layout: "rating",
+    title: "별점 후기",
+    type: "review",
+  },
+  {
+    category: "데이터",
+    description: "핵심 수치를 크게 강조하는 카운터 구성",
+    layout: "counters",
+    title: "핵심 수치 강조",
+    type: "stats",
+  },
+  {
+    category: "데이터",
+    description: "진행 바로 달성도를 시각화하는 구성",
+    layout: "bars",
+    title: "진행 바 통계",
+    type: "stats",
+  },
+  {
+    category: "데이터",
+    description: "어두운 배경으로 임팩트 있게 수치를 보여주는 구성",
+    layout: "dark",
+    title: "다크 데이터",
+    type: "stats",
+  },
+  {
+    category: "가격",
+    description: "플랜별 카드로 가격을 비교하는 구성",
+    layout: "cards",
+    title: "가격 카드",
+    type: "pricing",
+  },
+  {
+    category: "가격",
+    description: "두 개의 플랜을 나란히 비교하는 구성",
+    layout: "two-col",
+    title: "2열 가격 비교",
+    type: "pricing",
+  },
+  {
+    category: "FAQ",
+    description: "질문을 클릭해 답변을 여는 아코디언 구성",
+    layout: "accordion",
+    title: "FAQ 아코디언",
+    type: "faq",
+  },
+  {
+    category: "FAQ",
+    description: "질문과 답변을 두 열로 나란히 배치하는 구성",
+    layout: "two-col",
+    title: "2열 FAQ",
+    type: "faq",
+  },
+  {
+    category: "팀",
+    description: "팀원 프로필을 카드 그리드로 보여주는 구성",
+    layout: "grid",
+    title: "팀 그리드",
+    type: "team",
+  },
+  {
+    category: "팀",
+    description: "팀원을 리스트로 나열하는 구성",
+    layout: "list",
+    title: "팀 리스트",
+    type: "team",
   },
 ];
 
@@ -559,7 +662,13 @@ function defaultSectionStyle(type: string, layout: string) {
 
   return {
     align:
-      layout === "text-focus" || layout === "centered-showcase"
+      layout === "text-focus" ||
+      layout === "centered-showcase" ||
+      type === "review" ||
+      type === "stats" ||
+      type === "pricing" ||
+      type === "faq" ||
+      type === "team"
         ? "center"
         : "left",
     arrowBgColor: "#0f172a",
@@ -607,7 +716,17 @@ function createSection(type: string, layout?: string): EditorSection {
         ? "cards"
         : type === "cta"
           ? "banner"
-          : "media-left");
+          : type === "review"
+            ? "grid"
+            : type === "stats"
+              ? "counters"
+              : type === "pricing"
+                ? "cards"
+                : type === "faq"
+                  ? "accordion"
+                  : type === "team"
+                    ? "grid"
+                    : "media-left");
 
   const base = {
     builderId: createSectionId(type),
@@ -676,6 +795,79 @@ function createSection(type: string, layout?: string): EditorSection {
       buttonLink: "#contact",
       description: "저장 후 게시하면 공개 URL에 바로 반영됩니다.",
       title: "이제 사이트를 게시할 시간입니다",
+    };
+  }
+
+  if (type === "review") {
+    return {
+      ...base,
+      align: "center",
+      badge: "고객 후기",
+      description: "실제 고객들이 경험한 이야기를 들어보세요.",
+      items: [
+        "김민준|마케팅 팀장|덕분에 사이트 운영이 훨씬 쉬워졌어요. 비개발자도 쉽게 쓸 수 있습니다.",
+        "이서연|스타트업 대표|런칭까지 일주일도 안 걸렸어요. 결과물이 기대 이상이었습니다.",
+        "박지훈|프리랜서 디자이너|디자인 퀄리티가 높고 커스터마이징이 자유로워서 만족합니다.",
+      ],
+      title: "고객들이 직접 경험한 변화",
+    };
+  }
+
+  if (type === "stats") {
+    return {
+      ...base,
+      align: "center",
+      badge: "주요 지표",
+      description: "숫자로 증명하는 키운의 성과입니다.",
+      items: ["500+|누적 사이트 수", "98%|고객 만족도", "3일|평균 런칭 기간", "24/7|운영 지원"],
+      title: "신뢰할 수 있는 플랫폼",
+    };
+  }
+
+  if (type === "pricing") {
+    return {
+      ...base,
+      align: "center",
+      badge: "요금제",
+      description: "필요에 맞는 플랜을 선택하세요.",
+      items: [
+        "스타터|무료|기본 템플릿 5개\n페이지 3개\n서브도메인 제공|무제한",
+        "프로|월 29,000원|모든 템플릿\n페이지 무제한\n커스텀 도메인|우선 지원",
+        "비즈니스|월 79,000원|화이트라벨\n팀 협업\n전담 매니저|엔터프라이즈",
+      ],
+      title: "합리적인 가격으로 시작하세요",
+    };
+  }
+
+  if (type === "faq") {
+    return {
+      ...base,
+      align: "center",
+      badge: "자주 묻는 질문",
+      description: "궁금한 점이 있으시면 언제든 문의해주세요.",
+      items: [
+        "코딩 없이도 사용할 수 있나요?|네, 키운은 완전한 노코드 빌더입니다. 드래그 앤 드롭과 텍스트 입력만으로 사이트를 만들 수 있습니다.",
+        "무료 체험이 가능한가요?|스타터 플랜은 영구 무료입니다. 신용카드 없이 바로 시작하실 수 있습니다.",
+        "커스텀 도메인을 연결할 수 있나요?|프로 이상 플랜에서 커스텀 도메인을 연결하실 수 있습니다.",
+        "데이터는 안전하게 보관되나요?|AWS 클라우드에 저장되며 정기적으로 백업됩니다.",
+      ],
+      title: "자주 묻는 질문",
+    };
+  }
+
+  if (type === "team") {
+    return {
+      ...base,
+      align: "center",
+      badge: "우리 팀",
+      description: "키운을 만들어가는 사람들을 소개합니다.",
+      items: [
+        "김대표|CEO · 공동창업자|제품 전략 및 비전",
+        "이기획|CPO · 공동창업자|프로덕트 디자인",
+        "박개발|CTO|풀스택 개발",
+        "최마케|CMO|브랜드 & 그로스",
+      ],
+      title: "팀을 소개합니다",
     };
   }
 
@@ -1397,6 +1589,231 @@ function MiniModulePreview({ preset }: { preset: ModulePreset }) {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (preset.type === "hero") {
+    if (preset.layout === "slide") {
+      return (
+        <div className="relative h-24 overflow-hidden rounded-md border border-slate-700 bg-blue-950 p-2">
+          <div className="h-1.5 w-12 rounded bg-white/30" />
+          <div className="mt-1 h-3 w-20 rounded bg-white/80" />
+          <div className="mt-1 h-2.5 w-16 rounded bg-white/60" />
+          <div className="mt-2 h-5 w-14 rounded bg-blue-500" />
+          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
+            <div className="size-1.5 rounded-full bg-white" />
+            <div className="size-1.5 rounded-full bg-white/40" />
+            <div className="size-1.5 rounded-full bg-white/40" />
+          </div>
+        </div>
+      );
+    }
+    if (preset.layout === "cta-focus") {
+      return (
+        <div className="relative h-24 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+          <div className="h-1 w-10 rounded bg-blue-400" />
+          <div className="mt-1 h-3 w-24 rounded bg-slate-900" />
+          <div className="mt-1 h-2 w-20 rounded bg-slate-300" />
+          <div className="mt-3 flex gap-1.5">
+            <div className="h-6 w-16 rounded-md bg-blue-600" />
+            <div className="h-6 w-14 rounded-md border border-slate-200 bg-white" />
+          </div>
+        </div>
+      );
+    }
+    if (preset.layout === "split-visual") {
+      return (
+        <div className="relative h-24 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+          <div className="grid h-full grid-cols-[1fr_1fr] items-center gap-2">
+            <div className="space-y-1">
+              <div className="h-1 w-10 rounded bg-blue-400" />
+              <div className="h-2.5 w-16 rounded bg-slate-900" />
+              <div className="h-1 w-12 rounded bg-slate-300" />
+              <div className="mt-1 h-4 w-10 rounded bg-blue-600" />
+            </div>
+            <div className="h-16 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200" />
+          </div>
+        </div>
+      );
+    }
+    if (preset.layout === "text-focus") {
+      return (
+        <div className="relative h-24 overflow-hidden rounded-md border border-slate-200 bg-gradient-to-b from-blue-50 to-white p-2">
+          <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
+            <div className="h-1 w-12 rounded bg-blue-400" />
+            <div className="h-3 w-28 rounded bg-slate-900" />
+            <div className="h-1.5 w-20 rounded bg-slate-300" />
+            <div className="mt-2 h-5 w-14 rounded bg-blue-600" />
+          </div>
+        </div>
+      );
+    }
+  }
+
+  if (preset.type === "review") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        <div className="mx-auto mb-2 flex justify-center gap-1">
+          <div className="h-1.5 w-12 rounded bg-slate-800" />
+        </div>
+        {preset.layout === "featured" ? (
+          <div className="mx-auto w-4/5 rounded border border-slate-200 bg-slate-50 p-1.5">
+            <div className="h-1 w-full rounded bg-slate-300" />
+            <div className="mt-1 h-1 w-3/4 rounded bg-slate-200" />
+            <div className="mt-2 flex items-center gap-1">
+              <div className="size-3 rounded-full bg-blue-200" />
+              <div className="h-1 w-8 rounded bg-slate-300" />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-1">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded border border-slate-100 bg-slate-50 p-1">
+                {preset.layout === "rating" && (
+                  <div className="mb-0.5 flex gap-0.5">
+                    {[0,1,2].map((s) => <div key={s} className="size-1 rounded-sm bg-amber-400" />)}
+                  </div>
+                )}
+                <div className="h-1 w-full rounded bg-slate-300" />
+                <div className="mt-1 h-1 w-3/4 rounded bg-slate-200" />
+                <div className="mt-1.5 flex items-center gap-0.5">
+                  <div className="size-2 rounded-full bg-blue-200" />
+                  <div className="h-1 w-4 rounded bg-slate-300" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "stats") {
+    return (
+      <div className={cn("relative h-20 overflow-hidden rounded-md border p-2", preset.layout === "dark" ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white")}>
+        <div className={cn("mx-auto mb-2 h-1.5 w-16 rounded", preset.layout === "dark" ? "bg-slate-400" : "bg-slate-800")} />
+        {preset.layout === "bars" ? (
+          <div className="space-y-1.5 px-1">
+            {[70, 85, 55].map((w, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <div className="h-1 w-6 rounded bg-slate-300" />
+                <div className="h-1.5 flex-1 rounded-full bg-slate-100">
+                  <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${w}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-1">
+            {["98%", "500+", "3일", "24h"].map((v, i) => (
+              <div key={i} className={cn("rounded p-1 text-center", preset.layout === "dark" ? "bg-slate-800" : "border border-slate-100 bg-slate-50")}>
+                <div className={cn("text-[8px] font-bold leading-none", preset.layout === "dark" ? "text-blue-400" : "text-blue-600")}>{v}</div>
+                <div className={cn("mt-0.5 h-0.5 rounded", preset.layout === "dark" ? "bg-slate-600" : "bg-slate-200")} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "pricing") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        <div className="mx-auto mb-1.5 h-1.5 w-16 rounded bg-slate-800" />
+        <div className={cn("grid gap-1", preset.layout === "two-col" ? "grid-cols-2" : "grid-cols-3")}>
+          {(preset.layout === "two-col" ? [0, 1] : [0, 1, 2]).map((i) => (
+            <div key={i} className={cn("rounded p-1", i === 1 ? "bg-blue-600" : "border border-slate-100 bg-slate-50")}>
+              <div className={cn("h-1 w-5 rounded", i === 1 ? "bg-blue-200" : "bg-slate-300")} />
+              <div className={cn("mt-0.5 h-2 w-7 rounded text-[7px] font-bold leading-none", i === 1 ? "bg-blue-400" : "bg-slate-200")} />
+              <div className={cn("mt-1 space-y-0.5")}>
+                {[0, 1].map((j) => <div key={j} className={cn("h-0.5 w-full rounded", i === 1 ? "bg-blue-400" : "bg-slate-200")} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (preset.type === "faq") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        <div className="mx-auto mb-2 h-1.5 w-16 rounded bg-slate-800" />
+        {preset.layout === "two-col" ? (
+          <div className="grid grid-cols-2 gap-1">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="rounded border border-slate-100 bg-slate-50 p-1">
+                <div className="h-1 w-full rounded bg-slate-700" />
+                <div className="mt-0.5 h-1 w-3/4 rounded bg-slate-300" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between py-1">
+                <div className="h-1 w-20 rounded bg-slate-700" />
+                <div className="size-2 rounded-full border border-slate-300" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "team") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        <div className="mx-auto mb-2 h-1.5 w-16 rounded bg-slate-800" />
+        {preset.layout === "list" ? (
+          <div className="divide-y divide-slate-100">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-1 py-1">
+                <div className="size-4 shrink-0 rounded-full bg-blue-100" />
+                <div className="space-y-0.5">
+                  <div className="h-1 w-10 rounded bg-slate-700" />
+                  <div className="h-0.5 w-7 rounded bg-slate-300" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-1">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="rounded border border-slate-100 bg-slate-50 p-1 text-center">
+                <div className="mx-auto size-4 rounded-full bg-blue-100" />
+                <div className="mt-0.5 h-0.5 w-full rounded bg-slate-300" />
+                <div className="mt-0.5 h-0.5 w-3/4 mx-auto rounded bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "cta" && preset.layout === "newsletter") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-2">
+        <div className="mb-1.5 h-2 w-20 rounded bg-slate-800" />
+        <div className="h-1 w-16 rounded bg-slate-300" />
+        <div className="mt-3 flex gap-1">
+          <div className="h-4 flex-1 rounded border border-slate-200 bg-white" />
+          <div className="h-4 w-12 rounded bg-blue-600" />
+        </div>
+      </div>
+    );
+  }
+
+  if (preset.type === "cta" && preset.layout === "dark") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-700 bg-slate-900 p-2">
+        <div className="mb-1.5 h-2 w-20 rounded bg-white/80" />
+        <div className="h-1 w-16 rounded bg-slate-500" />
+        <div className="mt-3 h-5 w-16 rounded bg-blue-500" />
       </div>
     );
   }
@@ -2687,30 +3104,366 @@ function CanvasSection({
                 }
               />
             </InlineEditFrame>
-            <div
-              className={cn(
-                "mt-7 flex",
-                alignmentJustifyClass(buttonAlign),
-              )}
-            >
+            {layout === "newsletter" ? (
+              <div className={cn("mt-7 flex gap-3", alignmentJustifyClass(align))}>
+                <input
+                  className="h-12 w-64 rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none"
+                  placeholder="이메일 주소를 입력하세요"
+                  type="email"
+                />
+                <div
+                  className="flex h-12 cursor-pointer items-center rounded-lg px-6 text-sm font-semibold text-white"
+                  style={buttonStyle(section, design)}
+                >
+                  {stringValue(section, "buttonLabel", "구독하기")}
+                </div>
+              </div>
+            ) : (
+              <div
+                className={cn(
+                  "mt-7 flex",
+                  alignmentJustifyClass(buttonAlign),
+                )}
+              >
+                <InlineEditFrame
+                  active={activeElement("button")}
+                  animationClass={previewAnimationClass("button")}
+                  label="버튼 문구 수정"
+                  onContextMenu={(event) => openContextMenu(event, index, "button")}
+                  onSelect={() => selectElementForSection("button")}
+                >
+                  <Input
+                    className="h-12 w-40 rounded-lg border-0 px-5 text-center text-sm font-semibold text-white focus-visible:ring-2"
+                    placeholder="버튼"
+                    style={buttonStyle(section, design)}
+                    value={stringValue(section, "buttonLabel")}
+                    onChange={(event) =>
+                      updateField(index, "buttonLabel", event.target.value)
+                    }
+                  />
+                </InlineEditFrame>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "review" ? (
+          <div className="w-full">
+            <div className={cn("mb-10", alignClass, alignmentPositionClass(align))}>
+              <span className="mb-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                {stringValue(section, "badge", "고객 후기")}
+              </span>
               <InlineEditFrame
-                active={activeElement("button")}
-                animationClass={previewAnimationClass("button")}
-                label="버튼 문구 수정"
-                onContextMenu={(event) => openContextMenu(event, index, "button")}
-                onSelect={() => selectElementForSection("button")}
+                active={activeElement("title")}
+                animationClass={previewAnimationClass("title")}
+                label="제목 바로 수정"
+                onContextMenu={(event) => openContextMenu(event, index, "title")}
+                onSelect={() => selectElementForSection("title")}
               >
                 <Input
-                  className="h-12 w-40 rounded-lg border-0 px-5 text-center text-sm font-semibold text-white focus-visible:ring-2"
-                  placeholder="버튼"
-                  style={buttonStyle(section, design)}
-                  value={stringValue(section, "buttonLabel")}
-                  onChange={(event) =>
-                    updateField(index, "buttonLabel", event.target.value)
-                  }
+                  className="h-auto border-0 bg-transparent p-0 text-3xl font-bold shadow-none focus-visible:ring-0"
+                  placeholder="제목을 입력하세요"
+                  style={titleTextStyle(section, design)}
+                  value={stringValue(section, "title")}
+                  onChange={(event) => updateField(index, "title", event.target.value)}
+                />
+              </InlineEditFrame>
+              <Textarea
+                className="mt-3 min-h-0 resize-none border-0 bg-transparent p-0 text-sm leading-7 text-slate-500 shadow-none focus-visible:ring-0"
+                style={descriptionTextStyle(section, design)}
+                value={stringValue(section, "description")}
+                onChange={(event) => updateField(index, "description", event.target.value)}
+              />
+            </div>
+            {layout === "featured" ? (
+              <div className="mx-auto max-w-2xl rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+                {items[0] ? (() => {
+                  const [name, role, quote] = items[0].split("|");
+                  return (
+                    <>
+                      <p className="text-lg leading-8 text-slate-700">&ldquo;{quote}&rdquo;</p>
+                      <div className="mt-6 flex items-center gap-3">
+                        <div className="flex size-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+                          {name?.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">{name}</p>
+                          <p className="text-xs text-slate-500">{role}</p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })() : null}
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {items.map((item, i) => {
+                  const [name, role, quote] = item.split("|");
+                  return (
+                    <div key={i} className="rounded-2xl border border-slate-100 bg-white p-6">
+                      {layout === "rating" && (
+                        <div className="mb-3 flex gap-0.5">
+                          {[1,2,3,4,5].map((s) => (
+                            <Star key={s} className="size-4 fill-amber-400 text-amber-400" />
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-sm leading-7 text-slate-600">&ldquo;{quote}&rdquo;</p>
+                      <div className="mt-4 flex items-center gap-3">
+                        <div className="flex size-9 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
+                          {name?.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">{name}</p>
+                          <p className="text-xs text-slate-400">{role}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "stats" ? (
+          <div className="w-full">
+            <div className={cn("mb-10", alignClass, alignmentPositionClass(align))}>
+              <span className="mb-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                {stringValue(section, "badge", "주요 지표")}
+              </span>
+              <InlineEditFrame
+                active={activeElement("title")}
+                animationClass={previewAnimationClass("title")}
+                label="제목 바로 수정"
+                onContextMenu={(event) => openContextMenu(event, index, "title")}
+                onSelect={() => selectElementForSection("title")}
+              >
+                <Input
+                  className="h-auto border-0 bg-transparent p-0 text-3xl font-bold shadow-none focus-visible:ring-0"
+                  placeholder="제목을 입력하세요"
+                  style={titleTextStyle(section, design)}
+                  value={stringValue(section, "title")}
+                  onChange={(event) => updateField(index, "title", event.target.value)}
                 />
               </InlineEditFrame>
             </div>
+            {layout === "bars" ? (
+              <div className="mx-auto max-w-2xl space-y-6">
+                {items.map((item, i) => {
+                  const [value, label] = item.split("|");
+                  const pct = parseInt(value) || 80;
+                  return (
+                    <div key={i}>
+                      <div className="mb-2 flex justify-between text-sm font-medium">
+                        <span>{label}</span>
+                        <span>{value}</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-slate-100">
+                        <div
+                          className="h-2 rounded-full bg-blue-500"
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {items.map((item, i) => {
+                  const [value, label] = item.split("|");
+                  return (
+                    <div key={i} className={cn("rounded-2xl p-6 text-center", layout === "dark" ? "bg-slate-800 text-white" : "border border-slate-100 bg-white")}>
+                      <p className={cn("text-4xl font-bold", layout === "dark" ? "text-white" : "text-blue-600")}>{value}</p>
+                      <p className={cn("mt-2 text-sm", layout === "dark" ? "text-slate-300" : "text-slate-500")}>{label}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "pricing" ? (
+          <div className="w-full">
+            <div className={cn("mb-10", alignClass, alignmentPositionClass(align))}>
+              <span className="mb-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                {stringValue(section, "badge", "요금제")}
+              </span>
+              <InlineEditFrame
+                active={activeElement("title")}
+                animationClass={previewAnimationClass("title")}
+                label="제목 바로 수정"
+                onContextMenu={(event) => openContextMenu(event, index, "title")}
+                onSelect={() => selectElementForSection("title")}
+              >
+                <Input
+                  className="h-auto border-0 bg-transparent p-0 text-3xl font-bold shadow-none focus-visible:ring-0"
+                  placeholder="제목을 입력하세요"
+                  style={titleTextStyle(section, design)}
+                  value={stringValue(section, "title")}
+                  onChange={(event) => updateField(index, "title", event.target.value)}
+                />
+              </InlineEditFrame>
+              <Textarea
+                className="mt-3 min-h-0 resize-none border-0 bg-transparent p-0 text-sm leading-7 text-slate-500 shadow-none focus-visible:ring-0"
+                style={descriptionTextStyle(section, design)}
+                value={stringValue(section, "description")}
+                onChange={(event) => updateField(index, "description", event.target.value)}
+              />
+            </div>
+            <div className={cn("grid gap-6", layout === "two-col" ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+              {items.map((item, i) => {
+                const [name, price, features, support] = item.split("|");
+                const featureList = (features ?? "").split("\n").filter(Boolean);
+                const isHighlighted = i === 1;
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "rounded-2xl p-6",
+                      isHighlighted
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-100 bg-white",
+                    )}
+                  >
+                    <p className={cn("text-sm font-semibold", isHighlighted ? "text-blue-100" : "text-slate-500")}>{name}</p>
+                    <p className={cn("mt-2 text-3xl font-bold", isHighlighted ? "text-white" : "text-slate-900")}>{price}</p>
+                    <ul className="mt-6 space-y-3">
+                      {featureList.map((f, j) => (
+                        <li key={j} className={cn("flex items-center gap-2 text-sm", isHighlighted ? "text-blue-100" : "text-slate-600")}>
+                          <Check className="size-4 shrink-0" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {support && (
+                      <p className={cn("mt-4 text-xs", isHighlighted ? "text-blue-200" : "text-slate-400")}>{support}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {type === "faq" ? (
+          <div className="w-full">
+            <div className={cn("mb-10", alignClass, alignmentPositionClass(align))}>
+              <span className="mb-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                {stringValue(section, "badge", "자주 묻는 질문")}
+              </span>
+              <InlineEditFrame
+                active={activeElement("title")}
+                animationClass={previewAnimationClass("title")}
+                label="제목 바로 수정"
+                onContextMenu={(event) => openContextMenu(event, index, "title")}
+                onSelect={() => selectElementForSection("title")}
+              >
+                <Input
+                  className="h-auto border-0 bg-transparent p-0 text-3xl font-bold shadow-none focus-visible:ring-0"
+                  placeholder="제목을 입력하세요"
+                  style={titleTextStyle(section, design)}
+                  value={stringValue(section, "title")}
+                  onChange={(event) => updateField(index, "title", event.target.value)}
+                />
+              </InlineEditFrame>
+            </div>
+            {layout === "two-col" ? (
+              <div className="grid gap-6 sm:grid-cols-2">
+                {items.map((item, i) => {
+                  const [q, a] = item.split("|");
+                  return (
+                    <div key={i} className="rounded-xl border border-slate-100 bg-white p-5">
+                      <p className="text-sm font-semibold text-slate-800">{q}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-500">{a}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mx-auto max-w-2xl divide-y divide-slate-100">
+                {items.map((item, i) => {
+                  const [q, a] = item.split("|");
+                  return (
+                    <div key={i} className="py-4">
+                      <p className="flex items-center justify-between text-sm font-semibold text-slate-800">
+                        {q}
+                        <ChevronDown className="size-4 shrink-0 text-slate-400" />
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-500">{a}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "team" ? (
+          <div className="w-full">
+            <div className={cn("mb-10", alignClass, alignmentPositionClass(align))}>
+              <span className="mb-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                {stringValue(section, "badge", "우리 팀")}
+              </span>
+              <InlineEditFrame
+                active={activeElement("title")}
+                animationClass={previewAnimationClass("title")}
+                label="제목 바로 수정"
+                onContextMenu={(event) => openContextMenu(event, index, "title")}
+                onSelect={() => selectElementForSection("title")}
+              >
+                <Input
+                  className="h-auto border-0 bg-transparent p-0 text-3xl font-bold shadow-none focus-visible:ring-0"
+                  placeholder="제목을 입력하세요"
+                  style={titleTextStyle(section, design)}
+                  value={stringValue(section, "title")}
+                  onChange={(event) => updateField(index, "title", event.target.value)}
+                />
+              </InlineEditFrame>
+              <Textarea
+                className="mt-3 min-h-0 resize-none border-0 bg-transparent p-0 text-sm leading-7 text-slate-500 shadow-none focus-visible:ring-0"
+                style={descriptionTextStyle(section, design)}
+                value={stringValue(section, "description")}
+                onChange={(event) => updateField(index, "description", event.target.value)}
+              />
+            </div>
+            {layout === "list" ? (
+              <div className="mx-auto max-w-2xl divide-y divide-slate-100">
+                {items.map((item, i) => {
+                  const [name, role, specialty] = item.split("|");
+                  return (
+                    <div key={i} className="flex items-center gap-4 py-4">
+                      <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+                        {name?.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{name}</p>
+                        <p className="text-xs text-slate-500">{role}</p>
+                        {specialty && <p className="mt-0.5 text-xs text-blue-500">{specialty}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {items.map((item, i) => {
+                  const [name, role, specialty] = item.split("|");
+                  return (
+                    <div key={i} className="rounded-2xl border border-slate-100 bg-white p-6 text-center">
+                      <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-blue-100 text-xl font-bold text-blue-600">
+                        {name?.charAt(0)}
+                      </div>
+                      <p className="text-sm font-semibold">{name}</p>
+                      <p className="mt-1 text-xs text-slate-500">{role}</p>
+                      {specialty && <p className="mt-1 text-xs text-blue-500">{specialty}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : null}
       </div>
@@ -2741,6 +3494,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const [previewViewport, setPreviewViewport] = useState<EditorViewport>("desktop");
   const [previewInsertAfterIndex, setPreviewInsertAfterIndex] = useState(0);
   const [isSectionLibraryOpen, setIsSectionLibraryOpen] = useState(false);
+  const [isLibraryFullOpen, setIsLibraryFullOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [leftPanel, setLeftPanel] = useState<"sections" | "settings">("settings");
   const [settingsSubPanel, setSettingsSubPanel] =
@@ -2862,6 +3616,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
     window.queueMicrotask(() => {
       setIsSectionLibraryOpen(false);
+      setIsLibraryFullOpen(false);
     });
   }, [settingsSubPanel]);
 
@@ -5894,8 +6649,96 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
             {!settingsSubPanel ? (
               <div className="fixed bottom-5 left-[340px] right-[380px] z-40">
                 <div className="rounded-2xl border border-blue-100 bg-white/95 shadow-2xl shadow-blue-950/10 backdrop-blur">
-                  {isSectionLibraryOpen ? (
-                    <div className="max-h-[360px] overflow-hidden p-4">
+                  {isLibraryFullOpen ? (
+                    /* ── 전체 라이브러리 확장 뷰 ── */
+                    <div className="flex max-h-[72vh] flex-col">
+                      {/* 헤더 */}
+                      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-3">
+                        <div>
+                          <p className="text-sm font-semibold">섹션 라이브러리</p>
+                          <p className="text-xs text-slate-500">검증된 레이아웃을 골라 현재 페이지에 추가합니다.</p>
+                        </div>
+                        <Button
+                          size="icon"
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setIsLibraryFullOpen(false);
+                            setIsSectionLibraryOpen(false);
+                          }}
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </div>
+                      {/* 카테고리 탭 */}
+                      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-slate-100 px-4 py-2">
+                        {availableLibraryCategories.map((category) => (
+                          <button
+                            key={category}
+                            className={cn(
+                              "h-7 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors",
+                              activeLibraryCategory === category
+                                ? "bg-blue-600 text-white"
+                                : "bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600",
+                            )}
+                            type="button"
+                            onClick={() => setActiveLibraryCategory(category)}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+                      {/* 프리셋 그리드 */}
+                      <div className="overflow-y-auto p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold">{activeLibraryCategory} 섹션</p>
+                          <span className="text-xs text-slate-400">{visibleModules.length}개 레이아웃</span>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                          {visibleModules.map((preset) => (
+                            <div
+                              key={`${preset.type}-${preset.layout}-full`}
+                              role="button"
+                              tabIndex={0}
+                              className={cn(
+                                "cursor-pointer rounded-xl border p-2.5 text-left transition hover:border-blue-300 hover:bg-blue-50/40",
+                                selectedSection &&
+                                  stringValue(selectedSection, "type") === preset.type &&
+                                  stringValue(selectedSection, "layout") === preset.layout
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-slate-100 bg-white",
+                              )}
+                              onClick={() => openModulePreview(preset)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  openModulePreview(preset);
+                                }
+                              }}
+                            >
+                              <MiniModulePreview preset={preset} />
+                              <p className="mt-2.5 truncate text-xs font-semibold">{preset.title}</p>
+                              <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500">{preset.description}</p>
+                              <Button
+                                className="mt-2.5 h-7 w-full text-[11px]"
+                                type="button"
+                                variant="outline"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openModulePreview(preset);
+                                }}
+                              >
+                                <Eye className="size-3" />
+                                미리보기
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : isSectionLibraryOpen ? (
+                    /* ── 카테고리별 미니 뷰 ── */
+                    <div className="p-4">
                       <div className="mb-4 flex items-center justify-between">
                         <div>
                           <p className="text-sm font-semibold">섹션 라이브러리</p>
@@ -5908,7 +6751,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                             className="h-8 px-3 text-xs"
                             type="button"
                             variant="outline"
-                            onClick={() => setRightPanelMode("library")}
+                            onClick={() => setIsLibraryFullOpen(true)}
                           >
                             모두 보기
                           </Button>
@@ -5999,6 +6842,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                       </div>
                     </div>
                   ) : (
+                    /* ── 기본 바 ── */
                     <div className="flex items-center gap-3 px-4 py-3">
                       <Button
                         className="shrink-0 shadow-sm"
@@ -6010,7 +6854,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                       </Button>
                       <div className="h-6 w-px bg-slate-200" />
                       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-                        {availableLibraryCategories.slice(0, 7).map((category) => (
+                        {availableLibraryCategories.map((category) => (
                           <button
                             key={category}
                             className={cn(
@@ -6033,7 +6877,10 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                         className="h-8 shrink-0 px-3 text-xs"
                         type="button"
                         variant="outline"
-                        onClick={() => setRightPanelMode("library")}
+                        onClick={() => {
+                          setIsLibraryFullOpen(true);
+                          setIsSectionLibraryOpen(false);
+                        }}
                       >
                         전체 보기
                       </Button>
