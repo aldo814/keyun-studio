@@ -1855,6 +1855,39 @@ function toEditableJson(draftJson: Json): EditableDraft {
   };
 }
 
+// ── content 섹션 멀티블록 헬퍼 ──────────────────────
+type ContentBlock = {
+  badge: string;
+  description: string;
+  imageUrl: string;
+  mediaPosition: "left" | "right";
+  title: string;
+};
+
+function contentBlocks(section: EditorSection): ContentBlock[] {
+  const raw = section.blocks;
+  if (Array.isArray(raw) && raw.length) {
+    return raw.map((b) => {
+      const block = b as Record<string, unknown>;
+      return {
+        badge: String(block.badge ?? ""),
+        description: String(block.description ?? ""),
+        imageUrl: String(block.imageUrl ?? ""),
+        mediaPosition: (block.mediaPosition === "right" ? "right" : "left") as "left" | "right",
+        title: String(block.title ?? ""),
+      };
+    });
+  }
+  // 기존 단일 필드를 블록 1개로 변환 (하위 호환)
+  return [{
+    badge: String(section.badge ?? ""),
+    description: String(section.description ?? ""),
+    imageUrl: String(section.imageUrl ?? ""),
+    mediaPosition: (section.mediaPosition === "right" ? "right" : "left") as "left" | "right",
+    title: String(section.title ?? ""),
+  }];
+}
+
 function itemList(section: EditorSection) {
   const items = section.items;
 
@@ -3223,6 +3256,11 @@ type CanvasSectionProps = {
     element: SelectedElement,
   ) => void;
   requestVisualUpload: (index: number) => void;
+  requestContentBlockUpload: (sectionIndex: number, blockIndex: number) => void;
+  addContentBlock: (sectionIndex: number) => void;
+  updateContentBlock: (sectionIndex: number, blockIndex: number, key: keyof ContentBlock, value: string) => void;
+  removeContentBlock: (sectionIndex: number, blockIndex: number) => void;
+  toggleContentBlockLayout: (sectionIndex: number, blockIndex: number) => void;
   removeSection: (index: number) => void;
   selectedSlideIndex: number;
   section: EditorSection;
@@ -3357,6 +3395,11 @@ function CanvasSection({
   moveSection,
   openContextMenu,
   requestVisualUpload,
+  requestContentBlockUpload,
+  addContentBlock,
+  updateContentBlock,
+  removeContentBlock,
+  toggleContentBlockLayout,
   removeSection,
   selectedSlideIndex,
   section,
@@ -4063,71 +4106,87 @@ function CanvasSection({
         ) : null}
 
         {type === "content" ? (
-          <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1fr]">
-            <VisualEditable
-              active={activeElement("visual")}
-              animationClass={previewAnimationClass("visual")}
-              className={cn(
-                "aspect-video border border-blue-100 bg-white/60",
-                mediaPosition === "right" ? "lg:order-2" : "lg:order-1",
-              )}
-              emptyClassName="min-h-full rounded-none border-0 shadow-none"
-              imageUrl={imageUrl}
-              onContextMenu={(event) => openContextMenu(event, index, "visual")}
-              onUpload={() => requestVisualUpload(index)}
-              onSelect={() => selectElementForSection("visual")}
-            />
-            <div className={cn(alignClass, mediaPosition === "right" ? "lg:order-1" : "lg:order-2")}>
-              <InlineEditFrame
-                active={activeElement("badge")}
-                animationClass={previewAnimationClass("badge")}
-                className="inline-block"
-                label="배지 바로 수정"
-                onContextMenu={(event) => openContextMenu(event, index, "badge")}
-                onSelect={() => selectElementForSection("badge")}
-              >
-                <Input
-                  className="h-8 w-32 rounded-full border-blue-100 bg-white/70 text-xs font-semibold text-blue-600"
-                  placeholder="배지"
-                  value={stringValue(section, "badge")}
-                  onChange={(event) => updateField(index, "badge", event.target.value)}
-                />
-              </InlineEditFrame>
-              <InlineEditFrame
-                active={activeElement("title")}
-                animationClass={previewAnimationClass("title")}
-                className="mt-5"
-                label="제목 바로 수정"
-                onContextMenu={(event) => openContextMenu(event, index, "title")}
-                onSelect={() => selectElementForSection("title")}
-              >
-                <Input
-                  className="h-auto border-0 bg-transparent p-0 text-3xl font-bold shadow-none focus-visible:ring-0"
-                  placeholder="제목을 입력하세요"
-                  style={titleTextStyle(section, design)}
-                  value={stringValue(section, "title")}
-                  onChange={(event) => updateField(index, "title", event.target.value)}
-                />
-              </InlineEditFrame>
-              <InlineEditFrame
-                active={activeElement("description")}
-                animationClass={previewAnimationClass("description")}
-                className="mt-4"
-                label="설명 바로 수정"
-                onContextMenu={(event) => openContextMenu(event, index, "description")}
-                onSelect={() => selectElementForSection("description")}
-              >
-                <Textarea
-                  className="min-h-24 resize-none border-0 bg-transparent p-0 text-sm leading-7 text-slate-600 shadow-none focus-visible:ring-0"
-                  placeholder="설명을 입력하세요"
-                  style={descriptionTextStyle(section, design)}
-                  value={stringValue(section, "description")}
-                  onChange={(event) =>
-                    updateField(index, "description", event.target.value)
-                  }
-                />
-              </InlineEditFrame>
-            </div>
+          <div className="space-y-16">
+            {contentBlocks(section).map((block, blockIndex) => (
+              <div key={blockIndex} className="group/block relative">
+                {/* 블록 툴바 */}
+                <div className="absolute -top-8 right-0 flex items-center gap-1 opacity-0 transition-opacity group-hover/block:opacity-100">
+                  <button
+                    className="flex items-center gap-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+                    title="이미지 좌/우 전환"
+                    type="button"
+                    onClick={() => toggleContentBlockLayout(index, blockIndex)}
+                  >
+                    <ArrowLeft className="size-3" />
+                    <ArrowRight className="size-3" />
+                    {block.mediaPosition === "left" ? "이미지 왼쪽" : "이미지 오른쪽"}
+                  </button>
+                  {contentBlocks(section).length > 1 && (
+                    <button
+                      className="rounded border border-red-100 bg-white p-1 text-red-400 shadow-sm hover:bg-red-50"
+                      title="블록 삭제"
+                      type="button"
+                      onClick={() => removeContentBlock(index, blockIndex)}
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1fr]">
+                  {/* 이미지 */}
+                  <VisualEditable
+                    active={false}
+                    animationClass=""
+                    className={cn(
+                      "aspect-video border border-blue-100 bg-white/60",
+                      block.mediaPosition === "right" ? "lg:order-2" : "lg:order-1",
+                    )}
+                    emptyClassName="min-h-full rounded-none border-0 shadow-none"
+                    imageUrl={block.imageUrl}
+                    onContextMenu={(event) => openContextMenu(event, index, "visual")}
+                    onUpload={() => requestContentBlockUpload(index, blockIndex)}
+                    onSelect={() => selectElementForSection("visual")}
+                  />
+                  {/* 텍스트 */}
+                  <div className={cn(alignClass, block.mediaPosition === "right" ? "lg:order-1" : "lg:order-2")}>
+                    <Input
+                      className="h-8 w-32 rounded-full border-blue-100 bg-white/70 text-xs font-semibold text-blue-600"
+                      placeholder="배지"
+                      value={block.badge}
+                      onChange={(e) => updateContentBlock(index, blockIndex, "badge", e.target.value)}
+                    />
+                    <Input
+                      className="mt-5 h-auto border-0 bg-transparent p-0 text-3xl font-bold shadow-none focus-visible:ring-0"
+                      placeholder="제목을 입력하세요"
+                      style={titleTextStyle(section, design)}
+                      value={block.title}
+                      onChange={(e) => updateContentBlock(index, blockIndex, "title", e.target.value)}
+                    />
+                    <Textarea
+                      className="mt-4 min-h-24 resize-none border-0 bg-transparent p-0 text-sm leading-7 text-slate-600 shadow-none focus-visible:ring-0"
+                      placeholder="설명을 입력하세요"
+                      style={descriptionTextStyle(section, design)}
+                      value={block.description}
+                      onChange={(e) => updateContentBlock(index, blockIndex, "description", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* 영역 추가 버튼 */}
+            <button
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed py-4 text-sm font-semibold transition-colors hover:opacity-80"
+              style={{ borderColor: design.textColor, color: design.textColor, opacity: 0.35 }}
+              type="button"
+              onClick={() => addContentBlock(index)}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
+            >
+              <Plus className="size-4" />
+              영역 추가
+            </button>
           </div>
         ) : null}
 
@@ -5387,6 +5446,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
   const [uploadMessage, setUploadMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [visualUploadIndex, setVisualUploadIndex] = useState(0);
+  const [visualUploadBlockIndex, setVisualUploadBlockIndex] = useState<number | null>(null);
   const [slideUploadTarget, setSlideUploadTarget] = useState<{
     sectionIndex: number;
     slideIndex: number;
@@ -5897,6 +5957,44 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
       ...draft.sections[index],
       [key]: value,
     });
+  }
+
+  // ── content 섹션 멀티블록 함수 ───────────────────
+  function addContentBlock(sectionIndex: number) {
+    const section = draft.sections[sectionIndex];
+    if (!section) return;
+    const blocks = contentBlocks(section);
+    const lastPos = blocks[blocks.length - 1]?.mediaPosition ?? "left";
+    const nextPos: "left" | "right" = lastPos === "left" ? "right" : "left";
+    updateSection(sectionIndex, {
+      ...section,
+      blocks: [...blocks, { badge: "", description: "", imageUrl: "", mediaPosition: nextPos, title: "" }],
+    });
+  }
+
+  function updateContentBlock(sectionIndex: number, blockIndex: number, key: keyof ContentBlock, value: string) {
+    const section = draft.sections[sectionIndex];
+    if (!section) return;
+    const blocks = contentBlocks(section).map((b, i) =>
+      i === blockIndex ? { ...b, [key]: value } : b,
+    );
+    updateSection(sectionIndex, { ...section, blocks });
+  }
+
+  function removeContentBlock(sectionIndex: number, blockIndex: number) {
+    const section = draft.sections[sectionIndex];
+    if (!section) return;
+    const blocks = contentBlocks(section).filter((_, i) => i !== blockIndex);
+    updateSection(sectionIndex, { ...section, blocks: blocks.length ? blocks : undefined });
+  }
+
+  function toggleContentBlockLayout(sectionIndex: number, blockIndex: number) {
+    const section = draft.sections[sectionIndex];
+    if (!section) return;
+    const blocks = contentBlocks(section).map((b, i) =>
+      i === blockIndex ? { ...b, mediaPosition: b.mediaPosition === "left" ? "right" : "left" } as ContentBlock : b,
+    );
+    updateSection(sectionIndex, { ...section, blocks });
   }
 
   function updateLocalizedSectionField(index: number, key: string, value: string) {
@@ -7222,6 +7320,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
     mediaType: "image" | "video",
     options?: {
       applyAsBackground?: boolean;
+      blockIndex?: number;
       sectionIndex?: number;
       sectionField?: string;
       slideIndex?: number;
@@ -7249,6 +7348,14 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
             imageUrl: url,
           };
           updateSection(targetIndex, { ...section, slides });
+          return;
+        }
+
+        if (typeof options?.blockIndex === "number") {
+          const blocks = contentBlocks(section).map((b, i) =>
+            i === options.blockIndex ? { ...b, imageUrl: url } : b,
+          );
+          updateSection(targetIndex, { ...section, blocks });
           return;
         }
 
@@ -7413,10 +7520,12 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
           if (file) {
             void uploadSectionMedia(file, "image", {
               applyAsBackground: false,
+              blockIndex: visualUploadBlockIndex ?? undefined,
               sectionIndex: visualUploadIndex,
             });
           }
 
+          setVisualUploadBlockIndex(null);
           event.currentTarget.value = "";
         }}
       />
@@ -8108,13 +8217,20 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                     {draft.sections.map((section, index) => (
                       <CanvasSection
                         key={stringValue(section, "builderId") || `${stringValue(section, "type")}-${index}`}
+                        addContentBlock={addContentBlock}
                         animationPreview={index === selectedIndex ? animationPreview : null}
                         design={draft.design}
                         index={index}
                         isSelected={index === selectedIndex}
                         moveSection={moveSection}
                         openContextMenu={openContextMenu}
+                        removeContentBlock={removeContentBlock}
                         requestVisualUpload={requestVisualUpload}
+                        requestContentBlockUpload={(sIdx, bIdx) => {
+                          setVisualUploadIndex(sIdx);
+                          setVisualUploadBlockIndex(bIdx);
+                          visualMediaInputRef.current?.click();
+                        }}
                         removeSection={removeSection}
                         selectedSlideIndex={selectedSlideIndex}
                         section={localizedSection(section, activeLocale)}
@@ -8122,6 +8238,8 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                         selectElement={selectElementForEdit}
                         selectSection={selectSectionForEdit}
                         selectSlide={setSelectedSlideIndex}
+                        toggleContentBlockLayout={toggleContentBlockLayout}
+                        updateContentBlock={updateContentBlock}
                         updateField={updateLocalizedSectionField}
                         updateItems={updateLocalizedSectionItems}
                         updateSlideField={updateHeroSlide}
@@ -10673,13 +10791,16 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                 >
                   <div className="pointer-events-none">
                     <CanvasSection
+                      addContentBlock={() => undefined}
                       animationPreview={null}
                       design={draft.design}
                       index={0}
                       isSelected={false}
                       moveSection={() => undefined}
                       openContextMenu={() => undefined}
+                      removeContentBlock={() => undefined}
                       requestVisualUpload={() => undefined}
+                      requestContentBlockUpload={() => undefined}
                       removeSection={() => undefined}
                       selectedSlideIndex={0}
                       section={previewSection}
@@ -10687,6 +10808,8 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                       selectElement={() => undefined}
                       selectSection={() => undefined}
                       selectSlide={() => undefined}
+                      toggleContentBlockLayout={() => undefined}
+                      updateContentBlock={() => undefined}
                       updateField={() => undefined}
                       updateItems={() => undefined}
                       updateSlideField={() => undefined}
