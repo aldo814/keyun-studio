@@ -80,6 +80,18 @@ function firstSearchValue(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function RequiredLabel({ children }: { children: string }) {
+  return (
+    <span className="text-sm font-medium">
+      {children}
+      <span aria-hidden className="ml-1 text-red-500">
+        *
+      </span>
+      <span className="sr-only"> 필수</span>
+    </span>
+  );
+}
+
 export default async function NewSitePage({ searchParams }: NewSitePageProps) {
   const query = await searchParams;
   const notice = firstSearchValue(query?.notice);
@@ -159,13 +171,13 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                   관리자와 방문자에게 보일 사이트 이름과 기본 주소를 설정합니다.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-5 md:grid-cols-2">
-                <label className="space-y-2 md:col-span-2">
-                  <span className="text-sm font-medium">사이트 이름</span>
+              <CardContent className="grid gap-6 md:grid-cols-2">
+                <label className="grid gap-2.5 md:col-span-2">
+                  <RequiredLabel>사이트 이름</RequiredLabel>
                   <Input name="name" placeholder="예: 키운 스튜디오" required />
                 </label>
 
-                <label className="space-y-2">
+                <label className="grid gap-2.5">
                   <span className="text-sm font-medium">사이트 주소</span>
                   <div className="flex overflow-hidden rounded-lg border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
                     <span className="flex items-center border-r border-border bg-muted px-3 text-sm text-muted-foreground">
@@ -182,7 +194,7 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                   </p>
                 </label>
 
-                <label className="space-y-2 md:col-span-2">
+                <label className="grid gap-2.5 md:col-span-2">
                   <span className="text-sm font-medium">한 줄 소개</span>
                   <Input
                     name="brand_message"
@@ -193,7 +205,7 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                   </p>
                 </label>
 
-                <label className="space-y-2 md:col-span-2">
+                <label className="grid gap-2.5 md:col-span-2">
                   <span className="text-sm font-medium">주요 고객</span>
                   <Input
                     name="target_customer"
@@ -201,17 +213,18 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                   />
                 </label>
 
-                <label className="space-y-2">
+                <label className="grid gap-2.5">
                   <span className="text-sm font-medium">대표 연락처</span>
                   <Input name="contact_phone" placeholder="예: 02-1234-5678" />
                 </label>
 
-                <label className="space-y-2">
-                  <span className="text-sm font-medium">업종</span>
+                <label className="grid gap-2.5">
+                  <RequiredLabel>업종</RequiredLabel>
                   <select
                     className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
                     name="business_type"
                     defaultValue=""
+                    required
                   >
                     <option value="" disabled>
                       업종 선택
@@ -224,12 +237,13 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                   </select>
                 </label>
 
-                <label className="space-y-2">
-                  <span className="text-sm font-medium">주요 목적</span>
+                <label className="grid gap-2.5">
+                  <RequiredLabel>주요 목적</RequiredLabel>
                   <select
                     className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
                     name="launch_goal"
                     defaultValue=""
+                    required
                   >
                     <option value="" disabled>
                       목적 선택
@@ -309,13 +323,13 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                   나중에 설정에서 바꿀 수 있어요. 지금은 첫 게시에 필요한 기본값만 받습니다.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <label className="space-y-2">
+              <CardContent className="space-y-6">
+                <label className="grid gap-2.5">
                   <span className="text-sm font-medium">검색 제목</span>
                   <Input name="seo_title" placeholder="예: 키운 스튜디오 | 쉬운 웹사이트 운영" />
                 </label>
 
-                <label className="space-y-2">
+                <label className="grid gap-2.5">
                   <span className="text-sm font-medium">검색 설명</span>
                   <Textarea
                     className="min-h-28"
@@ -324,7 +338,7 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                   />
                 </label>
 
-                <label className="space-y-2">
+                <label className="grid gap-2.5">
                   <span className="text-sm font-medium">대표 이미지 URL</span>
                   <Input name="og_image_url" placeholder="https://..." />
                 </label>

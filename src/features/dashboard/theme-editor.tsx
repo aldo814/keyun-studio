@@ -13,30 +13,30 @@ import {
 import { ThemePreview } from "./theme-preview";
 
 const fontOptions = [
-  "Noto Sans KR",
-  "IBM Plex Sans KR",
   "Pretendard",
+  "Noto Sans KR",
+  "Noto Serif KR",
+  "IBM Plex Sans KR",
   "Nanum Gothic",
   "Nanum Myeongjo",
+  "NanumSquareRound",
+  "Gmarket Sans",
+  "Escoredream",
+  "Mona12 Text KR",
   "Gowun Dodum",
   "Black Han Sans",
   "Do Hyeon",
   "Jua",
   "Sunflower",
   "Inter",
+  "Google Sans Flex",
   "Poppins",
   "Montserrat",
   "Roboto",
   "Lora",
 ];
 
-const englishFontOptions = [
-  "Inter",
-  "Poppins",
-  "Montserrat",
-  "Roboto",
-  "Lora",
-];
+const englishFontOptions = fontOptions;
 
 const radiusOptions = [
   { label: "둥근형", value: "9999px" },

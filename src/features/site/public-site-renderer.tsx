@@ -3,11 +3,27 @@ import type { CSSProperties, ReactNode } from "react";
 import type { DashboardPost } from "@/features/dashboard/content-posts-data";
 import type { DashboardPopup } from "@/features/dashboard/queries";
 import { submitPublicContact } from "@/features/site/actions";
+import { PublicHeroSlider } from "@/features/site/public-hero-slider";
 import { PublicSiteAnimations } from "@/features/site/public-site-animations";
 import { PublicPopups } from "@/features/site/public-popups";
 import type { Json } from "@/types/database";
 
 type PublicSection = Record<string, unknown>;
+type SiteLocale = "ko" | "en";
+type PublicTranslations = Partial<Record<SiteLocale, PublicSection>>;
+type PublicHeroSlide = {
+  backgroundType: "color" | "image";
+  badge: string;
+  bgColor: string;
+  buttonLabel: string;
+  buttonLink: string;
+  description: string;
+  id: string;
+  imageUrl: string;
+  secondaryButtonLabel: string;
+  secondaryButtonLink: string;
+  title: string;
+};
 type AlignmentValue = "left" | "center" | "right";
 type AnimationElement =
   | "section"
@@ -44,6 +60,7 @@ type PublicPageItem = {
   title: string;
   path: string;
   status: "public" | "private";
+  translations?: PublicTranslations;
 };
 
 type PublicNavigationItem = {
@@ -51,10 +68,19 @@ type PublicNavigationItem = {
   id: string;
   label: string;
   pageId: string;
+  translations?: PublicTranslations;
+};
+
+type PublicI18n = {
+  footerCopyright: Partial<Record<SiteLocale, string>>;
+  locales: SiteLocale[];
+  seo: Partial<Record<SiteLocale, { description: string; title: string }>>;
+  siteName: Partial<Record<SiteLocale, string>>;
 };
 
 type PublicPageJson = {
   design: PublicDesign;
+  i18n: PublicI18n;
   navigation: PublicNavigationItem[];
   pages: PublicPageItem[];
   sections: PublicSection[];
@@ -67,14 +93,16 @@ type PublicSiteRendererProps = {
   description?: string;
   popups?: DashboardPopup[];
   publishedJson: Json;
+  locale?: SiteLocale;
+  pagePath?: string;
   posts?: DashboardPost[];
   siteName: string;
   siteSlug?: string;
 };
 
 const defaultDesign: PublicDesign = {
-  bodyFontFamily: "system",
-  englishFontFamily: "inter",
+  bodyFontFamily: "pretendard",
+  englishFontFamily: "pretendard",
   footerAccentColor: "#2563eb",
   footerBgColor: "#0f172a",
   footerLayout: "simple",
@@ -85,7 +113,7 @@ const defaultDesign: PublicDesign = {
   headerLayout: "center",
   headerPosition: "static",
   headerTextColor: "#0f172a",
-  headingFontFamily: "system",
+  headingFontFamily: "pretendard",
   innerWidth: "1200",
   mainColor: "#2563eb",
   sectionGap: "80",
@@ -116,13 +144,37 @@ const defaultNavigation: PublicNavigationItem[] = [
   { id: "nav-company", label: "회사", pageId: "about", enabled: true },
 ];
 
+const defaultI18n: PublicI18n = {
+  footerCopyright: {
+    en: "All rights reserved.",
+    ko: "모든 권리 보유.",
+  },
+  locales: ["ko"],
+  seo: {},
+  siteName: {},
+};
+
 const fontStacks: Record<string, string> = {
+  "black-han-sans": "'Black Han Sans', sans-serif",
+  "escore-dream": "'Escoredream', sans-serif",
+  "gmarket-sans": "'Gmarket Sans', sans-serif",
   genos: "'Genos', sans-serif",
+  "google-sans-flex": "'Google Sans Flex', sans-serif",
+  "gowun-dodum": "'Gowun Dodum', sans-serif",
+  "ibm-plex-sans-kr": "'IBM Plex Sans KR', sans-serif",
   inter: "'Inter', sans-serif",
+  jua: "'Jua', sans-serif",
+  mona: "'Mona12 Text KR', 'Mona12', sans-serif",
   montserrat: "'Montserrat', sans-serif",
+  "nanum-myeongjo": "'Nanum Myeongjo', serif",
+  "nanum-square-round": "'NanumSquareRound', sans-serif",
   noto: "'Noto Sans KR', sans-serif",
+  "noto-sans-kr": "'Noto Sans KR', sans-serif",
+  "noto-serif-kr": "'Noto Serif KR', serif",
   playfair: "'Playfair Display', serif",
-  pretendard: "Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+  poppins: "'Poppins', sans-serif",
+  pretendard:
+    "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
   roboto: "'Roboto', sans-serif",
   system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
 };
@@ -132,33 +184,186 @@ function stringValue(record: PublicSection, key: string, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 
+function translationFields(value: unknown): PublicTranslations | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as PublicSection;
+  const english =
+    record.en && typeof record.en === "object" && !Array.isArray(record.en)
+      ? (record.en as PublicSection)
+      : undefined;
+
+  return english ? { en: english } : undefined;
+}
+
+function localizedRecord(record: PublicSection, locale: SiteLocale) {
+  if (locale === "ko") return record;
+  const translated = translationFields(record.translations)?.[locale];
+  return translated ? { ...record, ...translated } : record;
+}
+
+function localizedSectionRecord(record: PublicSection, locale: SiteLocale) {
+  const localized = localizedRecord(record, locale);
+
+  if (!Array.isArray(record.slides)) return localized;
+
+  return {
+    ...localized,
+    slides: record.slides.map((slide) =>
+      slide && typeof slide === "object" && !Array.isArray(slide)
+        ? localizedRecord(slide as PublicSection, locale)
+        : slide,
+    ),
+  };
+}
+
+function normalizeI18n(value: unknown): PublicI18n {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaultI18n;
+  const record = value as PublicSection;
+  const locales = Array.isArray(record.locales)
+    ? record.locales.filter(
+        (locale): locale is SiteLocale => locale === "ko" || locale === "en",
+      )
+    : defaultI18n.locales;
+
+  return {
+    footerCopyright:
+      record.footerCopyright &&
+      typeof record.footerCopyright === "object" &&
+      !Array.isArray(record.footerCopyright)
+        ? (record.footerCopyright as PublicI18n["footerCopyright"])
+        : defaultI18n.footerCopyright,
+    locales: Array.from(new Set<SiteLocale>(["ko", ...locales])),
+    seo:
+      record.seo && typeof record.seo === "object" && !Array.isArray(record.seo)
+        ? (record.seo as PublicI18n["seo"])
+        : {},
+    siteName:
+      record.siteName && typeof record.siteName === "object" && !Array.isArray(record.siteName)
+        ? (record.siteName as PublicI18n["siteName"])
+        : {},
+  };
+}
+
+function publicHeroSlides(section: PublicSection): PublicHeroSlide[] {
+  const fallbackSlides = [
+    {
+      badge: "AI · No Code · Web Solution",
+      bgColor: "#172554",
+      description: "검증된 디자인을 선택하고 내용만 바꾸면 사이트가 완성됩니다.",
+      title: "쉬운데, 결과물은 예쁜 웹사이트",
+    },
+    {
+      badge: "Preset Website Builder",
+      bgColor: "#1e3a8a",
+      description: "업종에 맞는 템플릿과 섹션을 골라 빠르게 시작하세요.",
+      title: "복잡한 디자인은 KEYUN이 정리했습니다",
+    },
+    {
+      badge: "Publish Today",
+      bgColor: "#064e3b",
+      description: "모바일 대응부터 문의 관리까지 한 번에 운영할 수 있습니다.",
+      title: "선택하고, 바꾸고, 오늘 바로 게시하세요",
+    },
+  ];
+  const createFallback = (index: number): PublicHeroSlide => {
+    const fallback = fallbackSlides[index % fallbackSlides.length];
+
+    return {
+      backgroundType: "color",
+      badge: fallback.badge,
+      bgColor: fallback.bgColor,
+      buttonLabel: "무료로 시작하기",
+      buttonLink: "#contact",
+      description: fallback.description,
+      id: `slide-${index + 1}`,
+      imageUrl: "",
+      secondaryButtonLabel: "템플릿 둘러보기",
+      secondaryButtonLink: "#",
+      title: fallback.title,
+    };
+  };
+
+  if (Array.isArray(section.slides) && section.slides.length) {
+    return section.slides
+      .map((item, index) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+
+        const record = item as PublicSection;
+        const fallback = createFallback(index);
+
+        return {
+          backgroundType:
+            stringValue(record, "backgroundType", fallback.backgroundType) === "image"
+              ? "image"
+              : "color",
+          badge: stringValue(record, "badge", fallback.badge),
+          bgColor: stringValue(record, "bgColor", fallback.bgColor),
+          buttonLabel: stringValue(record, "buttonLabel", fallback.buttonLabel),
+          buttonLink: stringValue(record, "buttonLink", fallback.buttonLink),
+          description: stringValue(record, "description", fallback.description),
+          id: stringValue(record, "id", fallback.id),
+          imageUrl: stringValue(record, "imageUrl"),
+          secondaryButtonLabel: stringValue(
+            record,
+            "secondaryButtonLabel",
+            fallback.secondaryButtonLabel,
+          ),
+          secondaryButtonLink: stringValue(
+            record,
+            "secondaryButtonLink",
+            fallback.secondaryButtonLink,
+          ),
+          title: stringValue(record, "title", fallback.title),
+        } satisfies PublicHeroSlide;
+      })
+      .filter((item): item is PublicHeroSlide => Boolean(item));
+  }
+
+  return [
+    createFallback(0),
+    createFallback(1),
+    createFallback(2),
+  ];
+}
+
 function numberValue(record: PublicSection, key: string, fallback: number) {
   const value = Number(stringValue(record, key, String(fallback)));
   return Number.isFinite(value) ? value : fallback;
 }
 
 
-function normalizePages(value: unknown): PublicPageItem[] {
+function normalizePages(value: unknown, locale: SiteLocale): PublicPageItem[] {
   if (!Array.isArray(value)) return defaultPages;
 
   const pages = value
     .map((item, index) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return null;
-      const record = item as PublicSection;
+      const source = item as PublicSection;
+      const record = localizedRecord(source, locale);
       const fallback = defaultPages[index] ?? defaultPages[0];
       const id = stringValue(record, "id", fallback.id || `page-${index}`);
       const title = stringValue(record, "title", fallback.title || "페이지");
       const path = stringValue(record, "path", fallback.path || "/");
       const status = stringValue(record, "status", fallback.status) === "private" ? "private" : "public";
 
-      return { id, path, status, title } satisfies PublicPageItem;
+      return {
+        id,
+        path,
+        status,
+        title,
+        translations: translationFields(source.translations),
+      } satisfies PublicPageItem;
     })
-    .filter((item): item is PublicPageItem => Boolean(item));
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   return pages.length ? pages : defaultPages;
 }
 
-function normalizeNavigation(value: unknown, pages: PublicPageItem[]): PublicNavigationItem[] {
+function normalizeNavigation(
+  value: unknown,
+  pages: PublicPageItem[],
+  locale: SiteLocale,
+): PublicNavigationItem[] {
   const pageIds = new Set(pages.map((page) => page.id));
 
   if (!Array.isArray(value)) {
@@ -168,7 +373,8 @@ function normalizeNavigation(value: unknown, pages: PublicPageItem[]): PublicNav
   const navigation = value
     .map((item, index) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return null;
-      const record = item as PublicSection;
+      const source = item as PublicSection;
+      const record = localizedRecord(source, locale);
       const fallback = defaultNavigation[index] ?? defaultNavigation[0];
       const pageId = stringValue(record, "pageId", fallback.pageId);
 
@@ -179,9 +385,10 @@ function normalizeNavigation(value: unknown, pages: PublicPageItem[]): PublicNav
         id: stringValue(record, "id", `nav-${index}`),
         label: stringValue(record, "label", fallback.label || "메뉴"),
         pageId,
+        translations: translationFields(source.translations),
       } satisfies PublicNavigationItem;
     })
-    .filter((item): item is PublicNavigationItem => Boolean(item));
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   return navigation.length ? navigation : defaultNavigation.filter((item) => pageIds.has(item.pageId));
 }
@@ -236,6 +443,8 @@ function defaultSection(type: string): PublicSection {
       gradientTo: "#ffffff",
       layout: "slide",
       mediaPosition: "right",
+      overlayColor: "#000000",
+      overlayOpacity: "0.3",
       paddingBottom: "110",
       paddingTop: "110",
       secondaryButtonLabel: "제품 살펴보기",
@@ -293,13 +502,17 @@ function defaultSection(type: string): PublicSection {
   };
 }
 
-function normalizeSection(value: unknown, index: number): PublicSection {
+function normalizeSection(
+  value: unknown,
+  index: number,
+  locale: SiteLocale,
+): PublicSection {
   if (typeof value === "string") {
     return { ...defaultSection(value), builderId: `${value}-${index}` };
   }
 
   if (value && typeof value === "object" && !Array.isArray(value)) {
-    const record = value as PublicSection;
+    const record = localizedSectionRecord(value as PublicSection, locale);
     const type = stringValue(record, "type", "content");
     return {
       ...defaultSection(type),
@@ -312,18 +525,19 @@ function normalizeSection(value: unknown, index: number): PublicSection {
   return { ...defaultSection("content"), builderId: `content-${index}` };
 }
 
-function normalizePageJson(publishedJson: Json): PublicPageJson {
+function normalizePageJson(publishedJson: Json, locale: SiteLocale): PublicPageJson {
   if (publishedJson && typeof publishedJson === "object" && !Array.isArray(publishedJson)) {
     const record = publishedJson as PublicSection;
     const sections = Array.isArray(record.sections)
-      ? record.sections.map(normalizeSection)
+      ? record.sections.map((section, index) => normalizeSection(section, index, locale))
       : [];
 
-    const pages = normalizePages(record.pages);
+    const pages = normalizePages(record.pages, locale);
 
     return {
       design: mergeDesign(record.design),
-      navigation: normalizeNavigation(record.navigation, pages),
+      i18n: normalizeI18n(record.i18n),
+      navigation: normalizeNavigation(record.navigation, pages, locale),
       pages,
       sections: sections.length
         ? sections
@@ -334,6 +548,7 @@ function normalizePageJson(publishedJson: Json): PublicPageJson {
 
   return {
     design: defaultDesign,
+    i18n: defaultI18n,
     navigation: defaultNavigation,
     pages: defaultPages,
     sections: [defaultSection("hero"), defaultSection("features"), defaultSection("cta")],
@@ -362,7 +577,7 @@ function sectionBackground(section: PublicSection, design: PublicDesign): CSSPro
 
   if (type === "image" && imageUrl) {
     return {
-      backgroundImage: `linear-gradient(90deg, rgba(255,255,255,0.92), rgba(255,255,255,0.58)), url(${imageUrl})`,
+      backgroundImage: `url(${imageUrl})`,
       backgroundPosition: "center",
       backgroundSize: "cover",
     };
@@ -534,13 +749,19 @@ function headerPositionClass(position: string) {
 
 function PublicHeader({
   design,
+  locale,
+  locales,
   navigation,
+  pagePath,
   pages,
   siteName,
   siteSlug,
 }: {
   design: PublicDesign;
+  locale: SiteLocale;
+  locales: SiteLocale[];
   navigation: PublicNavigationItem[];
+  pagePath: string;
   pages: PublicPageItem[];
   siteName: string;
   siteSlug: string;
@@ -558,9 +779,16 @@ function PublicHeader({
       return path;
     }
     if (path.startsWith("#")) return path;
-    if (path === "/") return `/s/${siteSlug}`;
+    const localePrefix = locale === "en" ? `/s/${siteSlug}/en` : `/s/${siteSlug}`;
+    if (path === "/") return localePrefix;
 
-    return `/s/${siteSlug}${path.startsWith("/") ? path : `/${path}`}`;
+    return `${localePrefix}${path.startsWith("/") ? path : `/${path}`}`;
+  };
+  const languageHref = (targetLocale: SiteLocale) => {
+    const suffix = pagePath === "/" ? "" : pagePath;
+    return targetLocale === "en"
+      ? `/s/${siteSlug}/en${suffix}`
+      : `/s/${siteSlug}${suffix}`;
   };
 
   return (
@@ -603,17 +831,35 @@ function PublicHeader({
           </nav>
         ) : null}
 
-        <a
-          className={`inline-flex min-h-11 shrink-0 items-center justify-center px-5 text-sm font-semibold ${headerLayout === "cta" ? "px-7 shadow-lg" : ""}`}
-          href="#contact"
-          style={{
-            backgroundColor: design.headerButtonBgColor,
-            borderRadius: 999,
-            color: design.headerButtonTextColor,
-          }}
-        >
-          시작하기
-        </a>
+        <div className="flex shrink-0 items-center gap-2">
+          {locales.includes("en") ? (
+            <div className="hidden items-center rounded-full border border-current/15 p-1 text-[11px] font-bold sm:flex">
+              {(["ko", "en"] as const).map((item) => (
+                <a
+                  aria-current={locale === item ? "page" : undefined}
+                  className={`rounded-full px-2.5 py-1.5 ${
+                    locale === item ? "bg-current/10" : "opacity-45"
+                  }`}
+                  href={languageHref(item)}
+                  key={item}
+                >
+                  {item.toUpperCase()}
+                </a>
+              ))}
+            </div>
+          ) : null}
+          <a
+            className={`inline-flex min-h-11 items-center justify-center px-5 text-sm font-semibold ${headerLayout === "cta" ? "px-7 shadow-lg" : ""}`}
+            href="#contact"
+            style={{
+              backgroundColor: design.headerButtonBgColor,
+              borderRadius: 999,
+              color: design.headerButtonTextColor,
+            }}
+          >
+            {locale === "en" ? "Get started" : "시작하기"}
+          </a>
+        </div>
       </div>
     </header>
   );
@@ -824,30 +1070,31 @@ function SectionShell({
 
   return (
     <section
-      className="relative overflow-hidden border"
+      className={`relative overflow-hidden border ${
+        ["image", "video"].includes(backgroundType) ? "keyun-bg-overlay" : ""
+      }`}
       data-keyun-animation={animationName(section, "section")}
       style={{
         ...sectionBackground(section, design),
         ...sectionEffectStyle(section),
+        "--keyun-overlay-color": stringValue(section, "overlayColor", "#000000"),
+        "--keyun-overlay-opacity": stringValue(section, "overlayOpacity", "0.3"),
         borderRadius: `${stringValue(section, "radius", "24")}px`,
         color: design.textColor,
         paddingBottom: `${numberValue(section, "paddingBottom", 90)}px`,
         paddingTop: `${numberValue(section, "paddingTop", 90)}px`,
-      }}
+      } as unknown as CSSProperties}
     >
       {backgroundType === "video" && videoUrl ? (
-        <>
-          <video
-            aria-hidden
-            autoPlay
-            className="absolute inset-0 h-full w-full object-cover"
-            loop
-            muted
-            playsInline
-            src={videoUrl}
-          />
-          <div className="absolute inset-0 bg-white/72" />
-        </>
+        <video
+          aria-hidden
+          autoPlay
+          className="absolute inset-0 h-full w-full object-cover"
+          loop
+          muted
+          playsInline
+          src={videoUrl}
+        />
       ) : null}
       <div className="relative z-10 mx-auto w-full px-6 md:px-10" style={{ maxWidth: sectionWidth(section, design) }}>
         {children}
@@ -928,6 +1175,50 @@ function HeroSection({
   const mediaPosition = sectionMediaPosition(section);
   const visual = <VisualBlock section={section} siteName={siteName} />;
   const isTextOnly = layout === "text-focus" || layout === "cta-focus";
+
+  if (layout === "slide") {
+    return (
+      <section
+        className="relative overflow-hidden border"
+        data-keyun-animation={animationName(section, "section")}
+        style={{
+          ...sectionEffectStyle(section),
+          borderRadius: `${stringValue(section, "radius", "8")}px`,
+        }}
+      >
+        <PublicHeroSlider
+          align={alignmentValue(section, "align")}
+          animations={{
+            badge: animationName(section, "badge"),
+            button: animationName(section, "button"),
+            description: animationName(section, "description"),
+            secondaryButton: animationName(section, "secondaryButton"),
+            title: animationName(section, "title"),
+          }}
+          arrowBgColor={stringValue(section, "arrowBgColor", "#0f172a")}
+          arrowButtonSize={stringValue(section, "arrowButtonSize", "48")}
+          arrowColor={stringValue(section, "arrowColor", "#ffffff")}
+          arrowImageUrl={stringValue(section, "arrowImageUrl")}
+          arrowSize={stringValue(section, "arrowSize", "24")}
+          arrowStyle={stringValue(section, "arrowStyle", "simple")}
+          autoplayDelay={numberValue(section, "autoplayDelay", 4500)}
+          buttonStyle={buttonStyle(section, design)}
+          descriptionStyle={{
+            ...descriptionStyle(section, design),
+            color: stringValue(section, "descriptionColor", "#ffffff"),
+          }}
+          overlayColor={stringValue(section, "overlayColor", "#000000")}
+          overlayOpacity={stringValue(section, "overlayOpacity", "0.3")}
+          paginationStyle={stringValue(section, "paginationStyle", "circle")}
+          slides={publicHeroSlides(section)}
+          titleStyle={{
+            ...titleStyle(section, design),
+            color: stringValue(section, "titleColor", "#ffffff"),
+          }}
+        />
+      </section>
+    );
+  }
 
   if (showcaseHeroLayouts.has(layout)) {
     const centered = layout === "centered-showcase";
@@ -1178,10 +1469,12 @@ function CtaSection({ design, section }: { design: PublicDesign; section: Public
 
 function LatestPostsSection({
   design,
+  locale,
   posts,
   siteSlug,
 }: {
   design: PublicDesign;
+  locale: SiteLocale;
   posts: DashboardPost[];
   siteSlug: string;
 }) {
@@ -1209,17 +1502,19 @@ function LatestPostsSection({
                 fontFamily: fontStack(design.headingFontFamily, "system"),
               }}
             >
-              최근 게시글
+              {locale === "en" ? "Latest posts" : "최근 게시글"}
             </h2>
             <p className="mt-3 text-sm leading-7 text-slate-500">
-              관리자에서 게시한 글이 사용자 페이지에 자동으로 노출됩니다.
+              {locale === "en"
+                ? "Published updates appear here automatically."
+                : "관리자에서 게시한 글이 사용자 페이지에 자동으로 노출됩니다."}
             </p>
           </div>
           <a
             className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 px-5 text-sm font-bold"
             href={`/s/${siteSlug}/posts`}
           >
-            전체 보기
+            {locale === "en" ? "View all" : "전체 보기"}
           </a>
         </div>
 
@@ -1270,12 +1565,16 @@ function ContactSection({
   contactEnabled,
   contactResult,
   design,
+  locale,
+  pagePath,
   siteName,
   siteSlug,
 }: {
   contactEnabled: boolean;
   contactResult?: string;
   design: PublicDesign;
+  locale: SiteLocale;
+  pagePath: string;
   siteName: string;
   siteSlug: string;
 }) {
@@ -1293,19 +1592,23 @@ function ContactSection({
             className="mt-3 text-3xl font-bold tracking-normal"
             style={{ fontFamily: fontStack(design.headingFontFamily, "system") }}
           >
-            문의를 남겨주세요
+            {locale === "en" ? "Contact us" : "문의를 남겨주세요"}
           </h2>
           <p className="mt-4 text-sm leading-7 text-slate-300">
-            {siteName} 담당자가 문의 내용을 확인한 뒤 연락드립니다.
+            {locale === "en"
+              ? `${siteName} will review your message and get back to you.`
+              : `${siteName} 담당자가 문의 내용을 확인한 뒤 연락드립니다.`}
           </p>
           {contactResult === "sent" ? (
             <p className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100">
-              문의가 접수되었습니다.
+              {locale === "en" ? "Your message has been received." : "문의가 접수되었습니다."}
             </p>
           ) : null}
           {contactResult === "failed" ? (
             <p className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm font-semibold text-rose-100">
-              문의 접수에 실패했습니다. 이름, 연락처, 문의 내용을 확인해 주세요.
+              {locale === "en"
+                ? "We could not send your message. Please check the required fields."
+                : "문의 접수에 실패했습니다. 이름, 연락처, 문의 내용을 확인해 주세요."}
             </p>
           ) : null}
           {!contactEnabled ? (
@@ -1317,7 +1620,13 @@ function ContactSection({
 
         <form action={submitPublicContact} className="grid gap-3 rounded-2xl bg-white p-4 text-slate-950 md:p-5">
           <input name="site_slug" type="hidden" value={siteSlug} />
-          <input name="source_path" type="hidden" value={`/s/${siteSlug}`} />
+          <input
+            name="source_path"
+            type="hidden"
+            value={`${locale === "en" ? `/s/${siteSlug}/en` : `/s/${siteSlug}`}${
+              pagePath === "/" ? "" : pagePath
+            }`}
+          />
           <input
             aria-hidden="true"
             autoComplete="off"
@@ -1328,17 +1637,17 @@ function ContactSection({
           />
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1.5 text-xs font-bold text-slate-500">
-              이름
+              {locale === "en" ? "Name" : "이름"}
               <input
                 autoComplete="name"
                 className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-950 outline-none focus:border-slate-950"
                 name="name"
-                placeholder="홍길동"
+                placeholder={locale === "en" ? "Your name" : "홍길동"}
                 required
               />
             </label>
             <label className="grid gap-1.5 text-xs font-bold text-slate-500">
-              연락처
+              {locale === "en" ? "Phone" : "연락처"}
               <input
                 autoComplete="tel"
                 className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-950 outline-none focus:border-slate-950"
@@ -1348,7 +1657,7 @@ function ContactSection({
             </label>
           </div>
           <label className="grid gap-1.5 text-xs font-bold text-slate-500">
-            이메일
+            {locale === "en" ? "Email" : "이메일"}
             <input
               autoComplete="email"
               className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-950 outline-none focus:border-slate-950"
@@ -1358,24 +1667,30 @@ function ContactSection({
             />
           </label>
           <label className="grid gap-1.5 text-xs font-bold text-slate-500">
-            제목
+            {locale === "en" ? "Subject" : "제목"}
             <input
               className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-950 outline-none focus:border-slate-950"
               name="subject"
-              placeholder="문의 제목"
+              placeholder={locale === "en" ? "How can we help?" : "문의 제목"}
             />
           </label>
           <label className="grid gap-1.5 text-xs font-bold text-slate-500">
-            문의 내용
+            {locale === "en" ? "Message" : "문의 내용"}
             <textarea
               className="min-h-32 resize-y rounded-xl border border-slate-200 px-3 py-3 text-sm leading-6 text-slate-950 outline-none focus:border-slate-950"
               name="message"
-              placeholder="궁금한 내용을 남겨주세요."
+              placeholder={
+                locale === "en"
+                  ? "Tell us what you would like to know."
+                  : "궁금한 내용을 남겨주세요."
+              }
               required
             />
           </label>
           <p className="text-xs leading-5 text-slate-500">
-            연락처 또는 이메일 중 하나는 꼭 입력해 주세요.
+            {locale === "en"
+              ? "Please enter either a phone number or an email address."
+              : "연락처 또는 이메일 중 하나는 꼭 입력해 주세요."}
           </p>
           <button
             className="mt-2 inline-flex h-12 items-center justify-center rounded-xl px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
@@ -1383,10 +1698,18 @@ function ContactSection({
             style={{ backgroundColor: contactEnabled ? design.mainColor : "#94a3b8" }}
             type="submit"
           >
-            {contactEnabled ? "문의 보내기" : "데모에서는 저장 불가"}
+            {contactEnabled
+              ? locale === "en"
+                ? "Send message"
+                : "문의 보내기"
+              : locale === "en"
+                ? "Unavailable in demo"
+                : "데모에서는 저장 불가"}
           </button>
           <p className="text-xs leading-5 text-slate-400">
-            제출한 정보는 문의 응대 목적으로만 사용됩니다.
+            {locale === "en"
+              ? "Your information is used only to respond to this inquiry."
+              : "제출한 정보는 문의 응대 목적으로만 사용됩니다."}
           </p>
         </form>
       </div>
@@ -1394,8 +1717,21 @@ function ContactSection({
   );
 }
 
-function PublicFooter({ design, siteName }: { design: PublicDesign; siteName: string }) {
-  const links = ["이용약관", "개인정보처리방침", "문의하기"];
+function PublicFooter({
+  copyright,
+  design,
+  locale,
+  siteName,
+}: {
+  copyright: string;
+  design: PublicDesign;
+  locale: SiteLocale;
+  siteName: string;
+}) {
+  const links =
+    locale === "en"
+      ? ["Terms", "Privacy Policy", "Contact"]
+      : ["이용약관", "개인정보처리방침", "문의하기"];
   const layout = design.footerLayout;
 
   return (
@@ -1411,7 +1747,7 @@ function PublicFooter({ design, siteName }: { design: PublicDesign; siteName: st
         {layout === "minimal" || layout === "simple" ? (
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <p className="text-xl font-bold">{siteName}</p>
-            <p className="text-sm opacity-70">© {new Date().getFullYear()} {siteName}. All rights reserved.</p>
+            <p className="text-sm opacity-70">© {new Date().getFullYear()} {siteName}. {copyright}</p>
           </div>
         ) : layout === "social" ? (
           <div className="text-center">
@@ -1433,26 +1769,41 @@ function PublicFooter({ design, siteName }: { design: PublicDesign; siteName: st
           <div className="flex flex-col gap-8 rounded-3xl bg-white/10 p-8 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-2xl font-bold">{siteName}</p>
-              <p className="mt-2 text-sm opacity-70">브랜드의 다음 페이지를 키운과 함께 만듭니다.</p>
+              <p className="mt-2 text-sm opacity-70">
+                {locale === "en"
+                  ? "Build your brand's next page with KEYUN."
+                  : "브랜드의 다음 페이지를 키운과 함께 만듭니다."}
+              </p>
             </div>
             <a className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-bold" href="#" style={{ color: design.footerAccentColor }}>
-              문의하기
+              {locale === "en" ? "Contact" : "문의하기"}
             </a>
           </div>
         ) : (
           <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
             <div>
               <p className="text-xl font-bold">{siteName}</p>
-              <p className="mt-3 max-w-sm text-sm leading-7 opacity-70">키운 스튜디오로 제작된 사이트입니다.</p>
+              <p className="mt-3 max-w-sm text-sm leading-7 opacity-70">
+                {locale === "en"
+                  ? "This website was created with KEYUN Studio."
+                  : "키운 스튜디오로 제작된 사이트입니다."}
+              </p>
             </div>
             <div>
-              <p className="text-sm font-bold" style={{ color: design.footerAccentColor }}>메뉴</p>
+              <p className="text-sm font-bold" style={{ color: design.footerAccentColor }}>
+                {locale === "en" ? "Menu" : "메뉴"}
+              </p>
               <div className="mt-4 grid gap-2 text-sm opacity-75">
-                {["제품", "솔루션", "가격"].map((item) => <a key={item} href="#">{item}</a>)}
+                {(locale === "en"
+                  ? ["Product", "Solutions", "Pricing"]
+                  : ["제품", "솔루션", "가격"]
+                ).map((item) => <a key={item} href="#">{item}</a>)}
               </div>
             </div>
             <div>
-              <p className="text-sm font-bold" style={{ color: design.footerAccentColor }}>정보</p>
+              <p className="text-sm font-bold" style={{ color: design.footerAccentColor }}>
+                {locale === "en" ? "Information" : "정보"}
+              </p>
               <div className="mt-4 grid gap-2 text-sm opacity-75">
                 {links.map((item) => <a key={item} href="#">{item}</a>)}
               </div>
@@ -1461,7 +1812,7 @@ function PublicFooter({ design, siteName }: { design: PublicDesign; siteName: st
         )}
         {layout !== "minimal" && layout !== "simple" ? (
           <div className="mt-10 border-t pt-5 text-sm opacity-70" style={{ borderColor: `${design.footerAccentColor}55` }}>
-            © {new Date().getFullYear()} {siteName}. All rights reserved.
+            © {new Date().getFullYear()} {siteName}. {copyright}
           </div>
         ) : null}
       </div>
@@ -1499,14 +1850,20 @@ export function PublicSiteRenderer({
   contactEnabled = true,
   contactResult,
   description,
+  locale = "ko",
+  pagePath = "/",
   popups = [],
   publishedJson,
   posts = [],
   siteName,
   siteSlug = "",
 }: PublicSiteRendererProps) {
-  const page = normalizePageJson(publishedJson);
-  const { design, navigation, pages, sections } = page;
+  const page = normalizePageJson(publishedJson, locale);
+  const { design, i18n, navigation, pages, sections } = page;
+  const localizedSiteName = i18n.siteName[locale] || siteName;
+  const localizedCopyright =
+    i18n.footerCopyright[locale] ||
+    (locale === "en" ? "All rights reserved." : "모든 권리 보유.");
 
   return (
     <div
@@ -1519,9 +1876,12 @@ export function PublicSiteRenderer({
       <PublicSiteAnimations />
       <PublicHeader
         design={design}
+        locale={locale}
+        locales={i18n.locales}
         navigation={navigation}
+        pagePath={pagePath}
         pages={pages}
-        siteName={siteName}
+        siteName={localizedSiteName}
         siteSlug={siteSlug}
       />
       <main style={{ display: "grid", gap: `${Math.max(0, Number(design.sectionGap) || 0)}px` }}>
@@ -1530,29 +1890,43 @@ export function PublicSiteRenderer({
             design={design}
             key={stringValue(section, "builderId", `${stringValue(section, "type", "section")}-${index}`)}
             section={section}
-            siteName={siteName}
+            siteName={localizedSiteName}
           />
         ))}
         {sections.length === 0 ? (
           <section className="px-6 py-24">
             <div className="mx-auto max-w-3xl text-center">
-              <h1 className="text-4xl font-bold">{siteName}</h1>
+              <h1 className="text-4xl font-bold">{localizedSiteName}</h1>
               {description ? <p className="mt-4 text-slate-500">{description}</p> : null}
             </div>
           </section>
         ) : null}
-        {siteSlug ? <LatestPostsSection design={design} posts={posts} siteSlug={siteSlug} /> : null}
+        {siteSlug ? (
+          <LatestPostsSection
+            design={design}
+            locale={locale}
+            posts={posts}
+            siteSlug={siteSlug}
+          />
+        ) : null}
         {siteSlug ? (
           <ContactSection
             contactEnabled={contactEnabled}
             contactResult={contactResult}
             design={design}
-            siteName={siteName}
+            locale={locale}
+            pagePath={pagePath}
+            siteName={localizedSiteName}
             siteSlug={siteSlug}
           />
         ) : null}
       </main>
-      <PublicFooter design={design} siteName={siteName} />
+      <PublicFooter
+        copyright={localizedCopyright}
+        design={design}
+        locale={locale}
+        siteName={localizedSiteName}
+      />
       {siteSlug ? <PublicPopups popups={popups} siteSlug={siteSlug} /> : null}
     </div>
   );

@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   Check, ChevronDown, Copy, Eye, FileText, GripVertical, Home,
-  Image as ImageIcon, Laptop, Layers3, Monitor, MoreHorizontal, Palette, Plus,
+  Image as ImageIcon, Languages, Laptop, Layers3, Monitor, MoreHorizontal, Palette, Plus,
   Settings, Smartphone, Sparkles, Tablet, Trash2, UploadCloud, WandSparkles, X,
   ZoomIn,
 } from "lucide-react";
@@ -17,6 +17,9 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
+import type { Swiper as SwiperInstance } from "swiper";
+import { A11y, Autoplay, Pagination } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +29,8 @@ import { cn } from "@/lib/utils";
 import type { Json } from "@/types/database";
 
 type EditorSection = Record<string, unknown>;
+type SupportedLocale = "ko" | "en";
+type TranslationFields = Partial<Record<SupportedLocale, Record<string, unknown>>>;
 
 type DesignSettings = {
   bodyFontFamily: string;
@@ -53,6 +58,7 @@ type EditorPageItem = {
   title: string;
   path: string;
   status: "public" | "private";
+  translations?: TranslationFields;
 };
 
 type EditorNavigationItem = {
@@ -60,10 +66,22 @@ type EditorNavigationItem = {
   label: string;
   pageId: string;
   enabled: boolean;
+  translations?: TranslationFields;
+};
+
+type EditorI18nSettings = {
+  defaultLocale: "ko";
+  footerCopyright: Partial<Record<SupportedLocale, string>>;
+  locales: SupportedLocale[];
+  seo: Partial<
+    Record<SupportedLocale, { description: string; title: string }>
+  >;
+  siteName: Partial<Record<SupportedLocale, string>>;
 };
 
 type EditableDraft = Record<string, unknown> & {
   design: DesignSettings;
+  i18n: EditorI18nSettings;
   navigation: EditorNavigationItem[];
   pages: EditorPageItem[];
   sections: EditorSection[];
@@ -91,6 +109,21 @@ type ModulePreset = {
   type: string;
 };
 
+type HeroSlide = {
+  backgroundType: "color" | "image";
+  badge: string;
+  bgColor: string;
+  buttonLabel: string;
+  buttonLink: string;
+  description: string;
+  id: string;
+  imageUrl: string;
+  secondaryButtonLabel: string;
+  secondaryButtonLink: string;
+  title: string;
+  translations?: TranslationFields;
+};
+
 type EditorViewport = "desktop" | "tablet" | "mobile";
 type RightPanelMode = "library" | "settings";
 type AlignmentValue = "left" | "center" | "right";
@@ -106,8 +139,8 @@ type SelectedElement =
   | "visual";
 
 const defaultDesign: DesignSettings = {
-  bodyFontFamily: "system",
-  englishFontFamily: "inter",
+  bodyFontFamily: "pretendard",
+  englishFontFamily: "pretendard",
   footerAccentColor: "#2563eb",
   footerBgColor: "#0f172a",
   footerLayout: "info",
@@ -118,7 +151,7 @@ const defaultDesign: DesignSettings = {
   headerLayout: "center",
   headerPosition: "fixed",
   headerTextColor: "#0f172a",
-  headingFontFamily: "system",
+  headingFontFamily: "pretendard",
   mainColor: "#2563eb",
   subColor: "#dbeafe",
   textColor: "#0f172a",
@@ -242,6 +275,19 @@ const defaultNavigation: EditorNavigationItem[] = [
   { id: "nav-company", label: "회사", pageId: "about", enabled: true },
 ];
 
+const defaultI18n: EditorI18nSettings = {
+  defaultLocale: "ko",
+  footerCopyright: {
+    en: "All rights reserved.",
+    ko: "모든 권리 보유.",
+  },
+  locales: ["ko"],
+  seo: {
+    en: { description: "", title: "" },
+  },
+  siteName: {},
+};
+
 const widthOptions = [
   { label: "기본 1200", value: "1200" },
   { label: "넓게", value: "1440" },
@@ -291,6 +337,11 @@ const showcaseHeroLayouts = new Set([
 
 const freeFontOptions = [
   {
+    label: "Pretendard",
+    stack: "'Pretendard Variable', Pretendard, ui-sans-serif, system-ui, sans-serif",
+    value: "pretendard",
+  },
+  {
     label: "시스템 기본",
     stack: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
     value: "system",
@@ -299,6 +350,36 @@ const freeFontOptions = [
     label: "Noto Sans KR",
     stack: "'Noto Sans KR', ui-sans-serif, system-ui, sans-serif",
     value: "noto-sans-kr",
+  },
+  {
+    label: "Noto Serif KR",
+    stack: "'Noto Serif KR', serif",
+    value: "noto-serif-kr",
+  },
+  {
+    label: "나눔명조",
+    stack: "'Nanum Myeongjo', serif",
+    value: "nanum-myeongjo",
+  },
+  {
+    label: "나눔스퀘어라운드",
+    stack: "'NanumSquareRound', ui-sans-serif, system-ui, sans-serif",
+    value: "nanum-square-round",
+  },
+  {
+    label: "G마켓 산스",
+    stack: "'Gmarket Sans', ui-sans-serif, system-ui, sans-serif",
+    value: "gmarket-sans",
+  },
+  {
+    label: "S-Core Dream",
+    stack: "'Escoredream', ui-sans-serif, system-ui, sans-serif",
+    value: "escore-dream",
+  },
+  {
+    label: "Mona",
+    stack: "'Mona12 Text KR', 'Mona12', ui-sans-serif, system-ui, sans-serif",
+    value: "mona",
   },
   {
     label: "IBM Plex Sans KR",
@@ -311,11 +392,146 @@ const freeFontOptions = [
     value: "gowun-dodum",
   },
   {
+    label: "Black Han Sans",
+    stack: "'Black Han Sans', ui-sans-serif, system-ui, sans-serif",
+    value: "black-han-sans",
+  },
+  {
+    label: "Jua",
+    stack: "'Jua', ui-sans-serif, system-ui, sans-serif",
+    value: "jua",
+  },
+  {
     label: "Inter",
     stack: "Inter, ui-sans-serif, system-ui, sans-serif",
     value: "inter",
   },
+  {
+    label: "Google Sans Flex",
+    stack: "'Google Sans Flex', ui-sans-serif, system-ui, sans-serif",
+    value: "google-sans-flex",
+  },
+  {
+    label: "Montserrat",
+    stack: "'Montserrat', ui-sans-serif, system-ui, sans-serif",
+    value: "montserrat",
+  },
+  {
+    label: "Poppins",
+    stack: "'Poppins', ui-sans-serif, system-ui, sans-serif",
+    value: "poppins",
+  },
+  {
+    label: "Roboto",
+    stack: "'Roboto', ui-sans-serif, system-ui, sans-serif",
+    value: "roboto",
+  },
 ];
+
+function createHeroSlide(index: number, overrides: Partial<HeroSlide> = {}): HeroSlide {
+  const defaults = [
+    {
+      badge: "AI · No Code · Web Solution",
+      bgColor: "#172554",
+      description: "검증된 디자인을 선택하고 내용만 바꾸면 사이트가 완성됩니다.",
+      title: "쉬운데, 결과물은 예쁜 웹사이트",
+    },
+    {
+      badge: "Preset Website Builder",
+      bgColor: "#1e3a8a",
+      description: "업종에 맞는 템플릿과 섹션을 골라 빠르게 시작하세요.",
+      title: "복잡한 디자인은 KEYUN이 정리했습니다",
+    },
+    {
+      badge: "Publish Today",
+      bgColor: "#064e3b",
+      description: "모바일 대응부터 문의 관리까지 한 번에 운영할 수 있습니다.",
+      title: "선택하고, 바꾸고, 오늘 바로 게시하세요",
+    },
+  ][index % 3];
+
+  return {
+    backgroundType: "color",
+    badge: defaults.badge,
+    bgColor: defaults.bgColor,
+    buttonLabel: "무료로 시작하기",
+    buttonLink: "#contact",
+    description: defaults.description,
+    id: createSectionId(`slide-${index + 1}`),
+    imageUrl: "",
+    secondaryButtonLabel: "템플릿 둘러보기",
+    secondaryButtonLink: "#",
+    title: defaults.title,
+    ...overrides,
+  };
+}
+
+function heroSlides(section: EditorSection): HeroSlide[] {
+  const sectionId = stringValue(section, "builderId", "hero");
+
+  if (Array.isArray(section.slides) && section.slides.length) {
+    return section.slides
+      .map((item, index) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+
+        const record = item as Record<string, unknown>;
+        const fallback = createHeroSlide(index, {
+          id: `${sectionId}-slide-${index + 1}`,
+        });
+        const backgroundType =
+          stringValue(record, "backgroundType", fallback.backgroundType) === "image"
+            ? "image"
+            : "color";
+
+        return {
+          backgroundType,
+          badge: stringValue(record, "badge", fallback.badge),
+          bgColor: stringValue(record, "bgColor", fallback.bgColor),
+          buttonLabel: stringValue(record, "buttonLabel", fallback.buttonLabel),
+          buttonLink: stringValue(record, "buttonLink", fallback.buttonLink),
+          description: stringValue(record, "description", fallback.description),
+          id: stringValue(record, "id", fallback.id),
+          imageUrl: stringValue(record, "imageUrl"),
+          secondaryButtonLabel: stringValue(
+            record,
+            "secondaryButtonLabel",
+            fallback.secondaryButtonLabel,
+          ),
+          secondaryButtonLink: stringValue(
+            record,
+            "secondaryButtonLink",
+            fallback.secondaryButtonLink,
+          ),
+          title: stringValue(record, "title", fallback.title),
+          translations: normalizeTranslations(record.translations),
+        } satisfies HeroSlide;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  }
+
+  return [
+    createHeroSlide(0, {
+      badge: stringValue(section, "badge", "AI · No Code · Web Solution"),
+      buttonLabel: stringValue(section, "buttonLabel", "무료로 시작하기"),
+      buttonLink: stringValue(section, "buttonLink", "#contact"),
+      description: stringValue(
+        section,
+        "description",
+        "검증된 디자인을 선택하고 내용만 바꾸면 사이트가 완성됩니다.",
+      ),
+      imageUrl: stringValue(section, "imageUrl"),
+      secondaryButtonLabel: stringValue(
+        section,
+        "secondaryButtonLabel",
+        "템플릿 둘러보기",
+      ),
+      title: stringValue(section, "title", "쉬운데, 결과물은 예쁜 웹사이트"),
+      id: `${sectionId}-slide-1`,
+    }),
+    createHeroSlide(1, { id: `${sectionId}-slide-2` }),
+    createHeroSlide(2, { id: `${sectionId}-slide-3` }),
+  ];
+}
 
 function createSectionId(type: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -346,6 +562,13 @@ function defaultSectionStyle(type: string, layout: string) {
       layout === "text-focus" || layout === "centered-showcase"
         ? "center"
         : "left",
+    arrowBgColor: "#0f172a",
+    arrowButtonSize: "48",
+    arrowColor: "#ffffff",
+    arrowImageUrl: "",
+    arrowSize: "24",
+    arrowStyle: "simple",
+    autoplayDelay: "4500",
     backgroundType:
       layout === "cta-focus" || (type === "hero" && showcaseHeroLayouts.has(layout))
         ? "color"
@@ -356,6 +579,8 @@ function defaultSectionStyle(type: string, layout: string) {
     glass: "off",
     imageUrl: "",
     mediaPosition: type === "content" ? "left" : type === "hero" ? "right" : "center",
+    overlayColor: "#000000",
+    overlayOpacity: "0.3",
     paddingBottom: desktopPadding,
     paddingBottomDesktop: desktopPadding,
     paddingBottomMobile: mobilePadding,
@@ -364,6 +589,7 @@ function defaultSectionStyle(type: string, layout: string) {
     paddingTopDesktop: desktopPadding,
     paddingTopMobile: mobilePadding,
     paddingTopTablet: tabletPadding,
+    paginationStyle: "circle",
     radius: type === "hero" && showcaseHeroLayouts.has(layout) ? "8" : "24",
     shadow: type === "hero" && showcaseHeroLayouts.has(layout) ? "none" : "soft",
     titleFontSize,
@@ -400,7 +626,7 @@ function createSection(type: string, layout?: string): EditorSection {
       title: "KEYUN 웹사이트 빌더",
     };
 
-    return {
+    const heroSection = {
       ...base,
       ...(nextLayout === "product-canvas" ||
       nextLayout === "centered-showcase" ||
@@ -418,6 +644,19 @@ function createSection(type: string, layout?: string): EditorSection {
             title: "아이디어를 실현하는 가장 스마트한 방법, KEYUN",
           }),
     };
+
+    return nextLayout === "slide"
+      ? {
+          ...heroSection,
+          align: "left",
+          backgroundType: "color",
+          bgColor: "#172554",
+          slides: [createHeroSlide(0), createHeroSlide(1), createHeroSlide(2)],
+          descriptionColor: "#ffffff",
+          titleColor: "#ffffff",
+          width: "full",
+        }
+      : heroSection;
   }
 
   if (type === "features") {
@@ -452,6 +691,48 @@ function stringValue(record: Record<string, unknown>, key: string, fallback = ""
   const value = record[key];
 
   return typeof value === "string" ? value : fallback;
+}
+
+function localizedRecord<T extends Record<string, unknown>>(
+  record: T,
+  locale: SupportedLocale,
+): T {
+  if (locale === "ko") return record;
+
+  const translations = normalizeTranslations(record.translations);
+  const translated = translations?.[locale];
+
+  return translated ? ({ ...record, ...translated } as T) : record;
+}
+
+function localizedSection(section: EditorSection, locale: SupportedLocale): EditorSection {
+  const localized = localizedRecord(section, locale);
+
+  if (!Array.isArray(section.slides)) return localized;
+
+  return {
+    ...localized,
+    slides: section.slides.map((slide) =>
+      slide && typeof slide === "object" && !Array.isArray(slide)
+        ? localizedRecord(slide as Record<string, unknown>, locale)
+        : slide,
+    ),
+  };
+}
+
+function localizedPageTitle(page: EditorPageItem, locale: SupportedLocale) {
+  return locale === "ko"
+    ? page.title
+    : stringValue(page.translations?.[locale] ?? {}, "title", page.title);
+}
+
+function localizedNavigationLabel(
+  item: EditorNavigationItem,
+  locale: SupportedLocale,
+) {
+  return locale === "ko"
+    ? item.label
+    : stringValue(item.translations?.[locale] ?? {}, "label", item.label);
 }
 
 function alignmentValue(
@@ -605,6 +886,53 @@ function numberValue(record: Record<string, unknown>, key: string, fallback: num
   return Number.isFinite(value) ? value : fallback;
 }
 
+function normalizeTranslations(value: unknown): TranslationFields | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+
+  const record = value as Record<string, unknown>;
+  const english =
+    record.en && typeof record.en === "object" && !Array.isArray(record.en)
+      ? (record.en as Record<string, unknown>)
+      : undefined;
+
+  return english ? { en: english } : undefined;
+}
+
+function normalizeI18n(value: unknown): EditorI18nSettings {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return defaultI18n;
+  }
+
+  const record = value as Record<string, unknown>;
+  const locales = Array.isArray(record.locales)
+    ? record.locales.filter(
+        (locale): locale is SupportedLocale => locale === "ko" || locale === "en",
+      )
+    : defaultI18n.locales;
+  const siteName =
+    record.siteName && typeof record.siteName === "object" && !Array.isArray(record.siteName)
+      ? (record.siteName as Partial<Record<SupportedLocale, string>>)
+      : {};
+  const footerCopyright =
+    record.footerCopyright &&
+    typeof record.footerCopyright === "object" &&
+    !Array.isArray(record.footerCopyright)
+      ? (record.footerCopyright as Partial<Record<SupportedLocale, string>>)
+      : defaultI18n.footerCopyright;
+  const seo =
+    record.seo && typeof record.seo === "object" && !Array.isArray(record.seo)
+      ? (record.seo as EditorI18nSettings["seo"])
+      : defaultI18n.seo;
+
+  return {
+    defaultLocale: "ko",
+    footerCopyright,
+    locales: Array.from(new Set<SupportedLocale>(["ko", ...locales])),
+    seo,
+    siteName,
+  };
+}
+
 
 function normalizePages(value: unknown): EditorPageItem[] {
   if (!Array.isArray(value)) {
@@ -624,9 +952,15 @@ function normalizePages(value: unknown): EditorPageItem[] {
       const path = stringValue(record, "path", fallback.path || `/page-${index + 1}`);
       const status = stringValue(record, "status", fallback.status) === "private" ? "private" : "public";
 
-      return { id, path, status, title } satisfies EditorPageItem;
+      return {
+        id,
+        path,
+        status,
+        title,
+        translations: normalizeTranslations(record.translations),
+      } satisfies EditorPageItem;
     })
-    .filter((item): item is EditorPageItem => Boolean(item));
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   return pages.length ? pages : defaultPages;
 }
@@ -657,9 +991,10 @@ function normalizeNavigation(value: unknown, pages: EditorPageItem[]): EditorNav
         id: stringValue(record, "id", `nav-${index}`),
         label: stringValue(record, "label", fallback.label || "메뉴"),
         pageId,
+        translations: normalizeTranslations(record.translations),
       } satisfies EditorNavigationItem;
     })
-    .filter((item): item is EditorNavigationItem => Boolean(item));
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   return navigation.length ? navigation : defaultNavigation.filter((item) => pageIds.has(item.pageId));
 }
@@ -745,6 +1080,7 @@ function toEditableJson(draftJson: Json): EditableDraft {
     return {
       ...record,
       design: normalizeDesign(record.design),
+      i18n: normalizeI18n(record.i18n),
       navigation: normalizeNavigation(record.navigation, pages),
       pages,
       sections: sections.length
@@ -755,6 +1091,7 @@ function toEditableJson(draftJson: Json): EditableDraft {
 
   return {
     design: defaultDesign,
+    i18n: defaultI18n,
     navigation: defaultNavigation,
     pages: defaultPages,
     sections: [createSection("hero"), createSection("features"), createSection("cta")],
@@ -814,7 +1151,7 @@ function sectionBackground(section: EditorSection, design: DesignSettings): CSSP
 
   if (type === "image" && imageUrl) {
     return {
-      backgroundImage: `linear-gradient(90deg, rgba(255,255,255,0.92), rgba(255,255,255,0.54)), url(${imageUrl})`,
+      backgroundImage: `url(${imageUrl})`,
       backgroundPosition: "center",
       backgroundSize: "cover",
     };
@@ -1399,12 +1736,20 @@ type CanvasSectionProps = {
   ) => void;
   requestVisualUpload: (index: number) => void;
   removeSection: (index: number) => void;
+  selectedSlideIndex: number;
   section: EditorSection;
   selectedElement: SelectedElement;
   selectElement: (index: number, element: SelectedElement) => void;
   selectSection: (index: number) => void;
+  selectSlide: (index: number) => void;
   updateField: (index: number, key: string, value: string) => void;
   updateItems: (index: number, value: string) => void;
+  updateSlideField: (
+    sectionIndex: number,
+    slideIndex: number,
+    key: keyof HeroSlide,
+    value: string,
+  ) => void;
   viewport: EditorViewport;
 };
 
@@ -1525,14 +1870,18 @@ function CanvasSection({
   openContextMenu,
   requestVisualUpload,
   removeSection,
+  selectedSlideIndex,
   section,
   selectedElement,
   selectElement,
   selectSection,
+  selectSlide,
   updateField,
   updateItems,
+  updateSlideField,
   viewport,
 }: CanvasSectionProps) {
+  const heroSwiperRef = useRef<SwiperInstance | null>(null);
   const type = stringValue(section, "type", "content");
   const layout = stringValue(section, "layout");
   const align = alignmentValue(section, "align");
@@ -1540,9 +1889,16 @@ function CanvasSection({
   const backgroundType = stringValue(section, "backgroundType", "gradient");
   const imageUrl = stringValue(section, "imageUrl");
   const items = itemList(section);
+  const slides = layout === "slide" ? heroSlides(section) : [];
   const mediaPosition = sectionMediaPosition(section);
   const videoUrl = stringValue(section, "videoUrl");
   const isShowcaseHero = type === "hero" && showcaseHeroLayouts.has(layout);
+  useEffect(() => {
+    if (layout !== "slide" || !heroSwiperRef.current) return;
+    if (heroSwiperRef.current.realIndex === selectedSlideIndex) return;
+
+    heroSwiperRef.current.slideToLoop(selectedSlideIndex);
+  }, [layout, selectedSlideIndex]);
   const previewAnimationClass = (element: Exclude<SelectedElement, "site">) => {
     if (!animationPreview || animationPreview.element !== element) return "";
 
@@ -1555,11 +1911,19 @@ function CanvasSection({
   const sectionStyle = {
     ...sectionBackground(section, design),
     ...sectionEffectStyle(section),
+    "--keyun-overlay-color": stringValue(section, "overlayColor", "#000000"),
+    "--keyun-overlay-opacity": stringValue(section, "overlayOpacity", "0.3"),
     borderRadius: `${stringValue(section, "radius", "24")}px`,
     color: design.textColor,
-    paddingBottom: `${responsivePaddingValue(section, "paddingBottom", viewport, "96")}px`,
-    paddingTop: `${responsivePaddingValue(section, "paddingTop", viewport, "96")}px`,
-  };
+    paddingBottom:
+      layout === "slide"
+        ? "0px"
+        : `${responsivePaddingValue(section, "paddingBottom", viewport, "96")}px`,
+    paddingTop:
+      layout === "slide"
+        ? "0px"
+        : `${responsivePaddingValue(section, "paddingTop", viewport, "96")}px`,
+  } as CSSProperties;
   const cardStyle = childCardStyle(section);
   const activeElement = (element: SelectedElement) => isSelected && selectedElement === element;
   const selectElementForSection = (element: SelectedElement) => {
@@ -1570,6 +1934,8 @@ function CanvasSection({
     <section
       className={cn(
         "group relative overflow-hidden border transition-all",
+        (layout === "slide" || ["image", "video"].includes(backgroundType)) &&
+          "keyun-bg-overlay",
         previewAnimationClass("section"),
         isSelected
           ? "border-blue-500 ring-2 ring-blue-500/20"
@@ -1648,10 +2014,260 @@ function CanvasSection({
 
       <div
         className={cn(
-          "relative z-10 mx-auto w-full px-10",
-          widthClass(stringValue(section, "width", design.innerWidth)),
+          "relative z-10 mx-auto w-full",
+          layout === "slide" ? "max-w-none px-0" : "px-10",
+          layout !== "slide" &&
+            widthClass(stringValue(section, "width", design.innerWidth)),
         )}
       >
+        {type === "hero" && layout === "slide" ? (
+          <Swiper
+            key={`editor-slider-${stringValue(section, "builderId")}`}
+            a11y={{ enabled: true }}
+            autoplay={{
+              delay: numberValue(section, "autoplayDelay", 4500),
+              disableOnInteraction: false,
+              pauseOnMouseEnter: true,
+            }}
+            className={cn(
+              "keyun-hero-swiper",
+              `keyun-pagination-${stringValue(section, "paginationStyle", "circle")}`,
+            )}
+            initialSlide={Math.min(selectedSlideIndex, Math.max(slides.length - 1, 0))}
+            loop={slides.length > 1}
+            modules={[A11y, Autoplay, Pagination]}
+            pagination={{
+              clickable: true,
+              renderBullet: (bulletIndex, className) =>
+                `<span class="${className}">${
+                  stringValue(section, "paginationStyle", "circle") === "numeric"
+                    ? bulletIndex + 1
+                    : ""
+                }</span>`,
+            }}
+            onAutoplayTimeLeft={(swiper, _time, progress) => {
+              swiper.el.style.setProperty(
+                "--keyun-progress",
+                `${Math.max(0, Math.min(100, (1 - progress) * 100))}%`,
+              );
+            }}
+            onRealIndexChange={(swiper) => selectSlide(swiper.realIndex)}
+            onSwiper={(swiper) => {
+              heroSwiperRef.current = swiper;
+            }}
+          >
+            {slides.map((slide, slideIndex) => {
+              const slideAlign = align;
+              const slideBackground =
+                slide.backgroundType === "image" && slide.imageUrl
+                  ? {
+                      backgroundImage: `url(${slide.imageUrl})`,
+                      backgroundPosition: "center",
+                      backgroundSize: "cover",
+                    }
+                  : { backgroundColor: slide.bgColor };
+
+              return (
+                <SwiperSlide key={slide.id}>
+                  <div className="keyun-slide-overlay min-h-[620px]" style={slideBackground}>
+                    <div className="relative z-[2] mx-auto flex min-h-[620px] w-full max-w-[1440px] items-center px-10 py-24">
+                      <div
+                        className={cn(
+                          "w-full",
+                          alignmentTextClass(slideAlign),
+                        )}
+                      >
+                        <InlineEditFrame
+                          active={activeElement("badge")}
+                          animationClass={previewAnimationClass("badge")}
+                          className={cn(
+                            "inline-block",
+                            alignmentPositionClass(slideAlign),
+                          )}
+                          label="배지 바로 수정"
+                          onContextMenu={(event) => openContextMenu(event, index, "badge")}
+                          onSelect={() => selectElementForSection("badge")}
+                        >
+                          <Input
+                            className="h-8 w-auto rounded-full border-white/20 bg-white/10 px-4 text-xs font-semibold text-white"
+                            value={slide.badge}
+                            onChange={(event) =>
+                              updateSlideField(index, slideIndex, "badge", event.target.value)
+                            }
+                          />
+                        </InlineEditFrame>
+                        <InlineEditFrame
+                          active={activeElement("title")}
+                          animationClass={previewAnimationClass("title")}
+                          className={cn(
+                            "mt-7 max-w-4xl",
+                            alignmentPositionClass(slideAlign),
+                          )}
+                          label="제목 바로 수정"
+                          onContextMenu={(event) => openContextMenu(event, index, "title")}
+                          onSelect={() => selectElementForSection("title")}
+                        >
+                          <Textarea
+                            className="min-h-32 resize-none border-0 bg-transparent p-0 text-5xl font-black leading-[1.08] text-white shadow-none focus-visible:ring-0"
+                            style={{
+                              ...titleTextStyle(section, design),
+                              color: stringValue(section, "titleColor", "#ffffff"),
+                            }}
+                            value={slide.title}
+                            onChange={(event) =>
+                              updateSlideField(index, slideIndex, "title", event.target.value)
+                            }
+                          />
+                        </InlineEditFrame>
+                        <InlineEditFrame
+                          active={activeElement("description")}
+                          animationClass={previewAnimationClass("description")}
+                          className={cn(
+                            "mt-5 max-w-2xl",
+                            alignmentPositionClass(slideAlign),
+                          )}
+                          label="설명 바로 수정"
+                          onContextMenu={(event) =>
+                            openContextMenu(event, index, "description")
+                          }
+                          onSelect={() => selectElementForSection("description")}
+                        >
+                          <Textarea
+                            className="min-h-16 resize-none border-0 bg-transparent p-0 text-base leading-7 text-white/80 shadow-none focus-visible:ring-0"
+                            style={{
+                              ...descriptionTextStyle(section, design),
+                              color: stringValue(
+                                section,
+                                "descriptionColor",
+                                "#ffffff",
+                              ),
+                            }}
+                            value={slide.description}
+                            onChange={(event) =>
+                              updateSlideField(
+                                index,
+                                slideIndex,
+                                "description",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </InlineEditFrame>
+                        <div
+                          className={cn(
+                            "mt-8 flex flex-wrap items-center gap-3",
+                            alignmentJustifyClass(slideAlign),
+                          )}
+                        >
+                          <InlineEditFrame
+                            active={activeElement("button")}
+                            animationClass={previewAnimationClass("button")}
+                            label="버튼 문구 수정"
+                            onContextMenu={(event) =>
+                              openContextMenu(event, index, "button")
+                            }
+                            onSelect={() => selectElementForSection("button")}
+                          >
+                            <Input
+                              className="h-12 w-44 border-0 px-5 text-center text-sm font-semibold text-white"
+                              style={buttonStyle(section, design)}
+                              value={slide.buttonLabel}
+                              onChange={(event) =>
+                                updateSlideField(
+                                  index,
+                                  slideIndex,
+                                  "buttonLabel",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </InlineEditFrame>
+                          <InlineEditFrame
+                            active={activeElement("secondaryButton")}
+                            animationClass={previewAnimationClass("secondaryButton")}
+                            label="보조 버튼 수정"
+                            onContextMenu={(event) =>
+                              openContextMenu(event, index, "secondaryButton")
+                            }
+                            onSelect={() => selectElementForSection("secondaryButton")}
+                          >
+                            <Input
+                              className="h-12 w-40 border border-white/30 bg-white/10 text-center text-sm font-semibold text-white"
+                              value={slide.secondaryButtonLabel}
+                              onChange={(event) =>
+                                updateSlideField(
+                                  index,
+                                  slideIndex,
+                                  "secondaryButtonLabel",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </InlineEditFrame>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </SwiperSlide>
+              );
+            })}
+            <button
+              aria-label="이전 슬라이드"
+              className={cn(
+                "keyun-slider-arrow keyun-slider-arrow-prev",
+                stringValue(section, "arrowStyle", "simple") === "circle" &&
+                  "keyun-slider-arrow-circle",
+              )}
+              style={{
+                "--keyun-arrow-bg": stringValue(section, "arrowBgColor", "#0f172a"),
+                "--keyun-arrow-color": stringValue(section, "arrowColor", "#ffffff"),
+                "--keyun-arrow-icon-size": `${stringValue(section, "arrowSize", "24")}px`,
+                "--keyun-arrow-size": `${stringValue(section, "arrowButtonSize", "48")}px`,
+              } as CSSProperties}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                heroSwiperRef.current?.slidePrev();
+              }}
+            >
+              {stringValue(section, "arrowStyle", "simple") === "image" &&
+              stringValue(section, "arrowImageUrl") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt="" src={stringValue(section, "arrowImageUrl")} />
+              ) : (
+                <ArrowLeft />
+              )}
+            </button>
+            <button
+              aria-label="다음 슬라이드"
+              className={cn(
+                "keyun-slider-arrow keyun-slider-arrow-next",
+                stringValue(section, "arrowStyle", "simple") === "circle" &&
+                  "keyun-slider-arrow-circle",
+              )}
+              style={{
+                "--keyun-arrow-bg": stringValue(section, "arrowBgColor", "#0f172a"),
+                "--keyun-arrow-color": stringValue(section, "arrowColor", "#ffffff"),
+                "--keyun-arrow-icon-size": `${stringValue(section, "arrowSize", "24")}px`,
+                "--keyun-arrow-size": `${stringValue(section, "arrowButtonSize", "48")}px`,
+              } as CSSProperties}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                heroSwiperRef.current?.slideNext();
+              }}
+            >
+              {stringValue(section, "arrowStyle", "simple") === "image" &&
+              stringValue(section, "arrowImageUrl") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt="" src={stringValue(section, "arrowImageUrl")} />
+              ) : (
+                <ArrowRight />
+              )}
+            </button>
+          </Swiper>
+        ) : null}
+
         {isShowcaseHero ? (
           <div
             className={cn(
@@ -1702,7 +2318,7 @@ function CanvasSection({
           </div>
         ) : null}
 
-        {type === "hero" && !isShowcaseHero ? (
+        {type === "hero" && !isShowcaseHero && layout !== "slide" ? (
           <div
             className={cn(
               "grid items-center gap-10",
@@ -2108,6 +2724,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     toEditableJson(page.draftJson),
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedSlideIndex, setSelectedSlideIndex] = useState(0);
+  const [activeLocale, setActiveLocale] = useState<SupportedLocale>("ko");
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("site");
   const [animationPreview, setAnimationPreview] = useState<{
     element: Exclude<SelectedElement, "site">;
@@ -2125,7 +2743,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const [isSectionLibraryOpen, setIsSectionLibraryOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [leftPanel, setLeftPanel] = useState<"sections" | "settings">("settings");
-  const [settingsSubPanel, setSettingsSubPanel] = useState<null | "pages" | "menu" | "footer">(null);
+  const [settingsSubPanel, setSettingsSubPanel] =
+    useState<null | "language" | "pages" | "menu" | "footer">(null);
   const [headerSettingsTab, setHeaderSettingsTab] = useState<"layout" | "color" | "menu">("layout");
   const [footerSettingsTab, setFooterSettingsTab] = useState<"layout" | "color">("layout");
   const [saveMessage, setSaveMessage] = useState("저장 전 상태");
@@ -2133,6 +2752,10 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const [uploadMessage, setUploadMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [visualUploadIndex, setVisualUploadIndex] = useState(0);
+  const [slideUploadTarget, setSlideUploadTarget] = useState<{
+    sectionIndex: number;
+    slideIndex: number;
+  } | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     element: SelectedElement;
     index: number;
@@ -2140,9 +2763,11 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     y: number;
   } | null>(null);
   const bgColorInputRef = useRef<HTMLInputElement>(null);
+  const arrowMediaInputRef = useRef<HTMLInputElement>(null);
   const gradientFromInputRef = useRef<HTMLInputElement>(null);
   const gradientToInputRef = useRef<HTMLInputElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
+  const slideMediaInputRef = useRef<HTMLInputElement>(null);
   const visualMediaInputRef = useRef<HTMLInputElement>(null);
   const canvasScrollRef = useRef<HTMLDivElement>(null);
   const headerPreviewRef = useRef<HTMLDivElement>(null);
@@ -2156,6 +2781,9 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const storageKey = `keyun-editor-draft:${site.id}:${page.id}`;
   const isDemoSite = site.id.startsWith("demo_");
   const selectedSection = draft.sections[selectedIndex] ?? draft.sections[0] ?? null;
+  const localizedSelectedSection = selectedSection
+    ? localizedSection(selectedSection, activeLocale)
+    : null;
   const selectedBackgroundType = selectedSection
     ? stringValue(selectedSection, "backgroundType", "gradient")
     : "gradient";
@@ -2277,6 +2905,53 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     });
   }
 
+  function setEnglishEnabled(enabled: boolean) {
+    const locales: SupportedLocale[] = enabled ? ["ko", "en"] : ["ko"];
+
+    updateDraft({
+      i18n: {
+        ...draft.i18n,
+        locales,
+      },
+    });
+
+    if (!enabled && activeLocale === "en") {
+      setActiveLocale("ko");
+    }
+  }
+
+  function updateI18nSiteField(
+    key: "footerCopyright" | "siteName",
+    locale: SupportedLocale,
+    value: string,
+  ) {
+    updateDraft({
+      i18n: {
+        ...draft.i18n,
+        [key]: {
+          ...draft.i18n[key],
+          [locale]: value,
+        },
+      },
+    });
+  }
+
+  function updateI18nSeo(locale: SupportedLocale, key: "description" | "title", value: string) {
+    updateDraft({
+      i18n: {
+        ...draft.i18n,
+        seo: {
+          ...draft.i18n.seo,
+          [locale]: {
+            description: draft.i18n.seo[locale]?.description ?? "",
+            title: draft.i18n.seo[locale]?.title ?? "",
+            [key]: value,
+          },
+        },
+      },
+    });
+  }
+
 
   function updatePages(nextPages: EditorPageItem[]) {
     const pageIds = new Set(nextPages.map((page) => page.id));
@@ -2296,6 +2971,30 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
               ...page,
               ...nextPage,
               path: nextPage.path ? (nextPage.path.startsWith("/") ? nextPage.path : `/${nextPage.path}`) : page.path,
+            }
+          : page,
+      ),
+    );
+  }
+
+  function updateLocalizedPageTitle(pageId: string, title: string) {
+    if (activeLocale === "ko") {
+      updatePage(pageId, { title });
+      return;
+    }
+
+    updatePages(
+      draft.pages.map((page) =>
+        page.id === pageId
+          ? {
+              ...page,
+              translations: {
+                ...(page.translations ?? {}),
+                [activeLocale]: {
+                  ...(page.translations?.[activeLocale] ?? {}),
+                  title,
+                },
+              },
             }
           : page,
       ),
@@ -2374,6 +3073,30 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     });
   }
 
+  function updateLocalizedNavigationLabel(itemId: string, label: string) {
+    if (activeLocale === "ko") {
+      updateNavigationItem(itemId, { label });
+      return;
+    }
+
+    updateDraft({
+      navigation: draft.navigation.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              translations: {
+                ...(item.translations ?? {}),
+                [activeLocale]: {
+                  ...(item.translations?.[activeLocale] ?? {}),
+                  label,
+                },
+              },
+            }
+          : item,
+      ),
+    });
+  }
+
   function addNavigationItem() {
     const firstPublicPage = draft.pages.find((page) => page.status === "public") ?? draft.pages[0];
 
@@ -2428,6 +3151,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
   function selectSectionForEdit(index: number) {
     setSelectedIndex(index);
+    setSelectedSlideIndex(0);
     setSelectedElement("section");
     setRightPanelMode("settings");
     setContextMenu(null);
@@ -2489,6 +3213,80 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     });
   }
 
+  function updateLocalizedSectionField(index: number, key: string, value: string) {
+    if (activeLocale === "ko") {
+      updateSectionField(index, key, value);
+      return;
+    }
+
+    const section = draft.sections[index];
+    if (!section) return;
+
+    const translations = normalizeTranslations(section.translations) ?? {};
+    updateSection(index, {
+      ...section,
+      translations: {
+        ...translations,
+        [activeLocale]: {
+          ...(translations[activeLocale] ?? {}),
+          [key]: value,
+        },
+      },
+    });
+  }
+
+  function updateHeroSlide(
+    sectionIndex: number,
+    slideIndex: number,
+    key: keyof HeroSlide,
+    value: string,
+  ) {
+    const section = draft.sections[sectionIndex];
+    if (!section) return;
+
+    const slides = heroSlides(section);
+    const slide = slides[slideIndex];
+    if (!slide) return;
+
+    slides[slideIndex] =
+      activeLocale === "ko"
+        ? { ...slide, [key]: value }
+        : {
+            ...slide,
+            translations: {
+              ...(slide.translations ?? {}),
+              [activeLocale]: {
+                ...(slide.translations?.[activeLocale] ?? {}),
+                [key]: value,
+              },
+            },
+          };
+    updateSection(sectionIndex, { ...section, slides });
+  }
+
+  function addHeroSlide() {
+    if (!selectedSection) return;
+
+    const slides = heroSlides(selectedSection);
+    const nextIndex = slides.length;
+    updateSection(selectedIndex, {
+      ...selectedSection,
+      slides: [...slides, createHeroSlide(nextIndex)],
+    });
+    setSelectedSlideIndex(nextIndex);
+  }
+
+  function removeHeroSlide(slideIndex: number) {
+    if (!selectedSection) return;
+
+    const slides = heroSlides(selectedSection);
+    if (slides.length <= 1) return;
+
+    const nextSlides = slides.filter((_, index) => index !== slideIndex);
+    updateSection(selectedIndex, { ...selectedSection, slides: nextSlides });
+    setSelectedSlideIndex(Math.max(0, Math.min(slideIndex - 1, nextSlides.length - 1)));
+  }
+
   function updateAnimation(
     element: Exclude<SelectedElement, "site">,
     value: AnimationValue,
@@ -2507,6 +3305,33 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
         .split("\n")
         .map((item) => item.trim())
         .filter(Boolean),
+    });
+  }
+
+  function updateLocalizedSectionItems(index: number, value: string) {
+    const items = value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (activeLocale === "ko") {
+      updateSectionItems(index, value);
+      return;
+    }
+
+    const section = draft.sections[index];
+    if (!section) return;
+
+    const translations = normalizeTranslations(section.translations) ?? {};
+    updateSection(index, {
+      ...section,
+      translations: {
+        ...translations,
+        [activeLocale]: {
+          ...(translations[activeLocale] ?? {}),
+          items,
+        },
+      },
     });
   }
 
@@ -2537,10 +3362,12 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
     if (!current) {
       updateSections([nextSection], 0);
+      setSelectedSlideIndex(0);
       return;
     }
 
     updateSection(selectedIndex, nextSection);
+    setSelectedSlideIndex(0);
   }
 
   function replaceSelectedSection(preset: ModulePreset) {
@@ -2864,6 +3691,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
   function renderTextElementSettings(element: "badge" | "title" | "description") {
     if (!selectedSection) return null;
+    const contentSection = localizedSelectedSection ?? selectedSection;
 
     const isBadge = element === "badge";
     const isTitle = element === "title";
@@ -2892,17 +3720,17 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
           </div>
           {isBadge ? (
             <Input
-              value={stringValue(selectedSection, contentKey)}
+              value={stringValue(contentSection, contentKey)}
               onChange={(event) =>
-                updateSectionField(selectedIndex, contentKey, event.target.value)
+                updateLocalizedSectionField(selectedIndex, contentKey, event.target.value)
               }
             />
           ) : (
             <Textarea
               className="min-h-28"
-              value={stringValue(selectedSection, contentKey)}
+              value={stringValue(contentSection, contentKey)}
               onChange={(event) =>
-                updateSectionField(selectedIndex, contentKey, event.target.value)
+                updateLocalizedSectionField(selectedIndex, contentKey, event.target.value)
               }
             />
           )}
@@ -3039,6 +3867,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
   function renderButtonElementSettings(element: "button" | "secondaryButton") {
     if (!selectedSection) return null;
+    const contentSection = localizedSelectedSection ?? selectedSection;
 
     const isSecondary = element === "secondaryButton";
     const labelKey = isSecondary ? "secondaryButtonLabel" : "buttonLabel";
@@ -3052,18 +3881,18 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
             <label className="space-y-2">
               <span className="text-xs text-slate-500">버튼 문구</span>
               <Input
-                value={stringValue(selectedSection, labelKey)}
+                value={stringValue(contentSection, labelKey)}
                 onChange={(event) =>
-                  updateSectionField(selectedIndex, labelKey, event.target.value)
+                  updateLocalizedSectionField(selectedIndex, labelKey, event.target.value)
                 }
               />
             </label>
             <label className="space-y-2">
               <span className="text-xs text-slate-500">버튼 링크</span>
               <Input
-                value={stringValue(selectedSection, linkKey)}
+                value={stringValue(contentSection, linkKey)}
                 onChange={(event) =>
-                  updateSectionField(selectedIndex, linkKey, event.target.value)
+                  updateLocalizedSectionField(selectedIndex, linkKey, event.target.value)
                 }
               />
             </label>
@@ -3325,6 +4154,369 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     );
   }
 
+  function renderSlideContentSettings() {
+    if (!selectedSection) return null;
+
+    const slides = heroSlides(localizedSelectedSection ?? selectedSection);
+    const safeIndex = Math.min(selectedSlideIndex, Math.max(slides.length - 1, 0));
+    const slide = slides[safeIndex];
+
+    if (!slide) return null;
+
+    return (
+      <>
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">슬라이드</h3>
+              <p className="mt-1 text-xs text-slate-500">기본 3장, 필요한 만큼 추가할 수 있습니다.</p>
+            </div>
+            <Button size="sm" type="button" variant="outline" onClick={addHeroSlide}>
+              <Plus />
+              추가
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {slides.map((item, index) => (
+              <button
+                aria-pressed={safeIndex === index}
+                className={cn(
+                  "flex size-9 items-center justify-center rounded-md border text-xs font-bold",
+                  safeIndex === index
+                    ? "border-blue-500 bg-blue-50 text-blue-600"
+                    : "border-slate-200 bg-white text-slate-500",
+                )}
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedSlideIndex(index)}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">슬라이드 {safeIndex + 1} 내용</h3>
+            <Button
+              className="text-red-600"
+              disabled={slides.length <= 1}
+              size="sm"
+              type="button"
+              variant="ghost"
+              onClick={() => removeHeroSlide(safeIndex)}
+            >
+              <Trash2 />
+              삭제
+            </Button>
+          </div>
+          <label className="space-y-2">
+            <span className="text-xs text-slate-500">배지</span>
+            <Input
+              value={slide.badge}
+              onChange={(event) =>
+                updateHeroSlide(selectedIndex, safeIndex, "badge", event.target.value)
+              }
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-xs text-slate-500">제목</span>
+            <Textarea
+              className="min-h-24"
+              value={slide.title}
+              onChange={(event) =>
+                updateHeroSlide(selectedIndex, safeIndex, "title", event.target.value)
+              }
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-xs text-slate-500">설명</span>
+            <Textarea
+              className="min-h-20"
+              value={slide.description}
+              onChange={(event) =>
+                updateHeroSlide(selectedIndex, safeIndex, "description", event.target.value)
+              }
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="space-y-2">
+              <span className="text-xs text-slate-500">기본 버튼</span>
+              <Input
+                value={slide.buttonLabel}
+                onChange={(event) =>
+                  updateHeroSlide(
+                    selectedIndex,
+                    safeIndex,
+                    "buttonLabel",
+                    event.target.value,
+                  )
+                }
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-xs text-slate-500">보조 버튼</span>
+              <Input
+                value={slide.secondaryButtonLabel}
+                onChange={(event) =>
+                  updateHeroSlide(
+                    selectedIndex,
+                    safeIndex,
+                    "secondaryButtonLabel",
+                    event.target.value,
+                  )
+                }
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h3 className="text-sm font-semibold">슬라이드 배경</h3>
+          <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-slate-200">
+            {[
+              ["배경색", "color"],
+              ["배경 이미지", "image"],
+            ].map(([label, value]) => (
+              <button
+                className={cn(
+                  "h-10 text-xs font-semibold",
+                  slide.backgroundType === value
+                    ? "bg-blue-50 text-blue-600"
+                    : "bg-white text-slate-500",
+                )}
+                key={value}
+                type="button"
+                onClick={() =>
+                  updateHeroSlide(
+                    selectedIndex,
+                    safeIndex,
+                    "backgroundType",
+                    value,
+                  )
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {slide.backgroundType === "color" ? (
+            <label className="space-y-2">
+              <span className="text-xs text-slate-500">배경 색상</span>
+              <Input
+                className="h-11 p-1"
+                type="color"
+                value={slide.bgColor}
+                onChange={(event) =>
+                  updateHeroSlide(selectedIndex, safeIndex, "bgColor", event.target.value)
+                }
+              />
+            </label>
+          ) : (
+            <>
+              <Input
+                placeholder="이미지 URL"
+                value={slide.imageUrl}
+                onChange={(event) =>
+                  updateHeroSlide(selectedIndex, safeIndex, "imageUrl", event.target.value)
+                }
+              />
+              <Button
+                className="w-full"
+                disabled={isUploading}
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSlideUploadTarget({
+                    sectionIndex: selectedIndex,
+                    slideIndex: safeIndex,
+                  });
+                  slideMediaInputRef.current?.click();
+                }}
+              >
+                <UploadCloud />
+                {isUploading ? "업로드 중..." : "배경 이미지 업로드"}
+              </Button>
+            </>
+          )}
+        </section>
+      </>
+    );
+  }
+
+  function renderSliderControls() {
+    if (!selectedSection) return null;
+
+    const arrowStyle = stringValue(selectedSection, "arrowStyle", "simple");
+    const paginationStyle = stringValue(selectedSection, "paginationStyle", "circle");
+
+    return (
+      <>
+        <section className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold">슬라이드 화살표</h3>
+            <p className="mt-1 text-xs text-slate-500">SVG 스타일 또는 직접 올린 이미지를 사용합니다.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "일반형", value: "simple" },
+              { label: "원형 배경", value: "circle" },
+              { label: "이미지", value: "image" },
+            ].map((option) => (
+              <button
+                className={cn(
+                  "h-16 rounded-lg border text-xs font-semibold",
+                  arrowStyle === option.value
+                    ? "border-blue-500 bg-blue-50 text-blue-600"
+                    : "border-slate-200 bg-white text-slate-500",
+                )}
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  updateSectionField(selectedIndex, "arrowStyle", option.value)
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {arrowStyle === "image" ? (
+            <div className="space-y-3">
+              <Input
+                placeholder="화살표 이미지 URL"
+                value={stringValue(selectedSection, "arrowImageUrl")}
+                onChange={(event) =>
+                  updateSectionField(selectedIndex, "arrowImageUrl", event.target.value)
+                }
+              />
+              <Button
+                className="w-full"
+                disabled={isUploading}
+                type="button"
+                variant="outline"
+                onClick={() => arrowMediaInputRef.current?.click()}
+              >
+                <UploadCloud />
+                화살표 이미지 업로드
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-2">
+                <span className="text-xs text-slate-500">화살표 색상</span>
+                <Input
+                  className="h-10 p-1"
+                  type="color"
+                  value={stringValue(selectedSection, "arrowColor", "#ffffff")}
+                  onChange={(event) =>
+                    updateSectionField(selectedIndex, "arrowColor", event.target.value)
+                  }
+                />
+              </label>
+              {arrowStyle === "circle" ? (
+                <label className="space-y-2">
+                  <span className="text-xs text-slate-500">원형 배경</span>
+                  <Input
+                    className="h-10 p-1"
+                    type="color"
+                    value={stringValue(selectedSection, "arrowBgColor", "#0f172a")}
+                    onChange={(event) =>
+                      updateSectionField(selectedIndex, "arrowBgColor", event.target.value)
+                    }
+                  />
+                </label>
+              ) : null}
+            </div>
+          )}
+          <label className="block space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>화살표 크기</span>
+              <span>{stringValue(selectedSection, "arrowSize", "24")}px</span>
+            </div>
+            <input
+              className="w-full accent-blue-600"
+              max="48"
+              min="12"
+              type="range"
+              value={stringValue(selectedSection, "arrowSize", "24")}
+              onChange={(event) =>
+                updateSectionField(selectedIndex, "arrowSize", event.target.value)
+              }
+            />
+          </label>
+          {arrowStyle === "circle" ? (
+            <label className="block space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>원형 크기</span>
+                <span>{stringValue(selectedSection, "arrowButtonSize", "48")}px</span>
+              </div>
+              <input
+                className="w-full accent-blue-600"
+                max="80"
+                min="32"
+                type="range"
+                value={stringValue(selectedSection, "arrowButtonSize", "48")}
+                onChange={(event) =>
+                  updateSectionField(selectedIndex, "arrowButtonSize", event.target.value)
+                }
+              />
+            </label>
+          ) : null}
+        </section>
+
+        <section className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold">페이지 표시</h3>
+            <p className="mt-1 text-xs text-slate-500">슬라이드 위치와 자동 전환 진행을 표시합니다.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "원형", value: "circle" },
+              { label: "네모", value: "square" },
+              { label: "활성 확장형", value: "long-active" },
+              { label: "숫자형", value: "numeric" },
+              { label: "프로그레스형", value: "progress" },
+            ].map((option) => (
+              <button
+                className={cn(
+                  "h-12 rounded-lg border text-xs font-semibold",
+                  paginationStyle === option.value
+                    ? "border-blue-500 bg-blue-50 text-blue-600"
+                    : "border-slate-200 bg-white text-slate-500",
+                )}
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  updateSectionField(selectedIndex, "paginationStyle", option.value)
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <label className="block space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>자동 전환 시간</span>
+              <span>{(numberValue(selectedSection, "autoplayDelay", 4500) / 1000).toFixed(1)}초</span>
+            </div>
+            <input
+              className="w-full accent-blue-600"
+              max="10000"
+              min="2000"
+              step="500"
+              type="range"
+              value={stringValue(selectedSection, "autoplayDelay", "4500")}
+              onChange={(event) =>
+                updateSectionField(selectedIndex, "autoplayDelay", event.target.value)
+              }
+            />
+          </label>
+        </section>
+      </>
+    );
+  }
+
   function renderElementSettings() {
     if (selectedElement === "site") return renderSiteSettings();
     if (selectedElement === "badge") return renderTextElementSettings("badge");
@@ -3345,6 +4537,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     options?: {
       applyAsBackground?: boolean;
       sectionIndex?: number;
+      sectionField?: string;
+      slideIndex?: number;
     },
   ) {
     const targetIndex = options?.sectionIndex ?? selectedIndex;
@@ -3360,15 +4554,37 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
     try {
       const urlKey = mediaType === "video" ? "videoUrl" : "imageUrl";
+      const applyUploadedUrl = (url: string) => {
+        if (typeof options?.slideIndex === "number") {
+          const slides = heroSlides(section);
+          slides[options.slideIndex] = {
+            ...slides[options.slideIndex],
+            backgroundType: "image",
+            imageUrl: url,
+          };
+          updateSection(targetIndex, { ...section, slides });
+          return;
+        }
 
-      if (isDemoSite) {
-        const dataUrl = await readFileAsDataUrl(file);
+        if (options?.sectionField) {
+          updateSection(targetIndex, {
+            ...section,
+            [options.sectionField]: url,
+          });
+          return;
+        }
 
         updateSection(targetIndex, {
           ...section,
           ...(applyAsBackground ? { backgroundType: mediaType } : {}),
-          [urlKey]: dataUrl,
+          [urlKey]: url,
         });
+      };
+
+      if (isDemoSite) {
+        const dataUrl = await readFileAsDataUrl(file);
+
+        applyUploadedUrl(dataUrl);
         setUploadMessage(
           mediaType === "video"
             ? "동영상이 적용되었습니다. 저장하면 데모에 유지됩니다."
@@ -3405,11 +4621,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
       }
 
       const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
-      updateSection(targetIndex, {
-        ...section,
-        ...(applyAsBackground ? { backgroundType: mediaType } : {}),
-        [urlKey]: data.publicUrl,
-      });
+      applyUploadedUrl(data.publicUrl);
       setUploadMessage("업로드 완료. 저장하면 섹션에 반영됩니다.");
     } catch (error) {
       setUploadMessage(
@@ -3435,13 +4647,47 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const isPageSettingsMode = leftPanel === "settings" && settingsSubPanel === "pages";
   const isHeaderSettingsMode = leftPanel === "settings" && settingsSubPanel === "menu";
   const isFooterSettingsMode = leftPanel === "settings" && settingsSubPanel === "footer";
+  const isLanguageSettingsMode =
+    leftPanel === "settings" && settingsSubPanel === "language";
   const headerLayout = draft.design.headerLayout;
   const footerLayout = draft.design.footerLayout;
   const pageById = new Map(draft.pages.map((page) => [page.id, page]));
+  const localeCopy =
+    activeLocale === "en"
+      ? {
+          builderDescription: "A simple website builder with polished results.",
+          ctaDescription: "From template selection to publishing in one flow.",
+          ctaTitle: "Start your website with KEYUN",
+          information: "Information",
+          inquiry: "Contact",
+          menu: "Menu",
+          privacy: "Privacy Policy",
+          start: "Get started",
+          terms: "Terms",
+        }
+      : {
+          builderDescription: "쉬운데 결과물이 예쁜 웹사이트 빌더, KEYUN.",
+          ctaDescription: "템플릿 선택부터 게시까지 한 번에 이어집니다.",
+          ctaTitle: "지금 KEYUN으로 사이트를 시작하세요",
+          information: "정보",
+          inquiry: "문의하기",
+          menu: "메뉴",
+          privacy: "개인정보처리방침",
+          start: "시작하기",
+          terms: "이용약관",
+        };
+  const localizedSiteName = draft.i18n.siteName[activeLocale] || site.name;
+  const localizedCopyright =
+    draft.i18n.footerCopyright[activeLocale] ||
+    (activeLocale === "en" ? "All rights reserved." : "모든 권리 보유.");
   const headerMenuItems = draft.navigation
     .filter((item) => item.enabled)
     .filter((item) => pageById.get(item.pageId)?.status === "public")
-    .map((item) => item.label);
+    .map((item) =>
+      activeLocale === "ko"
+        ? item.label
+        : stringValue(item.translations?.[activeLocale] ?? {}, "label", item.label),
+    );
   const headerStyle = {
     backgroundColor: draft.design.headerBgColor,
     color: draft.design.headerTextColor,
@@ -3482,6 +4728,45 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
             void uploadSectionMedia(file, "image", {
               applyAsBackground: false,
               sectionIndex: visualUploadIndex,
+            });
+          }
+
+          event.currentTarget.value = "";
+        }}
+      />
+      <input
+        ref={slideMediaInputRef}
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        disabled={isUploading}
+        type="file"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+
+          if (file && slideUploadTarget) {
+            void uploadSectionMedia(file, "image", {
+              sectionIndex: slideUploadTarget.sectionIndex,
+              slideIndex: slideUploadTarget.slideIndex,
+            });
+          }
+
+          event.currentTarget.value = "";
+        }}
+      />
+      <input
+        ref={arrowMediaInputRef}
+        accept="image/svg+xml,image/png,image/webp"
+        className="hidden"
+        disabled={isUploading}
+        type="file"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+
+          if (file) {
+            void uploadSectionMedia(file, "image", {
+              applyAsBackground: false,
+              sectionField: "arrowImageUrl",
+              sectionIndex: selectedIndex,
             });
           }
 
@@ -3559,7 +4844,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                     onClick={() => {
                       setLeftPanel(item.panel);
                       if (item.panel === "sections") selectSiteStyle();
-                      if (item.panel === "settings") setSettingsSubPanel("menu");
+                      if (item.panel === "settings") setSettingsSubPanel(null);
                     }}
                   >
                     <Icon className="size-4" />
@@ -3601,7 +4886,11 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                             {String(index + 1).padStart(2, "0")} / {sectionLabel(type)}
                           </p>
                           <p className="mt-1 truncate text-sm font-semibold">
-                            {stringValue(section, "title", "Untitled")}
+                            {stringValue(
+                              localizedSection(section, activeLocale),
+                              "title",
+                              "Untitled",
+                            )}
                           </p>
                         </button>
                       );
@@ -3616,6 +4905,31 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
               <div className="mt-4">
                 <div className="space-y-2">
                   {[
+                    {
+                      key: "language" as const,
+                      label: "언어 설정",
+                      desc: "한국어 · English · 다국어 SEO",
+                      preview: (
+                        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-7 flex-1 items-center justify-center rounded-md bg-blue-600 text-[10px] font-bold text-white">
+                              KO
+                            </span>
+                            <span
+                              className={cn(
+                                "flex h-7 flex-1 items-center justify-center rounded-md border text-[10px] font-bold",
+                                draft.i18n.locales.includes("en")
+                                  ? "border-blue-200 bg-white text-blue-600"
+                                  : "border-slate-200 bg-white text-slate-300",
+                              )}
+                            >
+                              EN
+                            </span>
+                            <Languages className="size-4 text-slate-400" />
+                          </div>
+                        </div>
+                      ),
+                    },
                     {
                       key: "pages" as const,
                       label: "페이지 관리",
@@ -3754,6 +5068,23 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                     );
                   })}
                 </div>
+                <div className="flex rounded-lg border border-slate-200 bg-white p-1">
+                  {draft.i18n.locales.map((locale) => (
+                    <button
+                      className={cn(
+                        "h-8 rounded-md px-3 text-xs font-semibold transition-colors",
+                        activeLocale === locale
+                          ? "bg-slate-950 text-white"
+                          : "text-slate-500 hover:bg-slate-50",
+                      )}
+                      key={locale}
+                      type="button"
+                      onClick={() => setActiveLocale(locale)}
+                    >
+                      {locale === "ko" ? "한국어" : "English"}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="hidden max-w-40 truncate text-right text-xs text-slate-500 xl:block">
@@ -3858,7 +5189,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                       style={headerButtonStyle}
                       type="button"
                     >
-                      시작하기
+                      {localeCopy.start}
                     </button>
                 </div>
 
@@ -3875,12 +5206,15 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                         openContextMenu={openContextMenu}
                         requestVisualUpload={requestVisualUpload}
                         removeSection={removeSection}
-                        section={section}
+                        selectedSlideIndex={selectedSlideIndex}
+                        section={localizedSection(section, activeLocale)}
                         selectedElement={selectedElement}
                         selectElement={selectElementForEdit}
                         selectSection={selectSectionForEdit}
-                        updateField={updateSectionField}
-                        updateItems={updateSectionItems}
+                        selectSlide={setSelectedSlideIndex}
+                        updateField={updateLocalizedSectionField}
+                        updateItems={updateLocalizedSectionItems}
+                        updateSlideField={updateHeroSlide}
                         viewport={viewport}
                       />
                     ))}
@@ -3900,18 +5234,20 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img alt="keyun" className="h-7 w-auto brightness-0 invert" src="/keyun-logo.svg" />
                         <div className="flex flex-wrap items-center gap-6 text-sm font-medium opacity-80">
-                          <span>이용약관</span>
-                          <span>개인정보처리방침</span>
-                          <span>문의하기</span>
+                          <span>{localeCopy.terms}</span>
+                          <span>{localeCopy.privacy}</span>
+                          <span>{localeCopy.inquiry}</span>
                         </div>
-                        <p className="text-sm opacity-60">© KEYUN. All rights reserved.</p>
+                        <p className="text-sm opacity-60">
+                          © {localizedSiteName}. {localizedCopyright}
+                        </p>
                       </div>
                     ) : footerLayout === "cta" ? (
                       <div className="space-y-8">
                         <div className="rounded-2xl border border-white/10 bg-white/10 px-8 py-7 text-center">
-                          <p className="text-2xl font-bold">지금 KEYUN으로 사이트를 시작하세요</p>
+                          <p className="text-2xl font-bold">{localeCopy.ctaTitle}</p>
                           <p className="mt-2 text-sm opacity-70">
-                            템플릿 선택부터 게시까지 한 번에 이어집니다.
+                            {localeCopy.ctaDescription}
                           </p>
                           <button
                             className="mt-5 rounded-full px-6 py-3 text-sm font-semibold"
@@ -3921,11 +5257,11 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                             }}
                             type="button"
                           >
-                            상담 신청
+                            {localeCopy.inquiry}
                           </button>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-4 text-sm opacity-70">
-                          <span>© KEYUN. All rights reserved.</span>
+                          <span>© {localizedSiteName}. {localizedCopyright}</span>
                           <span>Instagram · Blog · Kakao</span>
                         </div>
                       </div>
@@ -3935,12 +5271,14 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img alt="keyun" className="h-8 w-auto brightness-0 invert" src="/keyun-logo.svg" />
                           <p className="mt-4 text-sm leading-6 opacity-70">
-                            쉬운데 결과물이 예쁜 웹사이트 빌더, KEYUN.
+                            {localeCopy.builderDescription}
                           </p>
-                          <p className="mt-5 text-xs opacity-50">© KEYUN. All rights reserved.</p>
+                          <p className="mt-5 text-xs opacity-50">
+                            © {localizedSiteName}. {localizedCopyright}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm font-bold" style={footerAccentStyle}>메뉴</p>
+                          <p className="text-sm font-bold" style={footerAccentStyle}>{localeCopy.menu}</p>
                           <div className="mt-3 space-y-2 text-sm opacity-70">
                             <p>제품</p>
                             <p>솔루션</p>
@@ -3974,6 +5312,146 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
               </div>
 
             </div>
+
+            {/* 언어 설정 floating 패널 */}
+            {isLanguageSettingsMode ? (
+              <div className="fixed bottom-5 left-[340px] right-[380px] z-40">
+                <div className="rounded-2xl border border-blue-100 bg-white/95 backdrop-blur">
+                  <div className="max-h-[420px] overflow-auto p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">언어 설정</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          한국어 디자인을 공유하고 영어 콘텐츠만 따로 관리합니다.
+                        </p>
+                      </div>
+                      <Button
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setSettingsSubPanel(null)}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+                      <div className="space-y-2">
+                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs font-bold text-blue-700">한국어</p>
+                              <p className="mt-1 text-[11px] text-blue-600/70">기본 언어 · /s/{site.slug}</p>
+                            </div>
+                            <Check className="size-4 text-blue-600" />
+                          </div>
+                        </div>
+                        <button
+                          className={cn(
+                            "flex w-full items-center justify-between rounded-lg border p-3 text-left",
+                            draft.i18n.locales.includes("en")
+                              ? "border-emerald-200 bg-emerald-50"
+                              : "border-slate-200 bg-white",
+                          )}
+                          type="button"
+                          onClick={() =>
+                            setEnglishEnabled(!draft.i18n.locales.includes("en"))
+                          }
+                        >
+                          <div>
+                            <p className="text-xs font-bold">English</p>
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              /s/{site.slug}/en
+                            </p>
+                          </div>
+                          <span
+                            className={cn(
+                              "flex h-6 w-11 items-center rounded-full p-0.5 transition-colors",
+                              draft.i18n.locales.includes("en")
+                                ? "justify-end bg-emerald-500"
+                                : "justify-start bg-slate-200",
+                            )}
+                          >
+                            <span className="size-5 rounded-full bg-white" />
+                          </span>
+                        </button>
+                      </div>
+
+                      {draft.i18n.locales.includes("en") ? (
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <label className="space-y-1.5">
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              영문 사이트명
+                            </span>
+                            <Input
+                              className="h-9"
+                              placeholder={site.name}
+                              value={draft.i18n.siteName.en ?? ""}
+                              onChange={(event) =>
+                                updateI18nSiteField("siteName", "en", event.target.value)
+                              }
+                            />
+                          </label>
+                          <label className="space-y-1.5">
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              영문 SEO 제목
+                            </span>
+                            <Input
+                              className="h-9"
+                              placeholder={site.name}
+                              value={draft.i18n.seo.en?.title ?? ""}
+                              onChange={(event) =>
+                                updateI18nSeo("en", "title", event.target.value)
+                              }
+                            />
+                          </label>
+                          <label className="space-y-1.5 md:col-span-2">
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              영문 SEO 설명
+                            </span>
+                            <Textarea
+                              className="min-h-16"
+                              value={draft.i18n.seo.en?.description ?? ""}
+                              onChange={(event) =>
+                                updateI18nSeo("en", "description", event.target.value)
+                              }
+                            />
+                          </label>
+                          <label className="space-y-1.5 md:col-span-2">
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              영문 카피라이트
+                            </span>
+                            <Input
+                              className="h-9"
+                              value={draft.i18n.footerCopyright.en ?? ""}
+                              onChange={(event) =>
+                                updateI18nSiteField(
+                                  "footerCopyright",
+                                  "en",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </label>
+                          <p className="text-[11px] leading-5 text-slate-400 md:col-span-2">
+                            상단의 EN을 선택하면 페이지명, GNB, 섹션과 슬라이드 내용을 영문으로 입력할 수 있습니다.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-center">
+                          <div>
+                            <Languages className="mx-auto size-6 text-slate-300" />
+                            <p className="mt-2 text-xs font-semibold text-slate-500">
+                              English를 활성화하면 번역 설정이 열립니다.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {/* 페이지 관리 floating 패널 */}
             {isPageSettingsMode ? (
@@ -4018,8 +5496,10 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                             <span className="text-[10px] font-semibold text-slate-400">페이지명</span>
                             <Input
                               className="h-8 bg-white text-xs"
-                              value={pageItem.title}
-                              onChange={(event) => updatePage(pageItem.id, { title: event.target.value })}
+                              value={localizedPageTitle(pageItem, activeLocale)}
+                              onChange={(event) =>
+                                updateLocalizedPageTitle(pageItem.id, event.target.value)
+                              }
                             />
                           </label>
 
@@ -4027,6 +5507,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                             <span className="text-[10px] font-semibold text-slate-400">주소</span>
                             <Input
                               className="h-8 bg-white font-mono text-xs"
+                              disabled={activeLocale !== "ko"}
                               value={pageItem.path}
                               onChange={(event) => updatePage(pageItem.id, { path: event.target.value })}
                             />
@@ -4227,7 +5708,16 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                                         <ArrowDown className="size-3" />
                                       </Button>
                                     </div>
-                                    <Input className="h-8 text-xs" value={item.label} onChange={(event) => updateNavigationItem(item.id, { label: event.target.value })} />
+                                    <Input
+                                      className="h-8 text-xs"
+                                      value={localizedNavigationLabel(item, activeLocale)}
+                                      onChange={(event) =>
+                                        updateLocalizedNavigationLabel(
+                                          item.id,
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
                                     <select
                                       className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs"
                                       value={item.pageId}
@@ -4235,7 +5725,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                                     >
                                       {draft.pages.map((page) => (
                                         <option key={page.id} value={page.id}>
-                                          {page.title}{page.status === "private" ? " (비공개)" : ""}
+                                          {localizedPageTitle(page, activeLocale)}
+                                          {page.status === "private" ? " (비공개)" : ""}
                                         </option>
                                       ))}
                                     </select>
@@ -4253,7 +5744,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                                       삭제
                                     </Button>
                                     <p className="md:col-span-5 text-[10px] text-slate-400">
-                                      연결 페이지: {linkedPage?.title ?? "없음"} {linkedPage?.status === "private" ? "· 공개 페이지에서는 메뉴 숨김" : ""}
+                                      연결 페이지: {linkedPage ? localizedPageTitle(linkedPage, activeLocale) : "없음"} {linkedPage?.status === "private" ? "· 공개 페이지에서는 메뉴 숨김" : ""}
                                     </p>
                                   </div>
                                 );
@@ -4649,13 +6140,23 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                   {selectedElement !== "section" ? (
                     renderElementSettings()
                   ) : activeRightTab === "content" ? (
+                    stringValue(selectedSection, "layout") === "slide" ? (
+                      renderSlideContentSettings()
+                    ) : (
                     <>
                       <label className="space-y-2">
                         <span className="text-sm font-semibold">제목</span>
                         <Input
-                          value={stringValue(selectedSection, "title")}
+                          value={stringValue(
+                            localizedSelectedSection ?? selectedSection,
+                            "title",
+                          )}
                           onChange={(event) =>
-                            updateSectionField(selectedIndex, "title", event.target.value)
+                            updateLocalizedSectionField(
+                              selectedIndex,
+                              "title",
+                              event.target.value,
+                            )
                           }
                         />
                       </label>
@@ -4663,9 +6164,12 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                         <span className="text-sm font-semibold">설명</span>
                         <Textarea
                           className="min-h-28"
-                          value={stringValue(selectedSection, "description")}
+                          value={stringValue(
+                            localizedSelectedSection ?? selectedSection,
+                            "description",
+                          )}
                           onChange={(event) =>
-                            updateSectionField(
+                            updateLocalizedSectionField(
                               selectedIndex,
                               "description",
                               event.target.value,
@@ -4677,9 +6181,12 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                         <label className="space-y-2">
                           <span className="text-sm font-semibold">버튼 문구</span>
                           <Input
-                            value={stringValue(selectedSection, "buttonLabel")}
+                            value={stringValue(
+                              localizedSelectedSection ?? selectedSection,
+                              "buttonLabel",
+                            )}
                             onChange={(event) =>
-                              updateSectionField(
+                              updateLocalizedSectionField(
                                 selectedIndex,
                                 "buttonLabel",
                                 event.target.value,
@@ -4690,9 +6197,12 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                         <label className="space-y-2">
                           <span className="text-sm font-semibold">버튼 링크</span>
                           <Input
-                            value={stringValue(selectedSection, "buttonLink")}
+                            value={stringValue(
+                              localizedSelectedSection ?? selectedSection,
+                              "buttonLink",
+                            )}
                             onChange={(event) =>
-                              updateSectionField(
+                              updateLocalizedSectionField(
                                 selectedIndex,
                                 "buttonLink",
                                 event.target.value,
@@ -4708,14 +6218,20 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                           </span>
                           <Textarea
                             className="min-h-36"
-                            value={itemsValue(selectedSection)}
+                            value={itemsValue(
+                              localizedSelectedSection ?? selectedSection,
+                            )}
                             onChange={(event) =>
-                              updateSectionItems(selectedIndex, event.target.value)
+                              updateLocalizedSectionItems(
+                                selectedIndex,
+                                event.target.value,
+                              )
                             }
                           />
                         </label>
                       ) : null}
                     </>
+                    )
                   ) : (
                     <>
                       <section className="space-y-4">
@@ -4739,6 +6255,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                           </Button>
                         </div>
                         <p className="text-sm text-slate-500">{layoutLabel(selectedSection)}</p>
+                        {stringValue(selectedSection, "layout") !== "slide" ? (
                         <div className="space-y-2">
                           <span className="text-xs text-slate-500">섹션 너비</span>
                           <div className="grid grid-cols-3 gap-2">
@@ -4762,12 +6279,17 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                             ))}
                           </div>
                         </div>
+                        ) : null}
                       </section>
 
                       <AnimationControl
                         value={animationValue(selectedSection, "section")}
                         onChange={(value) => updateAnimation("section", value)}
                       />
+
+                      {stringValue(selectedSection, "layout") === "slide"
+                        ? renderSliderControls()
+                        : null}
 
                       <section className="space-y-4">
                         <div>
@@ -5210,6 +6732,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
                       <section className="space-y-4">
                         <h3 className="text-sm font-semibold">배경</h3>
+                        {stringValue(selectedSection, "layout") !== "slide" ? (
+                          <>
                         <div className="grid grid-cols-4 gap-2">
                           {[
                             ["색상", "color"],
@@ -5419,6 +6943,62 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                               </Button>
                             ) : null}
                           </>
+                        ) : null}
+                          </>
+                        ) : null}
+                        {stringValue(selectedSection, "layout") === "slide" ||
+                        ["image", "video"].includes(selectedBackgroundType) ? (
+                          <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-slate-700">
+                                배경 오버레이
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {Math.round(
+                                  numberValue(selectedSection, "overlayOpacity", 0.3) * 100,
+                                )}
+                                %
+                              </span>
+                            </div>
+                            <label className="grid grid-cols-[72px_1fr] items-center gap-3">
+                              <span className="text-xs text-slate-500">색상</span>
+                              <Input
+                                className="h-10 p-1"
+                                type="color"
+                                value={stringValue(
+                                  selectedSection,
+                                  "overlayColor",
+                                  "#000000",
+                                )}
+                                onChange={(event) =>
+                                  updateSectionField(
+                                    selectedIndex,
+                                    "overlayColor",
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+                            <input
+                              className="w-full accent-blue-600"
+                              max="0.9"
+                              min="0"
+                              step="0.05"
+                              type="range"
+                              value={stringValue(
+                                selectedSection,
+                                "overlayOpacity",
+                                "0.3",
+                              )}
+                              onChange={(event) =>
+                                updateSectionField(
+                                  selectedIndex,
+                                  "overlayOpacity",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </div>
                         ) : null}
                         {uploadMessage ? (
                           <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
@@ -6052,12 +7632,15 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                       openContextMenu={() => undefined}
                       requestVisualUpload={() => undefined}
                       removeSection={() => undefined}
+                      selectedSlideIndex={0}
                       section={previewSection}
                       selectedElement="section"
                       selectElement={() => undefined}
                       selectSection={() => undefined}
+                      selectSlide={() => undefined}
                       updateField={() => undefined}
                       updateItems={() => undefined}
+                      updateSlideField={() => undefined}
                       viewport={previewViewport}
                     />
                   </div>

@@ -408,8 +408,8 @@ function buildInitialSiteJson({
 
   return {
     design: {
-      bodyFontFamily: "system",
-      englishFontFamily: "inter",
+      bodyFontFamily: "pretendard",
+      englishFontFamily: "pretendard",
       footerAccentColor: palette.accent,
       footerBgColor: palette.footer,
       footerLayout: "simple",
@@ -420,7 +420,7 @@ function buildInitialSiteJson({
       headerLayout: "center",
       headerPosition: "static",
       headerTextColor: "#0f172a",
-      headingFontFamily: "system",
+      headingFontFamily: "pretendard",
       innerWidth: "1200",
       mainColor: palette.accent,
       sectionGap: style === "interactive" ? "96" : "76",
@@ -548,8 +548,11 @@ export async function createDashboardSite(formData: FormData) {
   const ogImageUrl = value(formData, "og_image_url") || null;
   const completionPath = value(formData, "completion_path");
 
-  if (!name || !slug) {
-    throw new Error("사이트 이름과 slug가 필요해.");
+  if (!name || !slug || !businessType || !launchGoal) {
+    redirectWithNotice(
+      "/dashboard/sites/new",
+      "사이트 이름, 업종, 주요 목적을 모두 입력해주세요.",
+    );
   }
 
   const { data: site, error: siteError } = await supabase

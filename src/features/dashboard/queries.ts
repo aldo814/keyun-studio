@@ -774,6 +774,7 @@ export async function getSiteEditorState(siteId: string, pageId?: string) {
   const draftJson = {
     ...pageDraft,
     design: pageDraft.design ?? homeDraft.design,
+    i18n: pageDraft.i18n ?? homeDraft.i18n,
     navigation: pageDraft.navigation ?? homeDraft.navigation,
     pages: pageDraft.pages ?? homeDraft.pages,
   } satisfies Json;
@@ -914,6 +915,7 @@ export async function getPublishedSitePageBySlug(siteSlug: string, pagePath = "/
   const publishedJson = {
     ...pageJson,
     design: pageJson.design ?? homeJson.design,
+    i18n: pageJson.i18n ?? homeJson.i18n,
     navigation: pageJson.navigation ?? homeJson.navigation,
     pages: pageJson.pages ?? homeJson.pages,
   } satisfies Json;

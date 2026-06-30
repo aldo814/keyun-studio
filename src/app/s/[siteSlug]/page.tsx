@@ -25,6 +25,14 @@ function firstSearchValue(value: string | string[] | undefined) {
   return value ?? "";
 }
 
+function hasEnglishLocale(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const i18n = (value as Record<string, unknown>).i18n;
+  if (!i18n || typeof i18n !== "object" || Array.isArray(i18n)) return false;
+  return Array.isArray((i18n as Record<string, unknown>).locales)
+    && ((i18n as Record<string, unknown>).locales as unknown[]).includes("en");
+}
+
 export async function generateMetadata({
   params,
 }: PublishedSitePageProps): Promise<Metadata> {
@@ -50,11 +58,16 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: seo?.canonicalUrl
-      ? {
-          canonical: seo.canonicalUrl,
-        }
-      : undefined,
+    alternates: {
+      canonical: seo?.canonicalUrl || `/s/${site.slug}`,
+      languages: hasEnglishLocale(published.page?.publishedJson)
+        ? {
+            "en": `/s/${site.slug}/en`,
+            "ko": `/s/${site.slug}`,
+            "x-default": `/s/${site.slug}`,
+          }
+        : undefined,
+    },
     openGraph: {
       title: ogTitle,
       description: ogDescription,
@@ -93,6 +106,8 @@ export default async function PublishedSitePage({
       contactResult={firstSearchValue(query?.contact)}
       contactEnabled={!published.isDemo}
       description={published.seo?.description ?? ""}
+      locale="ko"
+      pagePath="/"
       popups={popups}
       posts={posts}
       publishedJson={published.page.publishedJson}
