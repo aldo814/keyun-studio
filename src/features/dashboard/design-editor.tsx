@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
-  BarChart3, Check, ChevronDown, ClipboardList, Copy, CreditCard, Eye, FileText,
-  GripVertical, HelpCircle, Home, Image as ImageIcon, Inbox, Languages, Laptop,
-  Layers3, LayoutGrid, Monitor, MoreHorizontal, Newspaper, Palette, Plus, Settings,
-  Smartphone, Sparkles, Star, Tablet, Trash2, UploadCloud, Users, WandSparkles, X, ZoomIn,
+  BarChart3, Check, ChevronDown, ClipboardList, Clock, Copy, CreditCard, Eye, FileText,
+  GitBranch, GripVertical, HelpCircle, Home, Image as ImageIcon, Inbox, Languages,
+  Laptop, Layers3, LayoutGrid, Monitor, MoreHorizontal, Newspaper, Palette, Plus,
+  Settings, Smartphone, Sparkles, Star, Tablet, Trash2, UploadCloud, Users,
+  WandSparkles, X, ZoomIn,
 } from "lucide-react";
 import {
   useEffect,
@@ -182,6 +183,8 @@ const sectionTypes = [
   { value: "breadcrumb", label: "브레드크럼", icon: ChevronDown },
   { value: "board", label: "게시판", icon: Newspaper },
   { value: "embed-form", label: "폼", icon: ClipboardList },
+  { value: "org-chart", label: "조직도", icon: GitBranch },
+  { value: "history", label: "연혁", icon: Clock },
 ];
 
 const modulePresets: ModulePreset[] = [
@@ -257,193 +260,197 @@ const modulePresets: ModulePreset[] = [
     title: "텍스트 중심 히어로",
     type: "hero",
   },
+  // ── 소개 (기능 + 서비스) ────────────────────────
   {
-    category: "기능",
+    category: "소개",
     description: "핵심 장점을 카드로 안전하게 정리",
     layout: "cards",
-    title: "기능 카드 그리드",
+    title: "특징 카드 그리드",
     type: "features",
   },
   {
-    category: "기능",
+    category: "소개",
     description: "서비스 흐름을 순서대로 보여주는 단계형 구성",
     layout: "timeline",
     title: "프로세스 타임라인",
     type: "features",
   },
   {
-    category: "서비스",
+    category: "소개",
     description: "이미지와 설명을 나란히 배치하는 소개 섹션",
     layout: "media-left",
     title: "이미지 설명 섹션",
     type: "content",
   },
+  // ── 신뢰 (후기 + 데이터) ────────────────────────
   {
-    category: "CTA",
-    description: "페이지 하단 전환을 만드는 와이드 배너",
-    layout: "banner",
-    title: "와이드 CTA",
-    type: "cta",
-  },
-  {
-    category: "CTA",
-    description: "어두운 배경으로 강한 전환을 유도하는 구성",
-    layout: "dark",
-    title: "다크 CTA",
-    type: "cta",
-  },
-  {
-    category: "CTA",
-    description: "이메일 입력 + 구독 버튼으로 리드를 수집하는 구성",
-    layout: "newsletter",
-    title: "뉴스레터 구독",
-    type: "cta",
-  },
-  {
-    category: "후기",
+    category: "신뢰",
     description: "여러 고객 후기를 카드 그리드로 나열하는 구성",
     layout: "grid",
     title: "후기 카드 그리드",
     type: "review",
   },
   {
-    category: "후기",
+    category: "신뢰",
     description: "대표 고객 후기를 크게 부각하는 구성",
     layout: "featured",
     title: "추천 후기 강조",
     type: "review",
   },
   {
-    category: "후기",
+    category: "신뢰",
     description: "별점과 함께 후기를 나열하는 구성",
     layout: "rating",
     title: "별점 후기",
     type: "review",
   },
   {
-    category: "데이터",
+    category: "신뢰",
     description: "핵심 수치를 크게 강조하는 카운터 구성",
     layout: "counters",
     title: "핵심 수치 강조",
     type: "stats",
   },
   {
-    category: "데이터",
+    category: "신뢰",
     description: "진행 바로 달성도를 시각화하는 구성",
     layout: "bars",
     title: "진행 바 통계",
     type: "stats",
   },
   {
-    category: "데이터",
+    category: "신뢰",
     description: "어두운 배경으로 임팩트 있게 수치를 보여주는 구성",
     layout: "dark",
     title: "다크 데이터",
     type: "stats",
   },
+  // ── 전환 (CTA + 가격) ────────────────────────────
   {
-    category: "가격",
+    category: "전환",
+    description: "페이지 하단 전환을 만드는 와이드 배너",
+    layout: "banner",
+    title: "와이드 CTA",
+    type: "cta",
+  },
+  {
+    category: "전환",
+    description: "어두운 배경으로 강한 전환을 유도하는 구성",
+    layout: "dark",
+    title: "다크 CTA",
+    type: "cta",
+  },
+  {
+    category: "전환",
+    description: "이메일 입력 + 구독 버튼으로 리드를 수집하는 구성",
+    layout: "newsletter",
+    title: "뉴스레터 구독",
+    type: "cta",
+  },
+  {
+    category: "전환",
     description: "플랜별 카드로 가격을 비교하는 구성",
     layout: "cards",
     title: "가격 카드",
     type: "pricing",
   },
   {
-    category: "가격",
+    category: "전환",
     description: "두 개의 플랜을 나란히 비교하는 구성",
     layout: "two-col",
     title: "2열 가격 비교",
     type: "pricing",
   },
+  // ── 정보 (FAQ + 팀) ──────────────────────────────
   {
-    category: "FAQ",
+    category: "정보",
     description: "질문을 클릭해 답변을 여는 아코디언 구성",
     layout: "accordion",
     title: "FAQ 아코디언",
     type: "faq",
   },
   {
-    category: "FAQ",
+    category: "정보",
     description: "질문과 답변을 두 열로 나란히 배치하는 구성",
     layout: "two-col",
     title: "2열 FAQ",
     type: "faq",
   },
   {
-    category: "팀",
+    category: "정보",
     description: "팀원 프로필을 카드 그리드로 보여주는 구성",
     layout: "grid",
     title: "팀 그리드",
     type: "team",
   },
   {
-    category: "팀",
+    category: "정보",
     description: "팀원을 리스트로 나열하는 구성",
     layout: "list",
     title: "팀 리스트",
     type: "team",
   },
-  // ── 게시판 ──────────────────────────────────────
+  // ── 콘텐츠 (게시판 + 폼) ────────────────────────
   {
-    category: "게시판",
+    category: "콘텐츠",
     description: "제목·날짜·작성자를 테이블로 나열하는 기본형 목록",
     layout: "list",
     title: "목록형 게시판",
     type: "board",
   },
   {
-    category: "게시판",
+    category: "콘텐츠",
     description: "썸네일 이미지를 카드 그리드로 보여주는 갤러리형",
     layout: "gallery",
     title: "갤러리형 게시판",
     type: "board",
   },
   {
-    category: "게시판",
+    category: "콘텐츠",
     description: "최신 글을 뉴스레터처럼 카드로 나열하는 구성",
     layout: "news",
     title: "뉴스형 게시판",
     type: "board",
   },
   {
-    category: "게시판",
+    category: "콘텐츠",
     description: "주요 공지사항을 강조해서 보여주는 구성",
     layout: "notice",
     title: "공지사항형",
     type: "board",
   },
-  // ── 폼 ──────────────────────────────────────────
   {
-    category: "폼",
+    category: "콘텐츠",
     description: "이름·이메일·내용을 입력받는 기본 문의 폼",
     layout: "contact",
     title: "문의 폼",
     type: "embed-form",
   },
   {
-    category: "폼",
+    category: "콘텐츠",
     description: "이메일 주소만 받아 뉴스레터를 구독하는 폼",
     layout: "newsletter",
     title: "뉴스레터 구독 폼",
     type: "embed-form",
   },
   {
-    category: "폼",
+    category: "콘텐츠",
     description: "상담 일정·내용을 받는 상담 신청 폼",
     layout: "consult",
     title: "상담 신청 폼",
     type: "embed-form",
   },
   {
-    category: "폼",
+    category: "콘텐츠",
     description: "여러 항목을 체크하는 설문 폼",
     layout: "survey",
     title: "설문 폼",
     type: "embed-form",
   },
   // ── 서브페이지 전용 ─────────────────────────────
+  // 페이지 헤더 (상단 고정)
   {
-    category: "서브 비주얼",
+    category: "페이지 헤더",
     description: "페이지 제목과 배경을 보여주는 컴팩트 배너",
     layout: "banner",
     pageType: "sub",
@@ -451,7 +458,7 @@ const modulePresets: ModulePreset[] = [
     type: "subhero",
   },
   {
-    category: "서브 비주얼",
+    category: "페이지 헤더",
     description: "배경 이미지 위에 제목을 얹는 구성",
     layout: "image-bg",
     pageType: "sub",
@@ -459,7 +466,7 @@ const modulePresets: ModulePreset[] = [
     type: "subhero",
   },
   {
-    category: "서브 비주얼",
+    category: "페이지 헤더",
     description: "좌측 제목 + 우측 부가정보를 나란히 배치",
     layout: "split",
     pageType: "sub",
@@ -467,7 +474,7 @@ const modulePresets: ModulePreset[] = [
     type: "subhero",
   },
   {
-    category: "브레드크럼",
+    category: "페이지 헤더",
     description: "현재 위치를 경로로 표시하는 네비게이션 바",
     layout: "default",
     pageType: "sub",
@@ -475,12 +482,45 @@ const modulePresets: ModulePreset[] = [
     type: "breadcrumb",
   },
   {
-    category: "브레드크럼",
+    category: "페이지 헤더",
     description: "브레드크럼과 페이지 제목을 함께 보여주는 구성",
     layout: "with-title",
     pageType: "sub",
     title: "제목 포함 브레드크럼",
     type: "breadcrumb",
+  },
+  // 서브 전용 정보형
+  {
+    category: "정보",
+    description: "수직 트리 구조로 조직 계층을 보여주는 구성",
+    layout: "tree",
+    pageType: "sub",
+    title: "조직도 트리",
+    type: "org-chart",
+  },
+  {
+    category: "정보",
+    description: "부서·직책을 카드 그리드로 나열하는 조직도",
+    layout: "grid",
+    pageType: "sub",
+    title: "조직도 카드형",
+    type: "org-chart",
+  },
+  {
+    category: "정보",
+    description: "연도별 이정표를 세로 타임라인으로 표현하는 구성",
+    layout: "timeline",
+    pageType: "sub",
+    title: "연혁 타임라인",
+    type: "history",
+  },
+  {
+    category: "정보",
+    description: "좌우 교차 배치로 연도·사건을 보여주는 구성",
+    layout: "zigzag",
+    pageType: "sub",
+    title: "연혁 지그재그",
+    type: "history",
   },
 ];
 
@@ -855,7 +895,11 @@ function createSection(type: string, layout?: string): EditorSection {
                           ? "list"
                           : type === "embed-form"
                             ? "contact"
-                            : "media-left");
+                            : type === "org-chart"
+                              ? "tree"
+                              : type === "history"
+                                ? "timeline"
+                                : "media-left");
 
   const base = {
     builderId: createSectionId(type),
@@ -997,6 +1041,39 @@ function createSection(type: string, layout?: string): EditorSection {
         "최마케|CMO|브랜드 & 그로스",
       ],
       title: "팀을 소개합니다",
+    };
+  }
+
+  if (type === "org-chart") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      description: "",
+      items: [
+        "대표이사|CEO|0|",
+        "개발본부장|CTO|1|",
+        "마케팅본부장|CMO|1|",
+        "개발팀장|Team Lead|2|",
+        "디자인팀장|Team Lead|2|",
+      ],
+      title: "",
+    };
+  }
+
+  if (type === "history") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      description: "",
+      items: [
+        "2024|회사 설립|서울시 강남구에 법인 설립",
+        "2024|첫 서비스 출시|베타 서비스 오픈 및 초기 사용자 1000명 달성",
+        "2025|Series A 투자유치|누적 투자금 50억 원 확보",
+        "2026|글로벌 진출|일본·동남아 시장 서비스 오픈",
+      ],
+      title: "",
     };
   }
 
@@ -2036,6 +2113,75 @@ function MiniModulePreview({ preset }: { preset: ModulePreset }) {
           <div className="mt-3 border-t border-slate-100 pt-2">
             <div className="h-3 w-28 rounded bg-slate-800" />
             <div className="mt-1 h-1.5 w-20 rounded bg-slate-200" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "org-chart") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "grid" ? (
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="h-5 w-14 rounded-lg border-2 border-blue-400 bg-white" />
+            <div className="flex gap-2">
+              {[0,1,2].map((i) => <div key={i} className="h-4 w-10 rounded border border-slate-300 bg-white" />)}
+            </div>
+            <div className="flex gap-1.5">
+              {[0,1,2,3].map((i) => <div key={i} className="h-3 w-7 rounded bg-slate-100" />)}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1">
+            <div className="h-5 w-14 rounded-lg border-2 border-blue-400 bg-white" />
+            <div className="h-3 w-px bg-slate-300" />
+            <div className="flex gap-3">
+              {[0,1].map((i) => (
+                <div key={i} className="flex flex-col items-center gap-1">
+                  <div className="h-4 w-12 rounded border border-slate-300 bg-white" />
+                  <div className="h-2 w-px bg-slate-300" />
+                  <div className="flex gap-1">
+                    <div className="h-2.5 w-8 rounded bg-slate-100" />
+                    <div className="h-2.5 w-8 rounded bg-slate-100" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "history") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "zigzag" ? (
+          <div className="space-y-1.5">
+            {[0,1,2].map((i) => (
+              <div key={i} className={cn("flex items-center gap-2", i % 2 === 1 && "flex-row-reverse")}>
+                <div className="h-5 flex-1 rounded border border-slate-200 bg-white px-1.5">
+                  <div className="mt-1 h-1 w-6 rounded bg-blue-400" />
+                  <div className="mt-0.5 h-1 w-10 rounded bg-slate-300" />
+                </div>
+                <div className="size-3 shrink-0 rounded-full border-2 border-blue-500 bg-white" />
+                <div className="flex-1" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="relative pl-4">
+            <div className="absolute left-1.5 top-1 bottom-1 w-px bg-blue-200" />
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="relative mb-1.5 last:mb-0">
+                <div className="absolute -left-2.5 top-1 size-2 rounded-full border border-blue-500 bg-white" />
+                <div className="rounded border border-slate-100 bg-white px-1.5 py-0.5">
+                  <div className="h-1 w-4 rounded bg-blue-300" />
+                  <div className="mt-0.5 h-1 w-10 rounded bg-slate-500" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -4101,6 +4247,122 @@ function CanvasSection({
             <p className="mt-2 text-center text-xs text-slate-400">폼 제출 데이터는 콘텐츠 &gt; 문의폼에서 확인할 수 있습니다.</p>
           </div>
         ) : null}
+
+        {type === "org-chart" ? (
+          <div className="w-full">
+            {layout === "grid" ? (
+              /* 카드 그리드형 */
+              <div className="space-y-6">
+                {/* CEO row */}
+                <div className="flex justify-center">
+                  <div className="w-44 rounded-xl border-2 border-blue-500 bg-white p-4 text-center shadow-sm">
+                    <div className="mx-auto mb-2 size-12 rounded-full bg-blue-100" />
+                    <p className="font-bold text-slate-800">대표이사</p>
+                    <p className="text-sm text-blue-600">CEO</p>
+                  </div>
+                </div>
+                {/* Level 2 */}
+                <div className="flex justify-center gap-4">
+                  {["개발본부장·CTO", "마케팅본부장·CMO", "운영본부장·COO"].map((label) => {
+                    const [name, role] = label.split("·");
+                    return (
+                      <div key={label} className="w-36 rounded-xl border border-slate-200 bg-white p-3 text-center shadow-sm">
+                        <div className="mx-auto mb-2 size-9 rounded-full bg-slate-100" />
+                        <p className="text-sm font-semibold text-slate-700">{name}</p>
+                        <p className="text-xs text-slate-400">{role}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Level 3 */}
+                <div className="flex justify-center gap-3">
+                  {["개발팀", "디자인팀", "마케팅팀", "운영팀"].map((label) => (
+                    <div key={label} className="w-24 rounded-lg border border-slate-100 bg-slate-50 p-2 text-center">
+                      <p className="text-xs font-medium text-slate-600">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* 트리형 */
+              <div className="flex flex-col items-center gap-0">
+                {/* CEO */}
+                <div className="w-40 rounded-xl border-2 border-blue-500 bg-white p-3 text-center shadow-sm">
+                  <p className="font-bold text-slate-800">대표이사</p>
+                  <p className="text-xs text-blue-600">CEO</p>
+                </div>
+                <div className="h-6 w-px bg-slate-300" />
+                {/* Level-2 row with connectors */}
+                <div className="relative flex gap-6">
+                  <div className="absolute -top-0 left-1/2 h-px -translate-x-1/2" />
+                  {[{ name: "개발본부장", role: "CTO" }, { name: "마케팅본부장", role: "CMO" }].map((item) => (
+                    <div key={item.role} className="flex flex-col items-center">
+                      <div className="h-0 w-px" />
+                      <div className="w-32 rounded-lg border border-slate-300 bg-white p-3 text-center shadow-sm">
+                        <p className="text-sm font-semibold text-slate-700">{item.name}</p>
+                        <p className="text-xs text-slate-400">{item.role}</p>
+                      </div>
+                      <div className="h-5 w-px bg-slate-300" />
+                      <div className="flex gap-3">
+                        {["팀A", "팀B"].map((t) => (
+                          <div key={t} className="w-16 rounded-md border border-slate-100 bg-slate-50 py-1.5 text-center text-xs text-slate-500">{t}</div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "history" ? (
+          <div className="w-full">
+            {layout === "zigzag" ? (
+              <div className="space-y-6">
+                {[
+                  { year: "2024", title: "회사 설립", desc: "서울시 강남구에 법인 설립" },
+                  { year: "2025", title: "Series A", desc: "누적 투자금 50억 원 확보" },
+                  { year: "2026", title: "글로벌 진출", desc: "일본·동남아 시장 진출" },
+                ].map((item, i) => (
+                  <div key={i} className={cn("flex items-center gap-8", i % 2 === 1 && "flex-row-reverse")}>
+                    <div className="flex-1 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <p className="text-sm font-bold text-blue-600">{item.year}</p>
+                      <p className="mt-1 font-semibold text-slate-800">{item.title}</p>
+                      <p className="mt-1 text-sm text-slate-500">{item.desc}</p>
+                    </div>
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-blue-500 bg-white font-bold text-blue-600 text-sm">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* 세로 타임라인 */
+              <div className="relative pl-10">
+                <div className="absolute left-4 top-2 bottom-2 w-px bg-blue-200" />
+                {[
+                  { year: "2024", title: "회사 설립", desc: "서울시 강남구에 법인 설립" },
+                  { year: "2024", title: "첫 서비스 출시", desc: "베타 서비스 오픈, 초기 사용자 1000명" },
+                  { year: "2025", title: "Series A 투자유치", desc: "누적 투자금 50억 원 확보" },
+                  { year: "2026", title: "글로벌 진출", desc: "일본·동남아 시장 서비스 오픈" },
+                ].map((item, i) => (
+                  <div key={i} className="relative mb-8 last:mb-0">
+                    <div className="absolute -left-6 flex size-5 items-center justify-center rounded-full border-2 border-blue-500 bg-white">
+                      <div className="size-2 rounded-full bg-blue-500" />
+                    </div>
+                    <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                      <span className="inline-block rounded bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-600">{item.year}</span>
+                      <p className="mt-2 font-semibold text-slate-800">{item.title}</p>
+                      <p className="mt-1 text-sm text-slate-500">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -4202,7 +4464,13 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
   );
   const availableLibraryCategories = Array.from(
     new Set(pageFilteredPresets.map((preset) => preset.category)),
-  );
+  ).sort((a, b) => {
+    if (a === "페이지 헤더") return -1;
+    if (b === "페이지 헤더") return 1;
+    if (a === "히어로") return -1;
+    if (b === "히어로") return 1;
+    return 0;
+  });
   const previewSection = useMemo(
     () => (previewPreset ? createSection(previewPreset.type, previewPreset.layout) : null),
     [previewPreset],
