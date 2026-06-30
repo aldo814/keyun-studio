@@ -888,6 +888,77 @@ export async function publishSite(formData: FormData) {
   }
 }
 
+export async function createEditorPage(formData: FormData) {
+  await getCurrentUser();
+
+  const siteId = value(formData, "site_id");
+  const requestedTitle = value(formData, "title") || "새 페이지";
+  const requestedPath = value(formData, "path");
+
+  if (!siteId) {
+    throw new Error("사이트 정보가 필요합니다.");
+  }
+
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("site_pages")
+    .select("id", { count: "exact", head: true })
+    .eq("site_id", siteId);
+  const baseSlug = slugify(requestedPath || requestedTitle) || `page-${(count ?? 0) + 1}`;
+  let path = `/${baseSlug}`;
+  let suffix = 2;
+
+  while (true) {
+    const { data: existing } = await supabase
+      .from("site_pages")
+      .select("id")
+      .eq("site_id", siteId)
+      .eq("path", path)
+      .maybeSingle();
+
+    if (!existing) break;
+    path = `/${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  const pageJson = buildGeneratedContentJson({
+    bodyText: "",
+    description: `${requestedTitle} 페이지의 내용을 입력하세요.`,
+    title: requestedTitle,
+  });
+  const { data: page, error } = await supabase
+    .from("site_pages")
+    .insert({
+      site_id: siteId,
+      title: requestedTitle,
+      path,
+      menu_code: path.slice(1),
+      menu_name: requestedTitle,
+      page_type: "custom",
+      is_hidden: true,
+      sort_order: count ?? 0,
+      locale_json: {},
+      page_json: pageJson,
+      draft_json: pageJson,
+    } as never)
+    .select("id,title,path")
+    .single();
+
+  if (error || !page) {
+    throw new Error(error?.message ?? "페이지를 생성하지 못했습니다.");
+  }
+
+  await syncSiteNavigationDraft(siteId);
+  revalidateSiteSitemap(siteId);
+
+  return {
+    id: String(page.id),
+    path: String(page.path),
+    status: "private" as const,
+    title: String(page.title),
+  };
+}
+
 export async function updateDraftJson(formData: FormData) {
   await getCurrentUser();
 

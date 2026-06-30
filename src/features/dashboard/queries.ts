@@ -724,17 +724,17 @@ export async function getDashboardSitePages(siteId: string): Promise<DashboardSi
 
 export async function getSiteEditorState(siteId: string, pageId?: string) {
   if (siteId === "demo_site_keyun") {
-    return getDemoEditorState(siteId);
+    return getDemoEditorState(siteId, pageId);
   }
 
   if (!hasSupabaseEnv()) {
-    return getDemoEditorState(siteId);
+    return getDemoEditorState(siteId, pageId);
   }
 
   const authenticated = await isAuthenticated();
 
   if (!authenticated) {
-    return getDemoEditorState(siteId);
+    return getDemoEditorState(siteId, pageId);
   }
 
   const [site, supabase] = await Promise.all([
@@ -746,24 +746,27 @@ export async function getSiteEditorState(siteId: string, pageId?: string) {
     return null;
   }
 
-  const pageQuery = supabase
+  const { data: pageData, error: pageError } = await supabase
     .from("site_pages")
-    .select("id,site_id,title,path,draft_json,published_json,updated_at")
-    .eq("site_id", siteId);
-
-  const { data } = pageId
-    ? await pageQuery.eq("id", pageId).maybeSingle()
-    : await pageQuery.eq("path", "/").maybeSingle();
-
-  const { data: homeData } = await supabase
-    .from("site_pages")
-    .select("id,site_id,title,path,draft_json,published_json,updated_at")
+    .select("id,site_id,title,path,draft_json,published_json,updated_at,is_hidden,sort_order")
     .eq("site_id", siteId)
-    .eq("path", "/")
-    .maybeSingle();
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 
-  const page = data as EditorPageRow | null;
-  const homePage = homeData as EditorPageRow | null;
+  if (pageError) {
+    console.error(pageError.message);
+    return null;
+  }
+
+  const pages = (pageData ?? []) as Array<
+    EditorPageRow & { is_hidden: boolean | null; sort_order: number | null }
+  >;
+  const page =
+    (pageId ? pages.find((item) => item.id === pageId) : null) ??
+    pages.find((item) => item.path === "/") ??
+    pages[0] ??
+    null;
+  const homePage = pages.find((item) => item.path === "/") ?? page;
 
   if (!page) {
     return null;
@@ -789,6 +792,12 @@ export async function getSiteEditorState(siteId: string, pageId?: string) {
       publishedJson: page.published_json,
       updatedAt: formatDateTime(page.updated_at),
     },
+    sitePages: pages.map((item) => ({
+      id: item.id,
+      path: item.path,
+      status: item.is_hidden ? "private" as const : "public" as const,
+      title: item.title,
+    })),
   };
 }
 
@@ -834,23 +843,35 @@ export async function getSiteSeoSettings(siteId: string) {
   };
 }
 
-function getDemoEditorState(siteId: string) {
+function getDemoEditorState(siteId: string, pageId?: string) {
   const site = demoSites.find((item) => item.id === siteId) ?? null;
 
   if (!site) {
     return null;
   }
 
+  const sitePages = [
+    {
+      id: "demo_page_home",
+      path: "/",
+      status: "public" as const,
+      title: "메인 페이지",
+    },
+  ];
+  const selectedPage =
+    sitePages.find((item) => item.id === pageId) ?? sitePages[0];
+
   return {
     site,
     page: {
-      id: "demo_page_home",
-      title: "Home",
-      path: "/",
+      id: selectedPage.id,
+      title: selectedPage.title,
+      path: selectedPage.path,
       draftJson: demoTemplateJson,
       publishedJson: demoTemplateJson,
       updatedAt: site.updatedAt,
     },
+    sitePages,
   };
 }
 

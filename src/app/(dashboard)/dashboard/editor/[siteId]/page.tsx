@@ -7,15 +7,30 @@ type EditorPageProps = {
   params: Promise<{
     siteId: string;
   }>;
+  searchParams?: Promise<{
+    pageId?: string | string[];
+  }>;
 };
 
-export default async function EditorPage({ params }: EditorPageProps) {
+function firstSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+export default async function EditorPage({ params, searchParams }: EditorPageProps) {
   const { siteId } = await params;
-  const state = await getSiteEditorState(siteId);
+  const query = await searchParams;
+  const state = await getSiteEditorState(siteId, firstSearchValue(query?.pageId));
 
   if (!state) {
     notFound();
   }
 
-  return <DesignEditorLoader page={state.page} site={state.site} />;
+  return (
+    <DesignEditorLoader
+      key={state.page.id}
+      page={state.page}
+      site={state.site}
+      sitePages={state.sitePages}
+    />
+  );
 }

@@ -14,8 +14,16 @@ type DesignEditorLoaderProps = {
   page: {
     id: string;
     draftJson: Json;
+    path: string;
+    title: string;
     updatedAt: string;
   };
+  sitePages: Array<{
+    id: string;
+    path: string;
+    status: "public" | "private";
+    title: string;
+  }>;
 };
 
 const DynamicDesignEditor = dynamic(
