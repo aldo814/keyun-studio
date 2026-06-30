@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
-  BarChart3, Check, ChevronDown, ClipboardList, Clock, Copy, CreditCard, Eye, FileText,
-  GitBranch, GripVertical, HelpCircle, Home, Image as ImageIcon, Inbox, Languages,
-  Laptop, Layers3, LayoutGrid, Monitor, MoreHorizontal, Newspaper, Palette, Plus,
-  Settings, Smartphone, Sparkles, Star, Tablet, Trash2, UploadCloud, Users,
-  WandSparkles, X, ZoomIn,
+  Award, BarChart3, Briefcase, Camera, Check, ChevronDown, ClipboardList, Clock,
+  Copy, CreditCard, Download, Eye, FileText, GitBranch, GripVertical, HelpCircle,
+  Home, Image as ImageIcon, Inbox, Languages, Laptop, Layers3, LayoutGrid, MapPin,
+  Monitor, MoreHorizontal, Newspaper, Palette, Plus, Settings, Smartphone, Sparkles,
+  Star, Tablet, Trash2, UploadCloud, Users, WandSparkles, X, ZoomIn,
 } from "lucide-react";
 import {
   useEffect,
@@ -185,6 +185,15 @@ const sectionTypes = [
   { value: "embed-form", label: "폼", icon: ClipboardList },
   { value: "org-chart", label: "조직도", icon: GitBranch },
   { value: "history", label: "연혁", icon: Clock },
+  { value: "vision", label: "비전·미션", icon: Sparkles },
+  { value: "values", label: "핵심가치", icon: Award },
+  { value: "location", label: "오시는길", icon: MapPin },
+  { value: "partners", label: "파트너", icon: Users },
+  { value: "awards", label: "수상·인증", icon: Award },
+  { value: "press", label: "보도자료", icon: Newspaper },
+  { value: "photo-gallery", label: "포토갤러리", icon: Camera },
+  { value: "jobs", label: "채용", icon: Briefcase },
+  { value: "downloads", label: "자료실", icon: Download },
 ];
 
 const modulePresets: ModulePreset[] = [
@@ -521,6 +530,154 @@ const modulePresets: ModulePreset[] = [
     pageType: "sub",
     title: "연혁 지그재그",
     type: "history",
+  },
+  // ── 소개형 (서브) ────────────────────────────────
+  {
+    category: "소개",
+    description: "회사의 비전과 미션을 중앙 정렬로 강조하는 구성",
+    layout: "centered",
+    pageType: "sub",
+    title: "비전·미션 중앙형",
+    type: "vision",
+  },
+  {
+    category: "소개",
+    description: "비전과 미션을 좌우로 나란히 배치하는 구성",
+    layout: "split",
+    pageType: "sub",
+    title: "비전·미션 분리형",
+    type: "vision",
+  },
+  {
+    category: "소개",
+    description: "핵심 가치를 아이콘 카드 그리드로 나열하는 구성",
+    layout: "grid",
+    pageType: "sub",
+    title: "핵심가치 카드",
+    type: "values",
+  },
+  {
+    category: "소개",
+    description: "아이콘과 설명을 세로 목록으로 나열하는 구성",
+    layout: "list",
+    pageType: "sub",
+    title: "핵심가치 목록",
+    type: "values",
+  },
+  // ── 정보형 추가 (서브) ───────────────────────────
+  {
+    category: "정보",
+    description: "지도 이미지와 주소·교통 정보를 나란히 배치",
+    layout: "map-text",
+    pageType: "sub",
+    title: "오시는길 지도+텍스트",
+    type: "location",
+  },
+  {
+    category: "정보",
+    description: "주소·전화·이메일 등 연락처 정보만 보여주는 구성",
+    layout: "text-only",
+    pageType: "sub",
+    title: "오시는길 텍스트형",
+    type: "location",
+  },
+  {
+    category: "정보",
+    description: "최신 보도자료를 목록으로 나열하는 구성",
+    layout: "list",
+    pageType: "sub",
+    title: "보도자료 목록",
+    type: "press",
+  },
+  {
+    category: "정보",
+    description: "언론 보도를 카드 그리드로 보여주는 구성",
+    layout: "cards",
+    pageType: "sub",
+    title: "보도자료 카드",
+    type: "press",
+  },
+  // ── 신뢰형 (서브) ────────────────────────────────
+  {
+    category: "신뢰",
+    description: "파트너·고객사 로고를 그리드로 나열하는 구성",
+    layout: "logo-grid",
+    pageType: "sub",
+    title: "파트너 로고 그리드",
+    type: "partners",
+  },
+  {
+    category: "신뢰",
+    description: "파트너 로고를 가로 스트립으로 보여주는 구성",
+    layout: "logo-strip",
+    pageType: "sub",
+    title: "파트너 로고 스트립",
+    type: "partners",
+  },
+  {
+    category: "신뢰",
+    description: "수상·인증 배지를 카드 그리드로 나열하는 구성",
+    layout: "grid",
+    pageType: "sub",
+    title: "수상·인증 그리드",
+    type: "awards",
+  },
+  {
+    category: "신뢰",
+    description: "인증 항목을 로고+설명 목록으로 보여주는 구성",
+    layout: "list",
+    pageType: "sub",
+    title: "수상·인증 목록",
+    type: "awards",
+  },
+  // ── 콘텐츠형 추가 (서브) ────────────────────────
+  {
+    category: "콘텐츠",
+    description: "사진을 마소너리 그리드로 보여주는 갤러리",
+    layout: "masonry",
+    pageType: "sub",
+    title: "포토갤러리 마소너리",
+    type: "photo-gallery",
+  },
+  {
+    category: "콘텐츠",
+    description: "사진을 균일한 그리드로 나열하는 갤러리",
+    layout: "grid",
+    pageType: "sub",
+    title: "포토갤러리 그리드",
+    type: "photo-gallery",
+  },
+  {
+    category: "콘텐츠",
+    description: "채용 포지션을 카드 목록으로 나열하는 구성",
+    layout: "list",
+    pageType: "sub",
+    title: "채용 목록",
+    type: "jobs",
+  },
+  {
+    category: "콘텐츠",
+    description: "부서별 채용 포지션을 카드로 보여주는 구성",
+    layout: "cards",
+    pageType: "sub",
+    title: "채용 카드",
+    type: "jobs",
+  },
+  {
+    category: "콘텐츠",
+    description: "파일·문서를 다운로드 목록으로 나열하는 구성",
+    layout: "list",
+    pageType: "sub",
+    title: "자료실 목록",
+    type: "downloads",
+  },
+  {
+    category: "콘텐츠",
+    description: "카테고리별 자료를 카드로 보여주는 구성",
+    layout: "cards",
+    pageType: "sub",
+    title: "자료실 카드",
+    type: "downloads",
   },
 ];
 
@@ -899,7 +1056,25 @@ function createSection(type: string, layout?: string): EditorSection {
                               ? "tree"
                               : type === "history"
                                 ? "timeline"
-                                : "media-left");
+                                : type === "vision"
+                                  ? "centered"
+                                  : type === "values"
+                                    ? "grid"
+                                    : type === "location"
+                                      ? "map-text"
+                                      : type === "partners"
+                                        ? "logo-grid"
+                                        : type === "awards"
+                                          ? "grid"
+                                          : type === "press"
+                                            ? "list"
+                                            : type === "photo-gallery"
+                                              ? "masonry"
+                                              : type === "jobs"
+                                                ? "list"
+                                                : type === "downloads"
+                                                  ? "list"
+                                                  : "media-left");
 
   const base = {
     builderId: createSectionId(type),
@@ -1041,6 +1216,129 @@ function createSection(type: string, layout?: string): EditorSection {
         "최마케|CMO|브랜드 & 그로스",
       ],
       title: "팀을 소개합니다",
+    };
+  }
+
+  if (type === "vision") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#f8fafc",
+      description: "우리는 모든 사람이 쉽게 웹사이트를 만들 수 있는 세상을 꿈꿉니다.",
+      items: ["혁신|끊임없이 새로운 방법을 탐구합니다", "신뢰|고객과의 약속을 지킵니다", "성장|함께 성장하는 가치를 추구합니다"],
+      title: "우리의 비전",
+    };
+  }
+
+  if (type === "values") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      items: [
+        "혁신|Sparkles|새로운 방법으로 문제를 해결합니다",
+        "신뢰|Shield|고객과의 약속을 최우선으로 합니다",
+        "협력|Users|함께 성장하는 문화를 만들어갑니다",
+        "도전|Zap|두려움 없이 새로운 것에 도전합니다",
+        "책임|Check|맡은 일에 끝까지 책임을 집니다",
+        "성장|TrendingUp|끊임없이 배우고 발전합니다",
+      ],
+      title: "핵심 가치",
+    };
+  }
+
+  if (type === "location") {
+    return {
+      ...base,
+      address: "서울특별시 강남구 테헤란로 123, 키운빌딩 5층",
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      email: "hello@keyun.io",
+      items: ["지하철|2호선 강남역 3번 출구 도보 5분", "버스|강남역 정류장 하차"],
+      phone: "02-1234-5678",
+      title: "오시는 길",
+    };
+  }
+
+  if (type === "partners") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#f8fafc",
+      description: "신뢰할 수 있는 파트너사와 함께합니다.",
+      items: ["파트너A", "파트너B", "파트너C", "파트너D", "파트너E", "파트너F"],
+      title: "파트너 & 고객사",
+    };
+  }
+
+  if (type === "awards") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      items: [
+        "2026 대한민국 IT 대상|중소벤처기업부장관상|2026",
+        "2025 스타트업 어워드|최우수 서비스상|2025",
+        "ISO 27001|정보보안경영시스템 인증|2024",
+        "벤처기업 인증|중소벤처기업부|2024",
+      ],
+      title: "수상 및 인증",
+    };
+  }
+
+  if (type === "press") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      items: [
+        "키운스튜디오, 누적 투자금 50억 돌파|조선일보|2026-06-01",
+        "노코드 시대를 여는 키운스튜디오|한국경제|2026-05-15",
+        "스타트업 키운, 글로벌 진출 선언|매일경제|2026-04-20",
+      ],
+      title: "언론 보도",
+    };
+  }
+
+  if (type === "photo-gallery") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      description: "",
+      items: ["사진1", "사진2", "사진3", "사진4", "사진5", "사진6"],
+      title: "",
+    };
+  }
+
+  if (type === "jobs") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#f8fafc",
+      description: "함께 성장할 인재를 찾습니다.",
+      items: [
+        "프론트엔드 개발자|개발팀|경력 3년 이상|상시채용",
+        "백엔드 개발자|개발팀|경력 3년 이상|상시채용",
+        "UX 디자이너|디자인팀|경력 2년 이상|상시채용",
+        "마케팅 매니저|마케팅팀|경력 2년 이상|2026-07-31",
+      ],
+      title: "채용 공고",
+    };
+  }
+
+  if (type === "downloads") {
+    return {
+      ...base,
+      backgroundType: "color",
+      bgColor: "#ffffff",
+      items: [
+        "회사 소개서|PDF|2026-06|/files/company-profile.pdf",
+        "서비스 이용 가이드|PDF|2026-05|/files/guide.pdf",
+        "개인정보처리방침|PDF|2026-01|/files/privacy.pdf",
+        "이용약관|PDF|2026-01|/files/terms.pdf",
+      ],
+      title: "자료실",
     };
   }
 
@@ -2113,6 +2411,288 @@ function MiniModulePreview({ preset }: { preset: ModulePreset }) {
           <div className="mt-3 border-t border-slate-100 pt-2">
             <div className="h-3 w-28 rounded bg-slate-800" />
             <div className="mt-1 h-1.5 w-20 rounded bg-slate-200" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "vision") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-2">
+        {preset.layout === "split" ? (
+          <div className="grid h-full grid-cols-2 gap-1.5">
+            <div className="rounded-lg bg-blue-50 p-1.5">
+              <div className="mb-1 h-1.5 w-8 rounded bg-blue-400" />
+              <div className="h-1 w-full rounded bg-blue-200" />
+              <div className="mt-0.5 h-1 w-3/4 rounded bg-blue-200" />
+            </div>
+            <div className="rounded-lg bg-purple-50 p-1.5">
+              <div className="mb-1 h-1.5 w-8 rounded bg-purple-400" />
+              <div className="h-1 w-full rounded bg-purple-200" />
+              <div className="mt-0.5 h-1 w-3/4 rounded bg-purple-200" />
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-1.5">
+            <div className="h-2 w-20 rounded bg-slate-700" />
+            <div className="h-1 w-28 rounded bg-slate-300" />
+            <div className="mt-1 flex gap-1.5">
+              {[0,1,2].map((i) => <div key={i} className="h-6 w-12 rounded-lg border border-blue-100 bg-blue-50" />)}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "values") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "list" ? (
+          <div className="space-y-1.5">
+            {[0,1,2].map((i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <div className="size-4 rounded-full bg-blue-100" />
+                <div className="flex-1 space-y-0.5">
+                  <div className="h-1.5 w-10 rounded bg-slate-600" />
+                  <div className="h-1 w-16 rounded bg-slate-200" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-1">
+            {[0,1,2,3,4,5].map((i) => (
+              <div key={i} className="flex flex-col items-center gap-0.5 rounded border border-slate-100 p-1">
+                <div className="size-3 rounded-full bg-blue-100" />
+                <div className="h-1 w-6 rounded bg-slate-600" />
+                <div className="h-0.5 w-8 rounded bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "location") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "text-only" ? (
+          <div className="grid grid-cols-2 gap-2">
+            {[["주소", 14], ["교통", 10], ["전화", 10], ["이메일", 12]].map(([label, w], i) => (
+              <div key={i} className="flex gap-1">
+                <div className="mt-0.5 size-2 rounded-sm bg-blue-300" />
+                <div>
+                  <div className="h-1 w-4 rounded bg-slate-300" />
+                  <div className={`mt-0.5 h-1 rounded bg-slate-600`} style={{ width: w }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+              <MapPin className="size-4 text-slate-400" />
+            </div>
+            <div className="space-y-1">
+              <div className="h-1.5 w-12 rounded bg-slate-700" />
+              {[0,1,2].map((i) => (
+                <div key={i} className="flex gap-1 items-center">
+                  <div className="size-1.5 rounded-sm bg-blue-300" />
+                  <div className="h-1 flex-1 rounded bg-slate-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "partners") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-2">
+        {preset.layout === "logo-strip" ? (
+          <div className="flex h-full items-center justify-center gap-1.5">
+            {[0,1,2,3,4].map((i) => (
+              <div key={i} className="flex h-7 w-10 items-center justify-center rounded border border-slate-200 bg-white">
+                <div className="h-1.5 w-6 rounded bg-slate-300" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-1.5">
+            {[0,1,2,3,4,5].map((i) => (
+              <div key={i} className="flex h-7 items-center justify-center rounded border border-slate-200 bg-white">
+                <div className="h-1.5 w-8 rounded bg-slate-300" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "awards") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "list" ? (
+          <div className="space-y-1.5">
+            {[0,1,2].map((i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <div className="size-5 rounded-full bg-yellow-100 flex items-center justify-center">
+                  <div className="size-2.5 rounded-sm bg-yellow-400" />
+                </div>
+                <div className="flex-1 space-y-0.5">
+                  <div className="h-1.5 w-16 rounded bg-slate-600" />
+                  <div className="h-1 w-10 rounded bg-slate-200" />
+                </div>
+                <div className="h-2 w-6 rounded bg-slate-100" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5">
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="rounded border border-slate-100 p-1.5">
+                <div className="mb-1 size-4 rounded-full bg-yellow-100" />
+                <div className="h-1.5 w-10 rounded bg-slate-600" />
+                <div className="mt-0.5 h-1 w-8 rounded bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "press") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "cards" ? (
+          <div className="grid grid-cols-3 gap-1">
+            {[0,1,2].map((i) => (
+              <div key={i} className="overflow-hidden rounded border border-slate-100">
+                <div className="h-6 bg-slate-100" />
+                <div className="p-1">
+                  <div className="h-1 w-5 rounded bg-blue-300" />
+                  <div className="mt-0.5 h-1.5 w-full rounded bg-slate-600" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {[0,1,2].map((i) => (
+              <div key={i} className="flex items-center gap-1.5 border-b border-slate-50 pb-1.5">
+                <div className="h-2 w-8 rounded bg-blue-200" />
+                <div className="h-1.5 flex-1 rounded bg-slate-600" />
+                <div className="h-1 w-8 rounded bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "photo-gallery") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-1.5">
+        {preset.layout === "masonry" ? (
+          <div className="flex gap-1 h-full">
+            <div className="flex flex-col gap-1 flex-1">
+              <div className="flex-[2] rounded bg-slate-200" />
+              <div className="flex-[1] rounded bg-slate-100" />
+            </div>
+            <div className="flex flex-col gap-1 flex-1">
+              <div className="flex-[1] rounded bg-slate-100" />
+              <div className="flex-[2] rounded bg-slate-200" />
+            </div>
+            <div className="flex flex-col gap-1 flex-1">
+              <div className="flex-[1.5] rounded bg-slate-200" />
+              <div className="flex-[1.5] rounded bg-slate-100" />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-1 h-full">
+            {[0,1,2,3,4,5].map((i) => (
+              <div key={i} className="rounded bg-gradient-to-br from-slate-100 to-slate-200" />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "jobs") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "cards" ? (
+          <div className="grid grid-cols-2 gap-1.5">
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="rounded border border-slate-100 p-1.5">
+                <div className="flex justify-between">
+                  <div className="h-1.5 w-10 rounded bg-slate-700" />
+                  <div className="h-1.5 w-6 rounded bg-blue-200" />
+                </div>
+                <div className="mt-0.5 h-1 w-8 rounded bg-slate-300" />
+                <div className="mt-1 flex gap-1">
+                  <div className="h-1.5 w-8 rounded bg-slate-100" />
+                  <div className="h-1.5 w-8 rounded bg-slate-100" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="flex items-center gap-1.5 border-b border-slate-50 pb-1">
+                <div className="size-3 rounded bg-slate-100" />
+                <div className="flex-1">
+                  <div className="h-1.5 w-14 rounded bg-slate-700" />
+                  <div className="mt-0.5 h-1 w-10 rounded bg-slate-300" />
+                </div>
+                <div className="h-2 w-8 rounded bg-blue-100" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "downloads") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "cards" ? (
+          <div className="grid grid-cols-2 gap-1.5">
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="flex items-center gap-1 rounded border border-slate-100 p-1.5">
+                <div className="size-4 rounded bg-red-100 flex items-center justify-center shrink-0">
+                  <div className="size-2 rounded-sm bg-red-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="h-1.5 w-full rounded bg-slate-600" />
+                  <div className="mt-0.5 h-1 w-8 rounded bg-slate-200" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="flex items-center gap-1.5 border-b border-slate-50 pb-1">
+                <div className="size-4 rounded bg-red-100 shrink-0" />
+                <div className="flex-1">
+                  <div className="h-1.5 w-16 rounded bg-slate-600" />
+                  <div className="mt-0.5 h-1 w-10 rounded bg-slate-200" />
+                </div>
+                <div className="h-3 w-10 rounded border border-slate-200" />
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -4041,6 +4621,382 @@ function CanvasSection({
                 </div>
               )}
             </nav>
+          </div>
+        ) : null}
+
+        {type === "vision" ? (
+          <div className="w-full">
+            {layout === "split" ? (
+              <div className="grid grid-cols-2 gap-8">
+                {[{ label: "비전", color: "blue" }, { label: "미션", color: "purple" }].map(({ label, color }) => (
+                  <div key={label} className={cn("rounded-2xl p-6", color === "blue" ? "bg-blue-50" : "bg-purple-50")}>
+                    <span className={cn("mb-3 inline-block rounded-full px-3 py-1 text-xs font-bold", color === "blue" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700")}>{label}</span>
+                    <p className={cn("text-lg font-bold", color === "blue" ? "text-blue-900" : "text-purple-900")}>
+                      {label === "비전" ? stringValue(section, "title", "우리의 비전") : "우리의 미션"}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">{stringValue(section, "description", "")}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-2xl font-bold text-slate-800">{stringValue(section, "title", "우리의 비전")}</p>
+                <p className="mt-4 text-base leading-relaxed text-slate-500">{stringValue(section, "description", "")}</p>
+                <div className="mt-8 grid grid-cols-3 gap-4">
+                  {itemList(section).map((item, i) => {
+                    const [name, desc] = item.split("|");
+                    return (
+                      <div key={i} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                        <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-blue-100">
+                          <Sparkles className="size-5 text-blue-600" />
+                        </div>
+                        <p className="font-semibold text-slate-800">{name}</p>
+                        <p className="mt-1 text-sm text-slate-400">{desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "values" ? (
+          <div className="w-full">
+            {layout === "list" ? (
+              <div className="space-y-3">
+                {itemList(section).map((item, i) => {
+                  const [name, , desc] = item.split("|");
+                  return (
+                    <div key={i} className="flex items-start gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100">
+                        <Award className="size-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800">{name}</p>
+                        <p className="mt-0.5 text-sm text-slate-500">{desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-4">
+                {itemList(section).map((item, i) => {
+                  const [name, , desc] = item.split("|");
+                  return (
+                    <div key={i} className="rounded-xl border border-slate-100 bg-white p-5 text-center shadow-sm">
+                      <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-blue-100">
+                        <Award className="size-5 text-blue-600" />
+                      </div>
+                      <p className="font-semibold text-slate-800">{name}</p>
+                      <p className="mt-1 text-sm text-slate-400">{desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "location" ? (
+          <div className="w-full">
+            {layout === "text-only" ? (
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <MapPin className="mt-1 size-5 shrink-0 text-blue-600" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">주소</p>
+                      <p className="mt-1 text-slate-700">{stringValue(section, "address", "서울특별시 강남구 테헤란로 123")}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <FileText className="mt-1 size-5 shrink-0 text-blue-600" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">교통편</p>
+                      <div className="mt-1 space-y-1">
+                        {itemList(section).map((item, i) => {
+                          const [label, desc] = item.split("|");
+                          return <p key={i} className="text-sm text-slate-600"><span className="font-semibold">{label}</span> {desc}</p>;
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <FileText className="mt-1 size-5 shrink-0 text-blue-600" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">전화</p>
+                      <p className="mt-1 text-slate-700">{stringValue(section, "phone", "02-1234-5678")}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <FileText className="mt-1 size-5 shrink-0 text-blue-600" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">이메일</p>
+                      <p className="mt-1 text-slate-700">{stringValue(section, "email", "hello@example.com")}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-6">
+                <div className="overflow-hidden rounded-2xl bg-slate-100">
+                  <div className="flex h-64 items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
+                    <div className="text-center">
+                      <MapPin className="mx-auto size-10 text-slate-400" />
+                      <p className="mt-2 text-sm text-slate-400">지도 영역</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4 py-2">
+                  <p className="text-lg font-bold text-slate-800">{stringValue(section, "title", "오시는 길")}</p>
+                  <div className="space-y-3">
+                    {[
+                      { icon: MapPin, label: "주소", val: stringValue(section, "address", "서울특별시 강남구 테헤란로 123") },
+                      { icon: FileText, label: "전화", val: stringValue(section, "phone", "02-1234-5678") },
+                      { icon: FileText, label: "이메일", val: stringValue(section, "email", "hello@example.com") },
+                    ].map(({ icon: Icon, label, val }) => (
+                      <div key={label} className="flex gap-3">
+                        <Icon className="mt-0.5 size-4 shrink-0 text-blue-600" />
+                        <div>
+                          <p className="text-xs font-bold text-slate-400">{label}</p>
+                          <p className="text-sm text-slate-700">{val}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="pt-1">
+                      <p className="text-xs font-bold text-slate-400">교통편</p>
+                      {itemList(section).map((item, i) => {
+                        const [label, desc] = item.split("|");
+                        return <p key={i} className="mt-1 text-sm text-slate-600"><span className="font-semibold text-blue-600">{label}</span> {desc}</p>;
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "partners" ? (
+          <div className="w-full">
+            {layout === "logo-strip" ? (
+              <div>
+                {stringValue(section, "title") && <p className="mb-6 text-center text-lg font-bold text-slate-700">{stringValue(section, "title")}</p>}
+                <div className="flex items-center justify-center gap-8 rounded-2xl border border-slate-100 bg-slate-50 py-6">
+                  {itemList(section).slice(0, 5).map((name, i) => (
+                    <div key={i} className="flex h-10 w-20 items-center justify-center rounded-lg bg-white shadow-sm">
+                      <span className="text-xs font-bold text-slate-400">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                {stringValue(section, "title") && <p className="mb-6 text-center text-lg font-bold text-slate-700">{stringValue(section, "title")}</p>}
+                {stringValue(section, "description") && <p className="mb-6 text-center text-sm text-slate-400">{stringValue(section, "description")}</p>}
+                <div className="grid grid-cols-3 gap-4">
+                  {itemList(section).map((name, i) => (
+                    <div key={i} className="flex h-16 items-center justify-center rounded-xl border border-slate-100 bg-white shadow-sm">
+                      <span className="text-sm font-bold text-slate-400">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "awards" ? (
+          <div className="w-full">
+            {layout === "list" ? (
+              <div className="space-y-3">
+                {itemList(section).map((item, i) => {
+                  const [title, org, year] = item.split("|");
+                  return (
+                    <div key={i} className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                      <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-yellow-100">
+                        <Award className="size-6 text-yellow-500" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-slate-800">{title}</p>
+                        <p className="text-sm text-slate-500">{org}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">{year}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {itemList(section).map((item, i) => {
+                  const [title, org, year] = item.split("|");
+                  return (
+                    <div key={i} className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+                      <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-yellow-100">
+                        <Award className="size-5 text-yellow-500" />
+                      </div>
+                      <p className="font-semibold text-slate-800">{title}</p>
+                      <p className="mt-1 text-sm text-slate-500">{org}</p>
+                      <span className="mt-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-400">{year}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "press" ? (
+          <div className="w-full">
+            {layout === "cards" ? (
+              <div className="grid grid-cols-3 gap-4">
+                {itemList(section).map((item, i) => {
+                  const [title, media, date] = item.split("|");
+                  return (
+                    <div key={i} className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+                      <div className="h-24 bg-gradient-to-br from-slate-100 to-slate-200" />
+                      <div className="p-4">
+                        <p className="text-xs font-bold text-blue-600">{media}</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-800 line-clamp-2">{title}</p>
+                        <p className="mt-2 text-xs text-slate-400">{date}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {itemList(section).map((item, i) => {
+                  const [title, media, date] = item.split("|");
+                  return (
+                    <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50">
+                      <span className="shrink-0 rounded bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-600">{media}</span>
+                      <p className="flex-1 text-sm font-medium text-slate-700">{title}</p>
+                      <span className="shrink-0 text-xs text-slate-400">{date}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "photo-gallery" ? (
+          <div className="w-full">
+            {layout === "masonry" ? (
+              <div className="columns-3 gap-3 space-y-3">
+                {[140, 100, 160, 120, 150, 90].map((h, i) => (
+                  <div
+                    key={i}
+                    className="break-inside-avoid overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200"
+                    style={{ height: h }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="aspect-square overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200" />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "jobs" ? (
+          <div className="w-full">
+            {stringValue(section, "title") && <p className="mb-6 text-2xl font-bold text-slate-800">{stringValue(section, "title")}</p>}
+            {stringValue(section, "description") && <p className="mb-6 text-slate-500">{stringValue(section, "description")}</p>}
+            {layout === "cards" ? (
+              <div className="grid grid-cols-2 gap-4">
+                {itemList(section).map((item, i) => {
+                  const [position, dept, career, deadline] = item.split("|");
+                  return (
+                    <div key={i} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-slate-800">{position}</p>
+                          <p className="mt-1 text-sm text-slate-500">{dept}</p>
+                        </div>
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-600">채용중</span>
+                      </div>
+                      <div className="mt-3 flex gap-2 text-xs text-slate-400">
+                        <span className="rounded bg-slate-100 px-2 py-0.5">{career}</span>
+                        <span className="rounded bg-slate-100 px-2 py-0.5">마감 {deadline}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {itemList(section).map((item, i) => {
+                  const [position, dept, career, deadline] = item.split("|");
+                  return (
+                    <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50">
+                      <Briefcase className="size-5 shrink-0 text-slate-300" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-slate-800">{position}</p>
+                        <p className="text-sm text-slate-400">{dept} · {career}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400">마감 {deadline}</span>
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-600">채용중</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "downloads" ? (
+          <div className="w-full">
+            {stringValue(section, "title") && <p className="mb-6 text-2xl font-bold text-slate-800">{stringValue(section, "title")}</p>}
+            {layout === "cards" ? (
+              <div className="grid grid-cols-2 gap-4">
+                {itemList(section).map((item, i) => {
+                  const [name, ext, date] = item.split("|");
+                  return (
+                    <div key={i} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-red-100">
+                        <FileText className="size-5 text-red-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-semibold text-slate-800">{name}</p>
+                        <p className="text-xs text-slate-400">{ext} · {date}</p>
+                      </div>
+                      <Download className="size-4 shrink-0 text-slate-400" />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {itemList(section).map((item, i) => {
+                  const [name, ext, date] = item.split("|");
+                  return (
+                    <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded bg-red-100">
+                        <FileText className="size-4 text-red-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{name}</p>
+                        <p className="text-xs text-slate-400">{ext} · {date}</p>
+                      </div>
+                      <button className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50" type="button">
+                        <Download className="size-3" /> 다운로드
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : null}
 
