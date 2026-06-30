@@ -8496,7 +8496,16 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button className="h-8 px-3 text-xs" type="button" variant="outline" onClick={addPage}>
+                        <Button
+                          className="h-8 px-3 text-xs"
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setSettingsSubPanel(null);
+                            setLeftPanel("sections");
+                            setIsPageComposerOpen(true);
+                          }}
+                        >
                           <Plus className="size-3.5" />
                           페이지 추가
                         </Button>
