@@ -5,7 +5,8 @@ import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   Check, ChevronDown, Copy, Eye, FileText, GripVertical, Home,
   Image as ImageIcon, Laptop, Layers3, Monitor, MoreHorizontal, Palette, Plus,
-  Settings, Smartphone, Tablet, Trash2, UploadCloud, X,
+  Settings, Smartphone, Sparkles, Tablet, Trash2, UploadCloud, WandSparkles, X,
+  ZoomIn,
 } from "lucide-react";
 import {
   useEffect,
@@ -93,6 +94,7 @@ type ModulePreset = {
 type EditorViewport = "desktop" | "tablet" | "mobile";
 type RightPanelMode = "library" | "settings";
 type AlignmentValue = "left" | "center" | "right";
+type AnimationValue = "none" | "fade-in" | "bounce-in" | "zoom-in";
 type SelectedElement =
   | "site"
   | "section"
@@ -132,6 +134,41 @@ const sectionTypes = [
 ];
 
 const modulePresets: ModulePreset[] = [
+  {
+    category: "히어로",
+    description: "메시지와 실제 에디터 화면을 한눈에 보여주는 제품 중심 구성",
+    layout: "product-canvas",
+    title: "제품 캔버스",
+    type: "hero",
+  },
+  {
+    category: "히어로",
+    description: "중앙 메시지 아래 대형 제품 화면으로 신뢰를 만드는 구성",
+    layout: "centered-showcase",
+    title: "중앙 쇼케이스",
+    type: "hero",
+  },
+  {
+    category: "히어로",
+    description: "완성된 사이트 결과물을 갤러리처럼 먼저 보여주는 구성",
+    layout: "template-showcase",
+    title: "템플릿 쇼케이스",
+    type: "hero",
+  },
+  {
+    category: "히어로",
+    description: "섹션이 하나의 페이지로 조립되는 과정을 표현한 구성",
+    layout: "modular-assembly",
+    title: "모듈 조립형",
+    type: "hero",
+  },
+  {
+    category: "히어로",
+    description: "강한 타이포와 결과물 화면을 비대칭으로 배치한 구성",
+    layout: "editorial-contrast",
+    title: "에디토리얼",
+    type: "hero",
+  },
   {
     category: "히어로",
     description: "첫 화면에 가장 적합한 슬라이드형 메인 비주얼",
@@ -233,6 +270,25 @@ const alignmentOptions = [
   value: AlignmentValue;
 }>;
 
+const animationOptions = [
+  { description: "아래에서 부드럽게 등장", icon: Sparkles, label: "페이드 인", value: "fade-in" },
+  { description: "가볍게 통통 튀며 등장", icon: WandSparkles, label: "통통 튀기", value: "bounce-in" },
+  { description: "작은 크기에서 확대", icon: ZoomIn, label: "줌 인", value: "zoom-in" },
+] satisfies Array<{
+  description: string;
+  icon: typeof Sparkles;
+  label: string;
+  value: Exclude<AnimationValue, "none">;
+}>;
+
+const showcaseHeroLayouts = new Set([
+  "product-canvas",
+  "centered-showcase",
+  "template-showcase",
+  "modular-assembly",
+  "editorial-contrast",
+]);
+
 const freeFontOptions = [
   {
     label: "시스템 기본",
@@ -286,9 +342,15 @@ function defaultSectionStyle(type: string, layout: string) {
   const titleFontSize = type === "hero" ? "48" : "32";
 
   return {
-    align: layout === "text-focus" ? "center" : "left",
-    backgroundType: layout === "cta-focus" ? "color" : "gradient",
-    bgColor: "#f8fbff",
+    align:
+      layout === "text-focus" || layout === "centered-showcase"
+        ? "center"
+        : "left",
+    backgroundType:
+      layout === "cta-focus" || (type === "hero" && showcaseHeroLayouts.has(layout))
+        ? "color"
+        : "gradient",
+    bgColor: type === "hero" && showcaseHeroLayouts.has(layout) ? "#ffffff" : "#f8fbff",
     gradientFrom: "#f3f7ff",
     gradientTo: "#ffffff",
     glass: "off",
@@ -302,8 +364,8 @@ function defaultSectionStyle(type: string, layout: string) {
     paddingTopDesktop: desktopPadding,
     paddingTopMobile: mobilePadding,
     paddingTopTablet: tabletPadding,
-    radius: "24",
-    shadow: "soft",
+    radius: type === "hero" && showcaseHeroLayouts.has(layout) ? "8" : "24",
+    shadow: type === "hero" && showcaseHeroLayouts.has(layout) ? "none" : "soft",
     titleFontSize,
     videoUrl: "",
     width: "1200",
@@ -329,15 +391,32 @@ function createSection(type: string, layout?: string): EditorSection {
   };
 
   if (type === "hero") {
+    const showcaseCopy = {
+      badge: "PRESET-BASED NO-CODE BUILDER",
+      buttonLabel: "무료로 내 사이트 만들기",
+      buttonLink: "#contact",
+      description: "쉬운데, 결과물은 예쁜 웹사이트",
+      secondaryButtonLabel: "템플릿 둘러보기",
+      title: "KEYUN 웹사이트 빌더",
+    };
+
     return {
       ...base,
-      badge: "AI · No Code · Web Solution",
-      buttonLabel: "무료로 시작하기",
-      buttonLink: "#contact",
-      description:
-        "KEYUN은 AI와 노코드 기술로 비즈니스의 시작부터 성장까지 모든 과정을 지원하는 통합 솔루션 플랫폼입니다.",
-      secondaryButtonLabel: "제품 살펴보기",
-      title: "아이디어를 실현하는 가장 스마트한 방법, KEYUN",
+      ...(nextLayout === "product-canvas" ||
+      nextLayout === "centered-showcase" ||
+      nextLayout === "template-showcase" ||
+      nextLayout === "modular-assembly" ||
+      nextLayout === "editorial-contrast"
+        ? showcaseCopy
+        : {
+            badge: "AI · No Code · Web Solution",
+            buttonLabel: "무료로 시작하기",
+            buttonLink: "#contact",
+            description:
+              "KEYUN은 AI와 노코드 기술로 비즈니스의 시작부터 성장까지 모든 과정을 지원하는 통합 솔루션 플랫폼입니다.",
+            secondaryButtonLabel: "제품 살펴보기",
+            title: "아이디어를 실현하는 가장 스마트한 방법, KEYUN",
+          }),
     };
   }
 
@@ -403,6 +482,24 @@ function alignmentPositionClass(value: AlignmentValue) {
   return "mr-auto";
 }
 
+function animationField(element: Exclude<SelectedElement, "site">) {
+  if (element === "section") return "sectionAnimation";
+  if (element === "secondaryButton") return "secondaryButtonAnimation";
+
+  return `${element}Animation`;
+}
+
+function animationValue(
+  section: EditorSection,
+  element: Exclude<SelectedElement, "site">,
+): AnimationValue {
+  const value = stringValue(section, animationField(element), "none");
+
+  return value === "fade-in" || value === "bounce-in" || value === "zoom-in"
+    ? value
+    : "none";
+}
+
 function AlignmentControl({
   label,
   onChange,
@@ -441,6 +538,64 @@ function AlignmentControl({
         })}
       </div>
     </div>
+  );
+}
+
+function AnimationControl({
+  onChange,
+  value,
+}: {
+  onChange: (value: AnimationValue) => void;
+  value: AnimationValue;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold">등장 애니메이션</h3>
+          <p className="mt-1 text-xs text-slate-500">선택하면 캔버스에서 한 번 재생됩니다.</p>
+        </div>
+        <button
+          className={cn(
+            "h-8 rounded-md border px-3 text-xs font-semibold",
+            value === "none"
+              ? "border-blue-500 bg-blue-50 text-blue-600"
+              : "border-slate-200 text-slate-500",
+          )}
+          type="button"
+          onClick={() => onChange("none")}
+        >
+          없음
+        </button>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {animationOptions.map((option) => {
+          const Icon = option.icon;
+          const isActive = value === option.value;
+
+          return (
+            <button
+              aria-pressed={isActive}
+              className={cn(
+                "group flex min-h-24 flex-col items-center justify-center rounded-lg border px-2 py-3 text-center transition-colors",
+                isActive
+                  ? "border-blue-500 bg-blue-50 text-blue-600"
+                  : "border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:text-slate-800",
+              )}
+              key={option.value}
+              title={option.description}
+              type="button"
+              onClick={() => onChange(option.value)}
+            >
+              <span className="flex size-8 items-center justify-center rounded-md bg-slate-50 transition-colors group-hover:bg-blue-100">
+                <Icon className="size-4" />
+              </span>
+              <span className="mt-2 text-[11px] font-semibold">{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -824,6 +979,91 @@ function buttonStyle(section: EditorSection, design: DesignSettings): CSSPropert
 }
 
 function MiniModulePreview({ preset }: { preset: ModulePreset }) {
+  if (preset.type === "hero" && showcaseHeroLayouts.has(preset.layout)) {
+    return (
+      <div className="relative h-24 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "centered-showcase" ? (
+          <>
+            <div className="mx-auto h-1.5 w-12 rounded bg-slate-900" />
+            <div className="mx-auto mt-1 h-1 w-20 rounded bg-slate-300" />
+            <div className="mx-auto mt-2 h-2.5 w-10 rounded bg-blue-600" />
+            <div className="mt-2 h-10 rounded border border-slate-200 bg-slate-50 p-1">
+              <div className="h-1 w-full bg-slate-200" />
+              <div className="mt-1 grid grid-cols-[20px_1fr_22px] gap-1">
+                <div className="h-6 bg-blue-50" />
+                <div className="h-6 bg-white" />
+                <div className="h-6 bg-slate-100" />
+              </div>
+            </div>
+          </>
+        ) : preset.layout === "template-showcase" ? (
+          <div className="grid h-full grid-cols-[0.7fr_1.3fr_0.55fr] gap-1.5">
+            <div className="flex flex-col justify-center gap-1">
+              <div className="h-1.5 w-10 bg-slate-900" />
+              <div className="h-1 w-12 bg-slate-300" />
+              <div className="mt-1 h-2.5 w-9 rounded-sm bg-blue-600" />
+            </div>
+            <div className="rounded-sm border border-emerald-200 bg-emerald-900 p-1.5">
+              <div className="h-1 w-8 bg-white/80" />
+              <div className="mt-3 h-1.5 w-12 bg-white" />
+            </div>
+            <div className="rounded-sm bg-rose-800 p-1.5">
+              <div className="h-1 w-5 bg-white/80" />
+            </div>
+          </div>
+        ) : preset.layout === "modular-assembly" ? (
+          <div className="grid h-full grid-cols-[0.7fr_0.7fr_1fr] items-center gap-1.5">
+            <div className="space-y-1">
+              <div className="h-1.5 w-10 bg-slate-900" />
+              <div className="h-1 w-12 bg-slate-300" />
+              <div className="h-2.5 w-9 rounded-sm bg-blue-600" />
+            </div>
+            <div className="space-y-1">
+              {[0, 1, 2].map((item) => (
+                <div className="h-4 border border-blue-200 bg-blue-50" key={item} />
+              ))}
+            </div>
+            <div className="h-16 border border-slate-200 bg-white p-1">
+              <div className="h-5 bg-orange-50" />
+              <div className="mt-1 h-3 bg-blue-50" />
+              <div className="mt-1 h-3 bg-emerald-50" />
+            </div>
+          </div>
+        ) : preset.layout === "editorial-contrast" ? (
+          <div className="grid h-full grid-cols-[12px_0.8fr_1.2fr] gap-2">
+            <div className="rounded-sm bg-slate-950" />
+            <div className="flex flex-col justify-center gap-1">
+              <div className="h-3 w-14 bg-slate-950" />
+              <div className="h-3 w-12 bg-slate-950" />
+              <div className="h-1 w-14 bg-slate-300" />
+              <div className="mt-1 h-2.5 w-9 rounded-sm bg-blue-600" />
+            </div>
+            <div className="space-y-1.5 py-1">
+              <div className="h-8 bg-amber-200" />
+              <div className="ml-3 h-8 bg-emerald-100" />
+            </div>
+          </div>
+        ) : (
+          <div className="grid h-full grid-cols-[0.8fr_1.2fr] items-center gap-2">
+            <div className="space-y-1">
+              <div className="h-1.5 w-10 bg-slate-900" />
+              <div className="h-1 w-12 bg-slate-300" />
+              <div className="mt-2 h-2.5 w-9 rounded-sm bg-blue-600" />
+            </div>
+            <div className="h-16 rounded-sm border border-slate-200 bg-slate-50 p-1">
+              <div className="h-1.5 bg-white" />
+              <div className="mt-1 grid grid-cols-[18px_1fr_18px] gap-1">
+                <div className="h-11 bg-blue-50" />
+                <div className="h-11 bg-white" />
+                <div className="h-11 bg-slate-100" />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-20 overflow-hidden rounded-md border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-blue-100 p-2">
       <div className="absolute right-2 top-2 size-8 rounded-lg border border-white/70 bg-white/70" />
@@ -841,6 +1081,166 @@ function MiniModulePreview({ preset }: { preset: ModulePreset }) {
       ) : (
         <div className="mt-4 h-5 w-16 rounded bg-blue-600" />
       )}
+    </div>
+  );
+}
+
+function ShowcaseHeroVisual({
+  imageUrl,
+  layout,
+}: {
+  imageUrl: string;
+  layout: string;
+}) {
+  const sitePreview = (tone: "blue" | "green" | "warm" = "blue") => (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-lg border border-slate-200 bg-white",
+        tone === "green" && "bg-emerald-950 text-white",
+        tone === "warm" && "bg-amber-100",
+      )}
+    >
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img alt="" className="absolute inset-0 h-full w-full object-cover" src={imageUrl} />
+      ) : null}
+      <div className="relative z-10 flex h-7 items-center justify-between border-b border-current/10 px-3">
+        <span className="text-[7px] font-black">STUDIO KEYUN</span>
+        <span className="h-1 w-12 rounded bg-current/25" />
+      </div>
+      <div className="relative z-10 p-4">
+        <div className="h-1.5 w-14 rounded bg-blue-500/80" />
+        <div className="mt-3 h-3 w-28 rounded-sm bg-current/85" />
+        <div className="mt-1.5 h-3 w-20 rounded-sm bg-current/85" />
+        <div className="mt-3 h-1.5 w-24 rounded bg-current/20" />
+        <div className="mt-4 h-5 w-16 rounded bg-slate-950" />
+      </div>
+    </div>
+  );
+
+  if (layout === "centered-showcase") {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-2">
+        <div className="mb-2 flex items-center gap-1 border-b border-slate-100 pb-2">
+          <span className="size-1.5 rounded-full bg-red-300" />
+          <span className="size-1.5 rounded-full bg-amber-300" />
+          <span className="size-1.5 rounded-full bg-emerald-300" />
+          <span className="ml-3 h-2 flex-1 rounded bg-slate-100" />
+        </div>
+        <div className="grid min-h-64 grid-cols-[90px_1fr_100px] gap-2">
+          <div className="space-y-2 bg-slate-50 p-2">
+            {["히어로", "서비스", "포트폴리오", "후기"].map((item, index) => (
+              <div
+                className={cn(
+                  "rounded border bg-white px-2 py-2 text-[8px]",
+                  index === 0 && "border-blue-400 text-blue-600",
+                )}
+                key={item}
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+          {sitePreview("warm")}
+          <div className="space-y-3 bg-slate-50 p-2">
+            <div className="h-2 w-10 rounded bg-blue-500" />
+            <div className="h-12 rounded border bg-white" />
+            <div className="h-8 rounded border bg-white" />
+            <div className="h-16 rounded border bg-white" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === "template-showcase") {
+    return (
+      <div className="grid min-h-72 grid-cols-[1.15fr_0.55fr] gap-3">
+        <div className="translate-y-6">{sitePreview("green")}</div>
+        <div className="space-y-3">
+          <div className="h-44">{sitePreview("warm")}</div>
+          <div className="h-28">{sitePreview("blue")}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === "modular-assembly") {
+    return (
+      <div className="grid min-h-72 grid-cols-[0.9fr_1.15fr] items-center gap-4">
+        <div className="space-y-2">
+          {["히어로", "서비스", "가격", "후기", "문의"].map((item, index) => (
+            <div
+              className="flex h-11 items-center justify-between rounded-md border border-blue-200 bg-white px-3"
+              key={item}
+              style={{ transform: `translateX(${index * 5}px)` }}
+            >
+              <span className="text-[9px] font-bold">{item}</span>
+              <ArrowRight className="size-3 text-blue-500" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-2">
+          <div className="h-24 bg-amber-50 p-3">
+            <div className="h-2 w-20 bg-slate-800" />
+            <div className="mt-2 h-1.5 w-24 bg-slate-300" />
+          </div>
+          <div className="mt-1 grid grid-cols-3 gap-1 bg-blue-50 p-3">
+            <div className="h-10 bg-white" />
+            <div className="h-10 bg-white" />
+            <div className="h-10 bg-white" />
+          </div>
+          <div className="mt-1 grid grid-cols-3 gap-1 bg-emerald-50 p-3">
+            <div className="h-12 bg-white" />
+            <div className="h-12 bg-white" />
+            <div className="h-12 bg-white" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === "editorial-contrast") {
+    return (
+      <div className="grid min-h-72 grid-cols-[42px_1fr] gap-4">
+        <div className="flex flex-col items-center justify-around rounded-lg bg-slate-950 py-4 text-[8px] font-bold text-white">
+          <span>01</span>
+          <span className="-rotate-90 whitespace-nowrap">업종 선택</span>
+          <span>02</span>
+          <span className="-rotate-90 whitespace-nowrap">바로 게시</span>
+        </div>
+        <div className="relative">
+          <div className="absolute inset-x-0 top-0 h-40">{sitePreview("warm")}</div>
+          <div className="absolute bottom-0 left-10 right-4 h-36">{sitePreview("green")}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-72 pt-6">
+      <div className="rounded-xl border border-slate-200 bg-white p-2">
+        <div className="mb-2 flex h-6 items-center justify-between border-b px-2 text-[8px] font-bold">
+          <span>KEYUN</span>
+          <span className="text-blue-600">게시하기</span>
+        </div>
+        <div className="grid grid-cols-[80px_1fr_90px] gap-2">
+          <div className="space-y-2 bg-slate-50 p-2">
+            {[0, 1, 2, 3].map((item) => (
+              <div className="h-8 rounded border bg-white" key={item} />
+            ))}
+          </div>
+          {sitePreview("blue")}
+          <div className="space-y-2 bg-slate-50 p-2">
+            <div className="h-3 w-12 bg-blue-100" />
+            <div className="h-10 border bg-white" />
+            <div className="h-14 border bg-white" />
+          </div>
+        </div>
+      </div>
+      <div className="absolute bottom-0 left-2 h-36 w-24 border-4 border-slate-900 bg-white p-1">
+        {sitePreview("blue")}
+      </div>
     </div>
   );
 }
@@ -871,6 +1271,7 @@ function EmptyVisual({ className }: { className?: string }) {
 
 function InlineEditFrame({
   active,
+  animationClass,
   children,
   className,
   label,
@@ -878,6 +1279,7 @@ function InlineEditFrame({
   onSelect,
 }: {
   active?: boolean;
+  animationClass?: string;
   children: ReactNode;
   className?: string;
   label: string;
@@ -889,6 +1291,7 @@ function InlineEditFrame({
       className={cn(
         "group/inline relative rounded-lg outline outline-0 outline-offset-4 outline-blue-500/0 transition hover:outline-2 hover:outline-blue-400/40 focus-within:outline-2 focus-within:outline-blue-500/60",
         active && "outline-2 outline-blue-500/70",
+        animationClass,
         className,
       )}
       onClick={(event) => {
@@ -921,6 +1324,7 @@ function InlineEditFrame({
 
 function VisualEditable({
   active,
+  animationClass,
   className,
   emptyClassName,
   imageUrl,
@@ -929,6 +1333,7 @@ function VisualEditable({
   onSelect,
 }: {
   active?: boolean;
+  animationClass?: string;
   className?: string;
   emptyClassName?: string;
   imageUrl: string;
@@ -941,6 +1346,7 @@ function VisualEditable({
       className={cn(
         "group/visual relative block w-full overflow-hidden rounded-3xl text-left outline outline-0 outline-offset-4 outline-blue-500/0 transition hover:outline-2 hover:outline-blue-400/40",
         active && "outline-2 outline-blue-500/70",
+        animationClass,
         className,
       )}
       type="button"
@@ -978,6 +1384,10 @@ function VisualEditable({
 }
 
 type CanvasSectionProps = {
+  animationPreview: {
+    element: Exclude<SelectedElement, "site">;
+    token: number;
+  } | null;
   design: DesignSettings;
   index: number;
   isSelected: boolean;
@@ -998,7 +1408,116 @@ type CanvasSectionProps = {
   viewport: EditorViewport;
 };
 
+function ShowcaseHeroCopy({
+  activeElement,
+  align,
+  buttonAlign,
+  design,
+  index,
+  onContextMenu,
+  onSelect,
+  previewAnimationClass,
+  section,
+  updateField,
+}: {
+  activeElement: (element: SelectedElement) => boolean;
+  align: AlignmentValue;
+  buttonAlign: AlignmentValue;
+  design: DesignSettings;
+  index: number;
+  onContextMenu: (
+    event: ReactMouseEvent,
+    index: number,
+    element: SelectedElement,
+  ) => void;
+  onSelect: (element: SelectedElement) => void;
+  previewAnimationClass: (element: Exclude<SelectedElement, "site">) => string;
+  section: EditorSection;
+  updateField: (index: number, key: string, value: string) => void;
+}) {
+  return (
+    <div className={cn("max-w-2xl", alignmentPositionClass(align), alignmentTextClass(align))}>
+      <InlineEditFrame
+        active={activeElement("badge")}
+        animationClass={previewAnimationClass("badge")}
+        className="inline-block"
+        label="배지 바로 수정"
+        onContextMenu={(event) => onContextMenu(event, index, "badge")}
+        onSelect={() => onSelect("badge")}
+      >
+        <Input
+          className="h-7 w-auto rounded-full border-blue-100 bg-blue-50 px-3 text-[10px] font-bold text-blue-600"
+          value={stringValue(section, "badge")}
+          onChange={(event) => updateField(index, "badge", event.target.value)}
+        />
+      </InlineEditFrame>
+      <InlineEditFrame
+        active={activeElement("title")}
+        animationClass={previewAnimationClass("title")}
+        className="mt-5"
+        label="제목 바로 수정"
+        onContextMenu={(event) => onContextMenu(event, index, "title")}
+        onSelect={() => onSelect("title")}
+      >
+        <Textarea
+          className="min-h-24 resize-none border-0 bg-transparent p-0 text-4xl font-black leading-[1.08] tracking-normal shadow-none focus-visible:ring-0 lg:text-5xl"
+          style={titleTextStyle(section, design)}
+          value={stringValue(section, "title")}
+          onChange={(event) => updateField(index, "title", event.target.value)}
+        />
+      </InlineEditFrame>
+      <InlineEditFrame
+        active={activeElement("description")}
+        animationClass={previewAnimationClass("description")}
+        className="mt-4"
+        label="설명 바로 수정"
+        onContextMenu={(event) => onContextMenu(event, index, "description")}
+        onSelect={() => onSelect("description")}
+      >
+        <Textarea
+          className="min-h-12 resize-none border-0 bg-transparent p-0 text-base font-medium text-slate-500 shadow-none focus-visible:ring-0"
+          style={descriptionTextStyle(section, design)}
+          value={stringValue(section, "description")}
+          onChange={(event) => updateField(index, "description", event.target.value)}
+        />
+      </InlineEditFrame>
+      <div className={cn("mt-7 flex flex-wrap gap-3", alignmentJustifyClass(buttonAlign))}>
+        <InlineEditFrame
+          active={activeElement("button")}
+          animationClass={previewAnimationClass("button")}
+          label="버튼 문구 수정"
+          onContextMenu={(event) => onContextMenu(event, index, "button")}
+          onSelect={() => onSelect("button")}
+        >
+          <Input
+            className="h-11 w-44 rounded-lg border-0 px-4 text-center text-sm font-semibold text-white"
+            style={buttonStyle(section, design)}
+            value={stringValue(section, "buttonLabel")}
+            onChange={(event) => updateField(index, "buttonLabel", event.target.value)}
+          />
+        </InlineEditFrame>
+        <InlineEditFrame
+          active={activeElement("secondaryButton")}
+          animationClass={previewAnimationClass("secondaryButton")}
+          label="보조 버튼 수정"
+          onContextMenu={(event) => onContextMenu(event, index, "secondaryButton")}
+          onSelect={() => onSelect("secondaryButton")}
+        >
+          <Input
+            className="h-11 w-40 rounded-lg border border-slate-200 bg-white px-4 text-center text-sm font-semibold"
+            value={stringValue(section, "secondaryButtonLabel")}
+            onChange={(event) =>
+              updateField(index, "secondaryButtonLabel", event.target.value)
+            }
+          />
+        </InlineEditFrame>
+      </div>
+    </div>
+  );
+}
+
 function CanvasSection({
+  animationPreview,
   design,
   index,
   isSelected,
@@ -1023,6 +1542,15 @@ function CanvasSection({
   const items = itemList(section);
   const mediaPosition = sectionMediaPosition(section);
   const videoUrl = stringValue(section, "videoUrl");
+  const isShowcaseHero = type === "hero" && showcaseHeroLayouts.has(layout);
+  const previewAnimationClass = (element: Exclude<SelectedElement, "site">) => {
+    if (!animationPreview || animationPreview.element !== element) return "";
+
+    const effect = animationValue(section, element);
+    if (effect === "none") return "";
+
+    return `keyun-animation-preview-${effect}-${animationPreview.token % 2 ? "a" : "b"}`;
+  };
   const alignClass = alignmentTextClass(align);
   const sectionStyle = {
     ...sectionBackground(section, design),
@@ -1042,6 +1570,7 @@ function CanvasSection({
     <section
       className={cn(
         "group relative overflow-hidden border transition-all",
+        previewAnimationClass("section"),
         isSelected
           ? "border-blue-500 ring-2 ring-blue-500/20"
           : "border-transparent hover:border-blue-300",
@@ -1123,7 +1652,57 @@ function CanvasSection({
           widthClass(stringValue(section, "width", design.innerWidth)),
         )}
       >
-        {type === "hero" ? (
+        {isShowcaseHero ? (
+          <div
+            className={cn(
+              layout === "centered-showcase"
+                ? "space-y-10"
+                : layout === "editorial-contrast"
+                  ? "grid items-center gap-8 lg:grid-cols-[0.8fr_1.2fr]"
+                  : "grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr]",
+            )}
+          >
+            <div className={cn(layout === "centered-showcase" && "mx-auto text-center")}>
+              <ShowcaseHeroCopy
+                activeElement={activeElement}
+                align={layout === "centered-showcase" ? "center" : align}
+                buttonAlign={layout === "centered-showcase" ? "center" : buttonAlign}
+                design={design}
+                index={index}
+                onContextMenu={openContextMenu}
+                onSelect={selectElementForSection}
+                previewAnimationClass={previewAnimationClass}
+                section={section}
+                updateField={updateField}
+              />
+            </div>
+            <button
+              className={cn(
+                "group/visual relative block w-full text-left outline outline-0 outline-offset-4 outline-blue-500/0 transition hover:outline-2 hover:outline-blue-400/40",
+                activeElement("visual") && "outline-2 outline-blue-500/70",
+                previewAnimationClass("visual"),
+                layout === "centered-showcase" && "mx-auto max-w-5xl",
+              )}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                selectElementForSection("visual");
+              }}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                requestVisualUpload(index);
+              }}
+              onContextMenu={(event) => openContextMenu(event, index, "visual")}
+            >
+              <ShowcaseHeroVisual imageUrl={imageUrl} layout={layout} />
+              <span className="absolute right-3 top-3 rounded-md bg-slate-950 px-3 py-1.5 text-[11px] font-semibold text-white opacity-0 transition group-hover/visual:opacity-100">
+                이미지 설정
+              </span>
+            </button>
+          </div>
+        ) : null}
+
+        {type === "hero" && !isShowcaseHero ? (
           <div
             className={cn(
               "grid items-center gap-10",
@@ -1144,6 +1723,7 @@ function CanvasSection({
             >
               <InlineEditFrame
                 active={activeElement("badge")}
+                animationClass={previewAnimationClass("badge")}
                 className="inline-block"
                 label="배지 바로 수정"
                 onContextMenu={(event) => openContextMenu(event, index, "badge")}
@@ -1158,6 +1738,7 @@ function CanvasSection({
               </InlineEditFrame>
               <InlineEditFrame
                 active={activeElement("title")}
+                animationClass={previewAnimationClass("title")}
                 className="mt-8"
                 label="제목 바로 수정"
                 onContextMenu={(event) => openContextMenu(event, index, "title")}
@@ -1173,6 +1754,7 @@ function CanvasSection({
               </InlineEditFrame>
               <InlineEditFrame
                 active={activeElement("description")}
+                animationClass={previewAnimationClass("description")}
                 className="mt-4"
                 label="설명 바로 수정"
                 onContextMenu={(event) => openContextMenu(event, index, "description")}
@@ -1196,6 +1778,7 @@ function CanvasSection({
               >
                 <InlineEditFrame
                   active={activeElement("button")}
+                  animationClass={previewAnimationClass("button")}
                   label="버튼 문구 수정"
                   onContextMenu={(event) => openContextMenu(event, index, "button")}
                   onSelect={() => selectElementForSection("button")}
@@ -1213,6 +1796,7 @@ function CanvasSection({
                 {stringValue(section, "secondaryButtonLabel") ? (
                   <InlineEditFrame
                     active={activeElement("secondaryButton")}
+                    animationClass={previewAnimationClass("secondaryButton")}
                     label="보조 버튼 수정"
                     onContextMenu={(event) =>
                       openContextMenu(event, index, "secondaryButton")
@@ -1257,6 +1841,7 @@ function CanvasSection({
               >
                 <VisualEditable
                   active={activeElement("visual")}
+                  animationClass={previewAnimationClass("visual")}
                   imageUrl={imageUrl}
                   onContextMenu={(event) => openContextMenu(event, index, "visual")}
                   onUpload={() => requestVisualUpload(index)}
@@ -1277,6 +1862,7 @@ function CanvasSection({
           >
             <InlineEditFrame
               active={activeElement("badge")}
+              animationClass={previewAnimationClass("badge")}
               className={cn("w-fit", alignmentPositionClass(align))}
               label="배지 바로 수정"
               onContextMenu={(event) => openContextMenu(event, index, "badge")}
@@ -1291,6 +1877,7 @@ function CanvasSection({
             </InlineEditFrame>
             <InlineEditFrame
               active={activeElement("title")}
+              animationClass={previewAnimationClass("title")}
               className="mt-5"
               label="제목 바로 수정"
               onContextMenu={(event) => openContextMenu(event, index, "title")}
@@ -1306,6 +1893,7 @@ function CanvasSection({
             </InlineEditFrame>
             <InlineEditFrame
               active={activeElement("description")}
+              animationClass={previewAnimationClass("description")}
               className={cn(
                 "mt-3 max-w-2xl",
                 alignmentPositionClass(align),
@@ -1374,6 +1962,7 @@ function CanvasSection({
           <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1fr]">
             <VisualEditable
               active={activeElement("visual")}
+              animationClass={previewAnimationClass("visual")}
               className={cn(
                 "aspect-video border border-blue-100 bg-white/60",
                 mediaPosition === "right" ? "lg:order-2" : "lg:order-1",
@@ -1387,6 +1976,7 @@ function CanvasSection({
             <div className={cn(alignClass, mediaPosition === "right" ? "lg:order-1" : "lg:order-2")}>
               <InlineEditFrame
                 active={activeElement("badge")}
+                animationClass={previewAnimationClass("badge")}
                 className="inline-block"
                 label="배지 바로 수정"
                 onContextMenu={(event) => openContextMenu(event, index, "badge")}
@@ -1401,6 +1991,7 @@ function CanvasSection({
               </InlineEditFrame>
               <InlineEditFrame
                 active={activeElement("title")}
+                animationClass={previewAnimationClass("title")}
                 className="mt-5"
                 label="제목 바로 수정"
                 onContextMenu={(event) => openContextMenu(event, index, "title")}
@@ -1416,6 +2007,7 @@ function CanvasSection({
               </InlineEditFrame>
               <InlineEditFrame
                 active={activeElement("description")}
+                animationClass={previewAnimationClass("description")}
                 className="mt-4"
                 label="설명 바로 수정"
                 onContextMenu={(event) => openContextMenu(event, index, "description")}
@@ -1445,6 +2037,7 @@ function CanvasSection({
           >
             <InlineEditFrame
               active={activeElement("title")}
+              animationClass={previewAnimationClass("title")}
               label="제목 바로 수정"
               onContextMenu={(event) => openContextMenu(event, index, "title")}
               onSelect={() => selectElementForSection("title")}
@@ -1459,6 +2052,7 @@ function CanvasSection({
             </InlineEditFrame>
             <InlineEditFrame
               active={activeElement("description")}
+              animationClass={previewAnimationClass("description")}
               className={cn(
                 "mt-4 max-w-2xl",
                 alignmentPositionClass(align),
@@ -1485,6 +2079,7 @@ function CanvasSection({
             >
               <InlineEditFrame
                 active={activeElement("button")}
+                animationClass={previewAnimationClass("button")}
                 label="버튼 문구 수정"
                 onContextMenu={(event) => openContextMenu(event, index, "button")}
                 onSelect={() => selectElementForSection("button")}
@@ -1514,6 +2109,10 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("site");
+  const [animationPreview, setAnimationPreview] = useState<{
+    element: Exclude<SelectedElement, "site">;
+    token: number;
+  } | null>(null);
   const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("settings");
   const [activeRightTab, setActiveRightTab] = useState<"content" | "style">("style");
   const [activeLibraryCategory, setActiveLibraryCategory] = useState("히어로");
@@ -1888,6 +2487,17 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
       ...draft.sections[index],
       [key]: value,
     });
+  }
+
+  function updateAnimation(
+    element: Exclude<SelectedElement, "site">,
+    value: AnimationValue,
+  ) {
+    updateSectionField(selectedIndex, animationField(element), value);
+    setAnimationPreview((current) => ({
+      element,
+      token: (current?.token ?? 0) + 1,
+    }));
   }
 
   function updateSectionItems(index: number, value: string) {
@@ -2298,6 +2908,11 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
           )}
         </section>
 
+        <AnimationControl
+          value={animationValue(selectedSection, element)}
+          onChange={(value) => updateAnimation(element, value)}
+        />
+
         {isBadge ? (
           <section className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
             <h3 className="text-sm font-semibold">배지 스타일</h3>
@@ -2454,6 +3069,11 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
             </label>
           </div>
         </section>
+
+        <AnimationControl
+          value={animationValue(selectedSection, element)}
+          onChange={(value) => updateAnimation(element, value)}
+        />
 
         <section className="space-y-4">
           <h3 className="text-sm font-semibold">버튼 배치</h3>
@@ -2667,6 +3287,11 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
             </p>
           ) : null}
         </section>
+
+        <AnimationControl
+          value={animationValue(selectedSection, "visual")}
+          onChange={(value) => updateAnimation("visual", value)}
+        />
 
         {["hero", "content"].includes(stringValue(selectedSection, "type", "content")) ? (
           <section className="space-y-3">
@@ -3242,6 +3867,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                     {draft.sections.map((section, index) => (
                       <CanvasSection
                         key={stringValue(section, "builderId") || `${stringValue(section, "type")}-${index}`}
+                        animationPreview={index === selectedIndex ? animationPreview : null}
                         design={draft.design}
                         index={index}
                         isSelected={index === selectedIndex}
@@ -4137,6 +4763,11 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                           </div>
                         </div>
                       </section>
+
+                      <AnimationControl
+                        value={animationValue(selectedSection, "section")}
+                        onChange={(value) => updateAnimation("section", value)}
+                      />
 
                       <section className="space-y-4">
                         <div>
@@ -5413,6 +6044,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                 >
                   <div className="pointer-events-none">
                     <CanvasSection
+                      animationPreview={null}
                       design={draft.design}
                       index={0}
                       isSelected={false}

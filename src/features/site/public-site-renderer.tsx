@@ -3,11 +3,20 @@ import type { CSSProperties, ReactNode } from "react";
 import type { DashboardPost } from "@/features/dashboard/content-posts-data";
 import type { DashboardPopup } from "@/features/dashboard/queries";
 import { submitPublicContact } from "@/features/site/actions";
+import { PublicSiteAnimations } from "@/features/site/public-site-animations";
 import { PublicPopups } from "@/features/site/public-popups";
 import type { Json } from "@/types/database";
 
 type PublicSection = Record<string, unknown>;
 type AlignmentValue = "left" | "center" | "right";
+type AnimationElement =
+  | "section"
+  | "badge"
+  | "title"
+  | "description"
+  | "button"
+  | "secondaryButton"
+  | "visual";
 
 type PublicDesign = {
   bodyFontFamily: string;
@@ -83,6 +92,14 @@ const defaultDesign: PublicDesign = {
   subColor: "#eff6ff",
   textColor: "#0f172a",
 };
+
+const showcaseHeroLayouts = new Set([
+  "product-canvas",
+  "centered-showcase",
+  "template-showcase",
+  "modular-assembly",
+  "editorial-contrast",
+]);
 
 const defaultPages: PublicPageItem[] = [
   { id: "home", title: "메인 페이지", path: "/", status: "public" },
@@ -461,6 +478,20 @@ function alignmentValue(
   return value === "center" || value === "right" ? value : "left";
 }
 
+function animationName(section: PublicSection, element: AnimationElement) {
+  const key =
+    element === "section"
+      ? "sectionAnimation"
+      : element === "secondaryButton"
+        ? "secondaryButtonAnimation"
+        : `${element}Animation`;
+  const value = stringValue(section, key, "none");
+
+  return value === "fade-in" || value === "bounce-in" || value === "zoom-in"
+    ? value
+    : "none";
+}
+
 function alignClass(section: PublicSection) {
   const align = alignmentValue(section, "align");
 
@@ -594,7 +625,11 @@ function VisualBlock({ section, siteName }: { section: PublicSection; siteName: 
 
   if (imageUrl) {
     return (
-      <div className="overflow-hidden border border-white/70 bg-white/60" style={{ borderRadius: radius }}>
+      <div
+        className="overflow-hidden border border-white/70 bg-white/60"
+        data-keyun-animation={animationName(section, "visual")}
+        style={{ borderRadius: radius }}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img alt="" className="h-full min-h-72 w-full object-cover" src={imageUrl} />
       </div>
@@ -604,6 +639,7 @@ function VisualBlock({ section, siteName }: { section: PublicSection; siteName: 
   return (
     <div
       className="relative min-h-80 overflow-hidden border border-white/70 bg-white/55 p-8 backdrop-blur"
+      data-keyun-animation={animationName(section, "visual")}
       style={{ borderRadius: radius }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(37,99,235,0.16),transparent_26%),radial-gradient(circle_at_80%_70%,rgba(59,130,246,0.2),transparent_30%)]" />
@@ -613,6 +649,162 @@ function VisualBlock({ section, siteName }: { section: PublicSection; siteName: 
       <div className="relative mx-auto mt-8 max-w-xs rounded-2xl border border-white/80 bg-white/70 p-5 text-center text-sm text-slate-500">
         <strong className="block text-lg text-slate-900">{siteName}</strong>
         Published with KEYUN
+      </div>
+    </div>
+  );
+}
+
+function ShowcaseVisual({
+  layout,
+  section,
+}: {
+  layout: string;
+  section: PublicSection;
+}) {
+  const imageUrl = stringValue(section, "imageUrl");
+  const sitePreview = (tone: "blue" | "green" | "warm" = "blue") => (
+    <div
+      className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white ${
+        tone === "green"
+          ? "bg-emerald-950 text-white"
+          : tone === "warm"
+            ? "bg-amber-100"
+            : ""
+      }`}
+    >
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img alt="" className="absolute inset-0 h-full w-full object-cover" src={imageUrl} />
+      ) : null}
+      <div className="relative z-10 flex h-8 items-center justify-between border-b border-current/10 px-3">
+        <span className="text-[8px] font-black">STUDIO KEYUN</span>
+        <span className="h-1 w-12 rounded bg-current/25" />
+      </div>
+      <div className="relative z-10 p-5">
+        <div className="h-1.5 w-16 rounded bg-blue-500/80" />
+        <div className="mt-4 h-3 w-32 rounded-sm bg-current/85" />
+        <div className="mt-2 h-3 w-24 rounded-sm bg-current/85" />
+        <div className="mt-4 h-1.5 w-28 rounded bg-current/20" />
+        <div className="mt-5 h-6 w-20 rounded bg-slate-950" />
+      </div>
+    </div>
+  );
+
+  if (layout === "centered-showcase") {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-2">
+        <div className="mb-2 flex items-center gap-1 border-b border-slate-100 pb-2">
+          <span className="size-1.5 rounded-full bg-red-300" />
+          <span className="size-1.5 rounded-full bg-amber-300" />
+          <span className="size-1.5 rounded-full bg-emerald-300" />
+          <span className="ml-3 h-2 flex-1 rounded bg-slate-100" />
+        </div>
+        <div className="grid min-h-72 grid-cols-[100px_1fr_110px] gap-2 max-md:grid-cols-[74px_1fr]">
+          <div className="space-y-2 bg-slate-50 p-2">
+            {["히어로", "서비스", "포트폴리오", "후기"].map((item, index) => (
+              <div
+                className={`rounded border bg-white px-2 py-2 text-[8px] ${
+                  index === 0 ? "border-blue-400 text-blue-600" : ""
+                }`}
+                key={item}
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+          {sitePreview("warm")}
+          <div className="space-y-3 bg-slate-50 p-2 max-md:hidden">
+            <div className="h-2 w-10 rounded bg-blue-500" />
+            <div className="h-12 rounded border bg-white" />
+            <div className="h-8 rounded border bg-white" />
+            <div className="h-16 rounded border bg-white" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === "template-showcase") {
+    return (
+      <div className="grid min-h-80 grid-cols-[1.15fr_0.55fr] gap-3">
+        <div className="translate-y-6">{sitePreview("green")}</div>
+        <div className="space-y-3">
+          <div className="h-48">{sitePreview("warm")}</div>
+          <div className="h-32">{sitePreview("blue")}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === "modular-assembly") {
+    return (
+      <div className="grid min-h-80 grid-cols-[0.9fr_1.15fr] items-center gap-4">
+        <div className="space-y-2">
+          {["히어로", "서비스", "가격", "후기", "문의"].map((item, index) => (
+            <div
+              className="flex h-12 items-center justify-between rounded-md border border-blue-200 bg-white px-3"
+              key={item}
+              style={{ transform: `translateX(${index * 5}px)` }}
+            >
+              <span className="text-[10px] font-bold">{item}</span>
+              <span className="text-blue-500">→</span>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-2">
+          <div className="h-28 bg-amber-50 p-4">
+            <div className="h-2 w-24 bg-slate-800" />
+            <div className="mt-2 h-1.5 w-28 bg-slate-300" />
+          </div>
+          <div className="mt-1 grid grid-cols-3 gap-1 bg-blue-50 p-3">
+            {[0, 1, 2].map((item) => <div className="h-12 bg-white" key={item} />)}
+          </div>
+          <div className="mt-1 grid grid-cols-3 gap-1 bg-emerald-50 p-3">
+            {[0, 1, 2].map((item) => <div className="h-14 bg-white" key={item} />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === "editorial-contrast") {
+    return (
+      <div className="grid min-h-80 grid-cols-[46px_1fr] gap-4">
+        <div className="flex flex-col items-center justify-around rounded-lg bg-slate-950 py-4 text-[8px] font-bold text-white">
+          <span>01</span>
+          <span className="-rotate-90 whitespace-nowrap">업종 선택</span>
+          <span>02</span>
+          <span className="-rotate-90 whitespace-nowrap">바로 게시</span>
+        </div>
+        <div className="relative">
+          <div className="absolute inset-x-0 top-0 h-44">{sitePreview("warm")}</div>
+          <div className="absolute bottom-0 left-10 right-4 h-40">{sitePreview("green")}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-80 pt-6">
+      <div className="rounded-xl border border-slate-200 bg-white p-2">
+        <div className="mb-2 flex h-7 items-center justify-between border-b px-2 text-[8px] font-bold">
+          <span>KEYUN</span>
+          <span className="text-blue-600">게시하기</span>
+        </div>
+        <div className="grid grid-cols-[90px_1fr_100px] gap-2 max-md:grid-cols-[70px_1fr]">
+          <div className="space-y-2 bg-slate-50 p-2">
+            {[0, 1, 2, 3].map((item) => <div className="h-9 rounded border bg-white" key={item} />)}
+          </div>
+          {sitePreview("blue")}
+          <div className="space-y-2 bg-slate-50 p-2 max-md:hidden">
+            <div className="h-3 w-12 bg-blue-100" />
+            <div className="h-10 border bg-white" />
+            <div className="h-14 border bg-white" />
+          </div>
+        </div>
+      </div>
+      <div className="absolute bottom-0 left-2 h-40 w-28 border-4 border-slate-900 bg-white p-1">
+        {sitePreview("blue")}
       </div>
     </div>
   );
@@ -633,6 +825,7 @@ function SectionShell({
   return (
     <section
       className="relative overflow-hidden border"
+      data-keyun-animation={animationName(section, "section")}
       style={{
         ...sectionBackground(section, design),
         ...sectionEffectStyle(section),
@@ -663,6 +856,65 @@ function SectionShell({
   );
 }
 
+function HeroCopy({
+  design,
+  section,
+  siteName,
+}: {
+  design: PublicDesign;
+  section: PublicSection;
+  siteName: string;
+}) {
+  return (
+    <div className={`max-w-2xl ${positionClass(section)} ${alignClass(section)}`}>
+      {stringValue(section, "badge") ? (
+        <p
+          className="mb-5 inline-flex rounded-full px-4 py-2 text-xs font-bold"
+          data-keyun-animation={animationName(section, "badge")}
+          style={{ backgroundColor: `${design.mainColor}12`, color: design.mainColor }}
+        >
+          {stringValue(section, "badge")}
+        </p>
+      ) : null}
+      <h1
+        className="max-w-3xl font-black leading-[1.08] tracking-normal"
+        data-keyun-animation={animationName(section, "title")}
+        style={titleStyle(section, design)}
+      >
+        {stringValue(section, "title", siteName)}
+      </h1>
+      <p
+        className="mt-5 max-w-2xl font-medium"
+        data-keyun-animation={animationName(section, "description")}
+        style={descriptionStyle(section, design)}
+      >
+        {stringValue(section, "description")}
+      </p>
+      <div className={`mt-8 flex flex-wrap items-center gap-3 ${justifyClass(section, "buttonAlign")}`}>
+        {stringValue(section, "buttonLabel") ? (
+          <a
+            className="inline-flex min-h-12 items-center justify-center px-6 font-semibold"
+            data-keyun-animation={animationName(section, "button")}
+            href={stringValue(section, "buttonLink", "#")}
+            style={buttonStyle(section, design)}
+          >
+            {stringValue(section, "buttonLabel")}
+          </a>
+        ) : null}
+        {stringValue(section, "secondaryButtonLabel") ? (
+          <a
+            className="inline-flex min-h-12 items-center justify-center rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-900"
+            data-keyun-animation={animationName(section, "secondaryButton")}
+            href="#"
+          >
+            {stringValue(section, "secondaryButtonLabel")}
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function HeroSection({
   design,
   section,
@@ -676,6 +928,32 @@ function HeroSection({
   const mediaPosition = sectionMediaPosition(section);
   const visual = <VisualBlock section={section} siteName={siteName} />;
   const isTextOnly = layout === "text-focus" || layout === "cta-focus";
+
+  if (showcaseHeroLayouts.has(layout)) {
+    const centered = layout === "centered-showcase";
+
+    return (
+      <SectionShell design={design} section={section}>
+        <div
+          className={
+            centered
+              ? "space-y-12"
+              : "grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr]"
+          }
+        >
+          <div className={centered ? "mx-auto text-center" : ""}>
+            <HeroCopy design={design} section={section} siteName={siteName} />
+          </div>
+          <div
+            className={centered ? "mx-auto w-full max-w-5xl" : ""}
+            data-keyun-animation={animationName(section, "visual")}
+          >
+            <ShowcaseVisual layout={layout} section={section} />
+          </div>
+        </div>
+      </SectionShell>
+    );
+  }
 
   return (
     <SectionShell design={design} section={section}>
@@ -691,6 +969,7 @@ function HeroSection({
           {stringValue(section, "badge") ? (
             <p
               className="mb-5 inline-flex rounded-full px-4 py-2 text-sm font-semibold"
+              data-keyun-animation={animationName(section, "badge")}
               style={{
                 backgroundColor: `${design.mainColor}14`,
                 color: design.mainColor,
@@ -699,16 +978,25 @@ function HeroSection({
               {stringValue(section, "badge")}
             </p>
           ) : null}
-          <h1 className="max-w-3xl font-bold tracking-normal" style={titleStyle(section, design)}>
+          <h1
+            className="max-w-3xl font-bold tracking-normal"
+            data-keyun-animation={animationName(section, "title")}
+            style={titleStyle(section, design)}
+          >
             {stringValue(section, "title", siteName)}
           </h1>
-          <p className="mt-6 max-w-2xl" style={descriptionStyle(section, design)}>
+          <p
+            className="mt-6 max-w-2xl"
+            data-keyun-animation={animationName(section, "description")}
+            style={descriptionStyle(section, design)}
+          >
             {stringValue(section, "description")}
           </p>
           <div className={`mt-9 flex flex-wrap items-center gap-4 ${justifyClass(section, "buttonAlign")}`}>
             {stringValue(section, "buttonLabel") ? (
               <a
                 className="inline-flex min-h-12 items-center justify-center px-6 font-semibold"
+                data-keyun-animation={animationName(section, "button")}
                 href={stringValue(section, "buttonLink", "#")}
                 style={buttonStyle(section, design)}
               >
@@ -716,7 +1004,11 @@ function HeroSection({
               </a>
             ) : null}
             {stringValue(section, "secondaryButtonLabel") ? (
-              <a className="inline-flex min-h-12 items-center justify-center px-3 text-sm font-semibold text-slate-900" href="#">
+              <a
+                className="inline-flex min-h-12 items-center justify-center px-3 text-sm font-semibold text-slate-900"
+                data-keyun-animation={animationName(section, "secondaryButton")}
+                href="#"
+              >
                 {stringValue(section, "secondaryButtonLabel")}
               </a>
             ) : null}
@@ -736,15 +1028,24 @@ function FeaturesSection({ design, section }: { design: PublicDesign; section: P
     <SectionShell design={design} section={section}>
       <div className={`max-w-4xl ${positionClass(section)} ${alignClass(section)}`}>
         {stringValue(section, "badge") ? (
-          <p className="mb-4 text-sm font-bold" style={{ color: design.mainColor }}>
+          <p
+            className="mb-4 text-sm font-bold"
+            data-keyun-animation={animationName(section, "badge")}
+            style={{ color: design.mainColor }}
+          >
             {stringValue(section, "badge")}
           </p>
         ) : null}
-        <h2 className="font-bold tracking-normal" style={titleStyle(section, design)}>
+        <h2
+          className="font-bold tracking-normal"
+          data-keyun-animation={animationName(section, "title")}
+          style={titleStyle(section, design)}
+        >
           {stringValue(section, "title")}
         </h2>
         <p
           className={`mt-4 max-w-2xl ${positionClass(section)}`}
+          data-keyun-animation={animationName(section, "description")}
           style={descriptionStyle(section, design)}
         >
           {stringValue(section, "description")}
@@ -797,14 +1098,26 @@ function ContentSection({
         {mediaPosition === "left" ? <div className="lg:order-1">{visual}</div> : null}
         <div className={`${alignClass(section)} ${mediaPosition === "right" ? "lg:order-1" : "lg:order-2"}`}>
           {stringValue(section, "badge") ? (
-            <p className="mb-4 text-sm font-bold" style={{ color: design.mainColor }}>
+            <p
+              className="mb-4 text-sm font-bold"
+              data-keyun-animation={animationName(section, "badge")}
+              style={{ color: design.mainColor }}
+            >
               {stringValue(section, "badge")}
             </p>
           ) : null}
-          <h2 className="font-bold tracking-normal" style={titleStyle(section, design)}>
+          <h2
+            className="font-bold tracking-normal"
+            data-keyun-animation={animationName(section, "title")}
+            style={titleStyle(section, design)}
+          >
             {stringValue(section, "title")}
           </h2>
-          <p className="mt-5" style={descriptionStyle(section, design)}>
+          <p
+            className="mt-5"
+            data-keyun-animation={animationName(section, "description")}
+            style={descriptionStyle(section, design)}
+          >
             {stringValue(section, "description")}
           </p>
           {stringValue(section, "bodyText") ? (
@@ -834,12 +1147,14 @@ function CtaSection({ design, section }: { design: PublicDesign; section: Public
       <div className={`max-w-4xl ${positionClass(section)} ${alignClass(section)}`}>
         <h2
           className="font-bold tracking-normal"
+          data-keyun-animation={animationName(section, "title")}
           style={titleStyle(section, design)}
         >
           {stringValue(section, "title")}
         </h2>
         <p
           className={`mt-5 max-w-2xl ${positionClass(section)}`}
+          data-keyun-animation={animationName(section, "description")}
           style={descriptionStyle(section, design)}
         >
           {stringValue(section, "description")}
@@ -848,6 +1163,7 @@ function CtaSection({ design, section }: { design: PublicDesign; section: Public
           <div className={`mt-8 flex ${justifyClass(section, "buttonAlign")}`}>
             <a
               className="inline-flex min-h-12 items-center justify-center px-6 font-semibold"
+              data-keyun-animation={animationName(section, "button")}
               href={stringValue(section, "buttonLink", "#")}
               style={buttonStyle(section, design)}
             >
@@ -1200,6 +1516,7 @@ export function PublicSiteRenderer({
         fontFamily: fontStack(design.bodyFontFamily, "system"),
       }}
     >
+      <PublicSiteAnimations />
       <PublicHeader
         design={design}
         navigation={navigation}
