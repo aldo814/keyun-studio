@@ -4699,87 +4699,108 @@ function CanvasSection({
           </div>
         ) : null}
 
-        {type === "location" ? (
-          <div className="w-full">
-            {layout === "text-only" ? (
-              <div className="grid grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <MapPin className="mt-1 size-5 shrink-0 text-blue-600" />
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">주소</p>
-                      <p className="mt-1 text-slate-700">{stringValue(section, "address", "서울특별시 강남구 테헤란로 123")}</p>
+        {type === "location" ? (() => {
+          const address = stringValue(section, "address", "");
+          const mapSrc = address
+            ? `https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed&hl=ko`
+            : "";
+          const contactRows = [
+            { icon: MapPin, label: "주소", field: "address", placeholder: "서울특별시 강남구 테헤란로 123" },
+            { icon: FileText, label: "전화", field: "phone", placeholder: "02-1234-5678" },
+            { icon: FileText, label: "이메일", field: "email", placeholder: "hello@example.com" },
+          ] as const;
+          return (
+            <div className="w-full">
+              {layout === "text-only" ? (
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    {contactRows.map(({ icon: Icon, label, field, placeholder }) => (
+                      <div key={field} className="flex gap-3">
+                        <Icon className="mt-1 size-5 shrink-0 text-blue-600" />
+                        <div className="flex-1">
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                          <Input
+                            className="mt-1 h-auto border-0 bg-transparent p-0 text-sm text-slate-700 shadow-none focus-visible:ring-0"
+                            placeholder={placeholder}
+                            value={stringValue(section, field, "")}
+                            onChange={(e) => updateField(index, field, e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <FileText className="mt-1 size-5 shrink-0 text-blue-600" />
+                      <div className="flex-1">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">교통편</p>
+                        <div className="mt-1 space-y-1">
+                          {itemList(section).map((item, i) => {
+                            const [label, desc] = item.split("|");
+                            return <p key={i} className="text-sm text-slate-600"><span className="font-semibold">{label}</span> {desc}</p>;
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-3">
-                    <FileText className="mt-1 size-5 shrink-0 text-blue-600" />
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">교통편</p>
-                      <div className="mt-1 space-y-1">
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-6">
+                  {/* 지도 */}
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100" style={{ height: 320 }}>
+                    {mapSrc ? (
+                      <iframe
+                        allowFullScreen
+                        className="h-full w-full border-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={mapSrc}
+                        title="지도"
+                      />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
+                        <MapPin className="size-10" />
+                        <p className="text-sm">주소를 입력하면 지도가 표시됩니다</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* 정보 */}
+                  <div className="space-y-4 py-2">
+                    <Input
+                      className="h-auto border-0 bg-transparent p-0 text-lg font-bold text-slate-800 shadow-none focus-visible:ring-0"
+                      placeholder="오시는 길"
+                      value={stringValue(section, "title", "")}
+                      onChange={(e) => updateField(index, "title", e.target.value)}
+                    />
+                    <div className="space-y-3">
+                      {contactRows.map(({ icon: Icon, label, field, placeholder }) => (
+                        <div key={field} className="flex gap-3">
+                          <Icon className="mt-0.5 size-4 shrink-0 text-blue-600" />
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-slate-400">{label}</p>
+                            <Input
+                              className="h-auto border-0 bg-transparent p-0 text-sm text-slate-700 shadow-none focus-visible:ring-0"
+                              placeholder={placeholder}
+                              value={stringValue(section, field, "")}
+                              onChange={(e) => updateField(index, field, e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      <div className="pt-1">
+                        <p className="text-xs font-bold text-slate-400">교통편</p>
                         {itemList(section).map((item, i) => {
                           const [label, desc] = item.split("|");
-                          return <p key={i} className="text-sm text-slate-600"><span className="font-semibold">{label}</span> {desc}</p>;
+                          return <p key={i} className="mt-1 text-sm text-slate-600"><span className="font-semibold text-blue-600">{label}</span> {desc}</p>;
                         })}
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <FileText className="mt-1 size-5 shrink-0 text-blue-600" />
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">전화</p>
-                      <p className="mt-1 text-slate-700">{stringValue(section, "phone", "02-1234-5678")}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <FileText className="mt-1 size-5 shrink-0 text-blue-600" />
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">이메일</p>
-                      <p className="mt-1 text-slate-700">{stringValue(section, "email", "hello@example.com")}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-6">
-                <div className="overflow-hidden rounded-2xl bg-slate-100">
-                  <div className="flex h-64 items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
-                    <div className="text-center">
-                      <MapPin className="mx-auto size-10 text-slate-400" />
-                      <p className="mt-2 text-sm text-slate-400">지도 영역</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4 py-2">
-                  <p className="text-lg font-bold text-slate-800">{stringValue(section, "title", "오시는 길")}</p>
-                  <div className="space-y-3">
-                    {[
-                      { icon: MapPin, label: "주소", val: stringValue(section, "address", "서울특별시 강남구 테헤란로 123") },
-                      { icon: FileText, label: "전화", val: stringValue(section, "phone", "02-1234-5678") },
-                      { icon: FileText, label: "이메일", val: stringValue(section, "email", "hello@example.com") },
-                    ].map(({ icon: Icon, label, val }) => (
-                      <div key={label} className="flex gap-3">
-                        <Icon className="mt-0.5 size-4 shrink-0 text-blue-600" />
-                        <div>
-                          <p className="text-xs font-bold text-slate-400">{label}</p>
-                          <p className="text-sm text-slate-700">{val}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="pt-1">
-                      <p className="text-xs font-bold text-slate-400">교통편</p>
-                      {itemList(section).map((item, i) => {
-                        const [label, desc] = item.split("|");
-                        return <p key={i} className="mt-1 text-sm text-slate-600"><span className="font-semibold text-blue-600">{label}</span> {desc}</p>;
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : null}
+              )}
+            </div>
+          );
+        })() : null}
 
         {type === "partners" ? (
           <div className="w-full">
