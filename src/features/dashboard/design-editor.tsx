@@ -31,6 +31,7 @@ import {
   publishSite,
   updateDraftJson,
 } from "@/features/dashboard/actions";
+import { initialBoards } from "@/features/dashboard/content-posts-data";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/types/database";
 
@@ -1380,6 +1381,7 @@ function createSection(type: string, layout?: string): EditorSection {
       ...base,
       align: "left",
       badge: "",
+      boardName: "",
       description: "",
       postsPerPage: "10",
       title: "",
@@ -9363,6 +9365,37 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                       ) : null}
 
                       {/* items 편집기 — 타입별 안내 문구 포함 */}
+                      {/* 게시판 선택 — board 타입 전용 */}
+                      {stringValue(selectedSection, "type") === "board" ? (
+                        <div className="space-y-4">
+                          <label className="block space-y-2">
+                            <span className="text-sm font-semibold">게시판 선택</span>
+                            <p className="text-xs text-slate-400">표시할 게시판을 선택하세요</p>
+                            <select
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                              value={stringValue(selectedSection, "boardName", "")}
+                              onChange={(e) => updateSectionField(selectedIndex, "boardName", e.target.value)}
+                            >
+                              <option value="">전체 게시글</option>
+                              {initialBoards.map((board) => (
+                                <option key={board.id ?? board.name} value={board.name}>{board.name}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="block space-y-2">
+                            <span className="text-sm font-semibold">표시 개수</span>
+                            <Input
+                              className="h-9"
+                              max="50"
+                              min="1"
+                              type="number"
+                              value={stringValue(selectedSection, "postsPerPage", "10")}
+                              onChange={(e) => updateSectionField(selectedIndex, "postsPerPage", e.target.value)}
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+
                       {(() => {
                         const t = stringValue(selectedSection, "type");
                         const itemsTypes: Record<string, { label: string; hint: string }> = {

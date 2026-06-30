@@ -2438,15 +2438,89 @@ function DownloadsSection({ design, section }: { design: PublicDesign; section: 
 }
 
 // ── BoardSection ─────────────────────────────────────────
-function BoardSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+function BoardSection({ design, posts, section, siteSlug }: { design: PublicDesign; posts: DashboardPost[]; section: PublicSection; siteSlug: string }) {
   const layout = stringValue(section, "layout", "list");
+  const boardName = stringValue(section, "boardName", "");
+  const perPage = Math.max(1, Number(stringValue(section, "postsPerPage", "10")) || 10);
+  const filtered = (boardName ? posts.filter((p) => p.board === boardName) : posts).slice(0, perPage);
+
+  function postHref(post: DashboardPost) {
+    return `/s/${siteSlug}/posts/${post.slug || post.id}`;
+  }
+
   return (
     <SectionShell design={design} section={section}>
       <SectionHeader design={design} section={section} />
-      <div className="mt-10 rounded-xl border bg-white/80 p-4 text-center text-sm text-slate-400" style={childCardStyle(section)}>
-        게시판 데이터는 콘텐츠 관리에서 등록한 글이 표시됩니다.
-        <p className="mt-1 text-xs">(layout: {layout})</p>
-      </div>
+      {filtered.length === 0 ? (
+        <div className="mt-10 rounded-xl border bg-white/80 p-8 text-center text-sm text-slate-400" style={childCardStyle(section)}>
+          {boardName ? `"${boardName}" 게시판에 게시글이 없습니다.` : "등록된 게시글이 없습니다."}
+        </div>
+      ) : layout === "gallery" ? (
+        <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3">
+          {filtered.map((post) => (
+            <a key={post.id} className="group overflow-hidden rounded-xl bg-white/80 shadow-sm transition hover:shadow-md" href={postHref(post)} style={childCardStyle(section)}>
+              <div className="h-32 bg-gradient-to-br from-slate-100 to-slate-200" />
+              <div className="p-3">
+                <span className="text-xs font-bold" style={{ color: design.mainColor }}>{post.board}</span>
+                <p className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug">{post.title}</p>
+                <p className="mt-1.5 text-xs text-slate-400">{post.updatedAt}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : layout === "news" ? (
+        <div className="mt-10 space-y-4">
+          {filtered.map((post) => (
+            <a key={post.id} className="flex gap-4 rounded-xl bg-white/80 p-4 transition hover:opacity-80" href={postHref(post)} style={childCardStyle(section)}>
+              <div className="size-16 shrink-0 rounded-lg bg-gradient-to-br from-slate-100 to-blue-100" />
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold" style={{ color: design.mainColor }}>{post.board}</span>
+                <p className="mt-0.5 truncate font-semibold">{post.title}</p>
+                {post.summary && <p className="mt-1 line-clamp-2 text-sm text-slate-400">{post.summary}</p>}
+                <p className="mt-1.5 text-xs text-slate-400">{post.updatedAt}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : layout === "notice" ? (
+        <div className="mt-10 overflow-hidden rounded-xl border bg-white/80" style={childCardStyle(section)}>
+          {filtered.map((post) => (
+            <a key={post.id} className={`flex items-center gap-3 border-b border-slate-100 px-5 py-3.5 last:border-0 transition hover:bg-slate-50 ${post.pinned ? "bg-blue-50/60" : ""}`} href={postHref(post)}>
+              {post.pinned && <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-bold" style={{ color: design.mainColor }}>공지</span>}
+              <span className="flex-1 truncate text-sm font-medium">{post.title}</span>
+              <span className="shrink-0 text-xs text-slate-400">{post.updatedAt}</span>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-10 overflow-hidden rounded-xl border bg-white/80" style={childCardStyle(section)}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50 text-xs text-slate-400">
+                <th className="py-2.5 pl-5 text-left font-medium">번호</th>
+                <th className="py-2.5 text-left font-medium">제목</th>
+                <th className="hidden py-2.5 text-left font-medium sm:table-cell">작성자</th>
+                <th className="py-2.5 pr-5 text-right font-medium">날짜</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtered.map((post, i) => (
+                <tr key={post.id} className="hover:bg-slate-50">
+                  <td className="py-3 pl-5 text-slate-400">{filtered.length - i}</td>
+                  <td className="py-3 pr-3">
+                    <a className="hover:underline" href={postHref(post)}>
+                      {post.pinned && <span className="mr-1.5 rounded bg-blue-100 px-1 py-0.5 text-[10px] font-bold" style={{ color: design.mainColor }}>공지</span>}
+                      {post.title}
+                    </a>
+                  </td>
+                  <td className="hidden py-3 text-slate-500 sm:table-cell">{post.author}</td>
+                  <td className="py-3 pr-5 text-right text-slate-400">{post.updatedAt}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </SectionShell>
   );
 }
@@ -2499,12 +2573,16 @@ function SectionHeader({ design, section }: { design: PublicDesign; section: Pub
 
 function PublicSectionRenderer({
   design,
+  posts,
   section,
   siteName,
+  siteSlug,
 }: {
   design: PublicDesign;
+  posts: DashboardPost[];
   section: PublicSection;
   siteName: string;
+  siteSlug: string;
 }) {
   const type = stringValue(section, "type", "content");
 
@@ -2529,7 +2607,7 @@ function PublicSectionRenderer({
   if (type === "photo-gallery") return <PhotoGallerySection design={design} section={section} />;
   if (type === "jobs") return <JobsSection design={design} section={section} />;
   if (type === "downloads") return <DownloadsSection design={design} section={section} />;
-  if (type === "board") return <BoardSection design={design} section={section} />;
+  if (type === "board") return <BoardSection design={design} posts={posts} section={section} siteSlug={siteSlug} />;
   if (type === "embed-form") return <EmbedFormSection design={design} section={section} />;
 
   // content — 멀티블록 지원
@@ -2605,8 +2683,10 @@ export function PublicSiteRenderer({
           <PublicSectionRenderer
             design={design}
             key={stringValue(section, "builderId", `${stringValue(section, "type", "section")}-${index}`)}
+            posts={posts}
             section={section}
             siteName={localizedSiteName}
+            siteSlug={siteSlug}
           />
         ))}
         {sections.length === 0 ? (
