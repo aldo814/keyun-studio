@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   BarChart3, Check, ChevronDown, Copy, CreditCard, Eye, FileText, GripVertical,
@@ -24,7 +25,11 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { publishSite, updateDraftJson } from "@/features/dashboard/actions";
+import {
+  createEditorPage,
+  publishSite,
+  updateDraftJson,
+} from "@/features/dashboard/actions";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/types/database";
 
@@ -97,8 +102,11 @@ type DesignEditorProps = {
   page: {
     id: string;
     draftJson: Json;
+    path: string;
+    title: string;
     updatedAt: string;
   };
+  sitePages: EditorPageItem[];
 };
 
 type ModulePreset = {
@@ -3471,7 +3479,8 @@ function CanvasSection({
   );
 }
 
-export function DesignEditor({ site, page }: DesignEditorProps) {
+export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
+  const router = useRouter();
   const [draft, setDraft] = useState<EditableDraft>(() => toEditableJson(page.draftJson));
   const [savedDraft, setSavedDraft] = useState<EditableDraft>(() =>
     toEditableJson(page.draftJson),
@@ -3496,13 +3505,19 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
   const [isSectionLibraryOpen, setIsSectionLibraryOpen] = useState(false);
   const [isLibraryFullOpen, setIsLibraryFullOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [leftPanel, setLeftPanel] = useState<"sections" | "settings">("settings");
+  const [leftPanel, setLeftPanel] =
+    useState<"pages" | "sections" | "settings">("settings");
   const [settingsSubPanel, setSettingsSubPanel] =
     useState<null | "language" | "pages" | "menu" | "footer">(null);
   const [headerSettingsTab, setHeaderSettingsTab] = useState<"layout" | "color" | "menu">("layout");
   const [footerSettingsTab, setFooterSettingsTab] = useState<"layout" | "color">("layout");
   const [saveMessage, setSaveMessage] = useState("저장 전 상태");
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreatingPage, setIsCreatingPage] = useState(false);
+  const [isPageComposerOpen, setIsPageComposerOpen] = useState(false);
+  const [isPagePathTouched, setIsPagePathTouched] = useState(false);
+  const [newPageTitle, setNewPageTitle] = useState("");
+  const [newPagePath, setNewPagePath] = useState("");
   const [uploadMessage, setUploadMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [visualUploadIndex, setVisualUploadIndex] = useState(0);
@@ -3756,23 +3771,55 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
     );
   }
 
-  function addPage() {
-    const nextIndex = draft.pages.length + 1;
-    const title = `새 페이지 ${nextIndex}`;
-    const page: EditorPageItem = {
-      id: `page-${Date.now()}`,
-      path: slugifyPath(title),
-      status: "private",
-      title,
-    };
+  async function addPage() {
+    const title = newPageTitle.trim();
 
-    updateDraft({
-      navigation: [
-        ...draft.navigation,
-        { enabled: false, id: `nav-${Date.now()}`, label: title, pageId: page.id },
-      ],
-      pages: [...draft.pages, page],
-    });
+    if (!title) {
+      setSaveMessage("페이지명을 입력해 주세요.");
+      return;
+    }
+
+    if (isDemoSite) {
+      setSaveMessage("데모에서는 실제 페이지를 추가할 수 없습니다.");
+      return;
+    }
+
+    setIsCreatingPage(true);
+    setSaveMessage("새 페이지를 만드는 중...");
+
+    try {
+      const formData = new FormData();
+      formData.set("site_id", site.id);
+      formData.set("title", title);
+      formData.set("path", newPagePath);
+      const createdPage = await createEditorPage(formData);
+
+      setNewPageTitle("");
+      setNewPagePath("");
+      setIsPagePathTouched(false);
+      setIsPageComposerOpen(false);
+      setSaveMessage("새 페이지를 만들었습니다.");
+      router.push(`/dashboard/editor/${site.id}?pageId=${createdPage.id}`);
+      router.refresh();
+    } catch (error) {
+      setSaveMessage(
+        error instanceof Error ? error.message : "페이지 생성 중 문제가 생겼습니다.",
+      );
+    } finally {
+      setIsCreatingPage(false);
+    }
+  }
+
+  function openEditorPage(pageId: string) {
+    if (pageId === page.id) return;
+    if (
+      hasUnsavedChanges &&
+      !window.confirm("저장하지 않은 변경사항이 있습니다. 다른 페이지로 이동할까요?")
+    ) {
+      return;
+    }
+
+    router.push(`/dashboard/editor/${site.id}?pageId=${pageId}`);
   }
 
   function duplicatePage(pageId: string) {
@@ -4279,7 +4326,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
       return;
     }
 
-    const previewUrl = `/dashboard/preview/${site.id}`;
+    const previewUrl = `/dashboard/preview/${site.id}?pageId=${page.id}`;
 
     if (previewWindow) {
       previewWindow.location.href = previewUrl;
@@ -5571,8 +5618,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                   <Home className="size-5 text-blue-600" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">KEYUN Official</p>
-                  <p className="truncate text-xs text-slate-500">https://keyun.io</p>
+                  <p className="truncate text-sm font-semibold">{site.name}</p>
+                  <p className="truncate text-xs text-slate-500">/s/{site.slug}</p>
                 </div>
                 <ChevronDown className="ml-auto size-4 text-slate-400" />
               </div>
@@ -5580,8 +5627,8 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
 
             <nav className="mt-8 space-y-1">
               {[
-                { label: "디자인", icon: Palette, panel: "sections" as const },
                 { label: "기본 설정", icon: Settings, panel: "settings" as const },
+                { label: "디자인", icon: Palette, panel: "sections" as const },
               ].map((item) => {
                 const Icon = item.icon;
                 const isActive = leftPanel === item.panel;
@@ -5609,12 +5656,254 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
               })}
             </nav>
 
-            {/* 디자인 탭 — 섹션 순서 */}
+            {leftPanel === "pages" ? (
+              <div className="mt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">페이지</p>
+                    <p className="mt-1 text-xs text-slate-400">{sitePages.length}개</p>
+                  </div>
+                  <Button
+                    className="h-8 px-3 text-xs"
+                    type="button"
+                    onClick={() => setIsPageComposerOpen((current) => !current)}
+                  >
+                    <Plus className="size-3.5" />
+                    추가
+                  </Button>
+                </div>
+
+                {isPageComposerOpen ? (
+                  <div className="mt-3 space-y-3 rounded-lg border border-blue-200 bg-white p-3">
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500">
+                        페이지명
+                      </span>
+                      <Input
+                        autoFocus
+                        className="h-9 text-sm"
+                        placeholder="예: 회사 소개"
+                        value={newPageTitle}
+                        onChange={(event) => {
+                          const title = event.target.value;
+                          setNewPageTitle(title);
+                          if (!isPagePathTouched) {
+                            setNewPagePath(slugifyPath(title).replace(/^\//, ""));
+                          }
+                        }}
+                      />
+                    </label>
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500">
+                        페이지 주소
+                      </span>
+                      <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-2">
+                        <span className="text-xs text-slate-400">/</span>
+                        <input
+                          className="min-w-0 flex-1 bg-transparent px-1 text-xs outline-none"
+                          placeholder="company"
+                          value={newPagePath}
+                          onChange={(event) => {
+                            setIsPagePathTouched(true);
+                            setNewPagePath(
+                              event.target.value.replace(/^\/+/, "").replace(/\s+/g, "-"),
+                            );
+                          }}
+                        />
+                      </div>
+                    </label>
+                    <div className="flex gap-2">
+                      <Button
+                        className="h-8 flex-1 text-xs"
+                        disabled={isCreatingPage || !newPageTitle.trim()}
+                        type="button"
+                        onClick={() => void addPage()}
+                      >
+                        {isCreatingPage ? "생성 중..." : "페이지 만들기"}
+                      </Button>
+                      <Button
+                        className="h-8 px-3 text-xs"
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsPageComposerOpen(false)}
+                      >
+                        취소
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="mt-4 space-y-2">
+                  {sitePages.map((sitePage) => {
+                    const isActive = sitePage.id === page.id;
+                    const PageIcon = sitePage.path === "/" ? Home : FileText;
+
+                    return (
+                      <button
+                        aria-current={isActive ? "page" : undefined}
+                        className={cn(
+                          "group flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors",
+                          isActive
+                            ? "border-blue-300 bg-blue-50"
+                            : "border-slate-200 bg-white hover:border-blue-200",
+                        )}
+                        key={sitePage.id}
+                        type="button"
+                        onClick={() => openEditorPage(sitePage.id)}
+                      >
+                        <span
+                          className={cn(
+                            "flex size-9 shrink-0 items-center justify-center rounded-md",
+                            isActive
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600",
+                          )}
+                        >
+                          <PageIcon className="size-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold">
+                            {sitePage.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11px] text-slate-400">
+                            {sitePage.path}
+                          </span>
+                        </span>
+                        <span
+                          className={cn(
+                            "size-2 shrink-0 rounded-full",
+                            sitePage.status === "public"
+                              ? "bg-emerald-500"
+                              : "bg-slate-300",
+                          )}
+                          title={sitePage.status === "public" ? "공개" : "비공개"}
+                        />
+                        <ArrowRight
+                          className={cn(
+                            "size-4 shrink-0 text-slate-300 transition-transform",
+                            !isActive && "group-hover:translate-x-0.5 group-hover:text-blue-500",
+                          )}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {/* 디자인 탭 — 페이지 스위처 + 섹션 순서 */}
             {leftPanel === "sections" && (
               <>
-                <div className="mt-8">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-sm font-semibold">섹션 위치</p>
+                {/* 페이지 스위처 */}
+                <div className="mt-6">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">페이지</p>
+                    <button
+                      className="flex size-6 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                      type="button"
+                      title="새 페이지 추가"
+                      onClick={() => setIsPageComposerOpen((v) => !v)}
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                  </div>
+
+                  {isPageComposerOpen && (
+                    <div className="mb-3 space-y-3 rounded-lg border border-blue-200 bg-white p-3">
+                      <label className="block space-y-1.5">
+                        <span className="text-[11px] font-semibold text-slate-500">페이지명</span>
+                        <Input
+                          autoFocus
+                          className="h-9 text-sm"
+                          placeholder="예: 서비스 소개"
+                          value={newPageTitle}
+                          onChange={(event) => {
+                            const title = event.target.value;
+                            setNewPageTitle(title);
+                            if (!isPagePathTouched) {
+                              setNewPagePath(slugifyPath(title).replace(/^\//, ""));
+                            }
+                          }}
+                        />
+                      </label>
+                      <label className="block space-y-1.5">
+                        <span className="text-[11px] font-semibold text-slate-500">페이지 주소</span>
+                        <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-2">
+                          <span className="text-xs text-slate-400">/</span>
+                          <input
+                            className="min-w-0 flex-1 bg-transparent px-1 text-xs outline-none"
+                            placeholder="service"
+                            value={newPagePath}
+                            onChange={(event) => {
+                              setIsPagePathTouched(true);
+                              setNewPagePath(
+                                event.target.value.replace(/^\/+/, "").replace(/\s+/g, "-"),
+                              );
+                            }}
+                          />
+                        </div>
+                      </label>
+                      <div className="flex gap-2">
+                        <Button
+                          className="h-8 flex-1 text-xs"
+                          disabled={isCreatingPage || !newPageTitle.trim()}
+                          type="button"
+                          onClick={() => void addPage()}
+                        >
+                          {isCreatingPage ? "생성 중..." : "페이지 만들기"}
+                        </Button>
+                        <Button
+                          className="h-8 px-3 text-xs"
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsPageComposerOpen(false)}
+                        >
+                          취소
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    {sitePages.map((sitePage) => {
+                      const isActive = sitePage.id === page.id;
+                      const PageIcon = sitePage.path === "/" ? Home : FileText;
+                      return (
+                        <button
+                          key={sitePage.id}
+                          aria-current={isActive ? "page" : undefined}
+                          className={cn(
+                            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors",
+                            isActive
+                              ? "bg-blue-600 text-white"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                          )}
+                          type="button"
+                          onClick={() => openEditorPage(sitePage.id)}
+                        >
+                          <PageIcon className={cn("size-3.5 shrink-0", isActive ? "text-blue-200" : "text-slate-400")} />
+                          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                            {sitePage.title}
+                          </span>
+                          <span
+                            className={cn(
+                              "size-1.5 shrink-0 rounded-full",
+                              sitePage.status === "public" ? "bg-emerald-400" : isActive ? "bg-blue-300" : "bg-slate-300",
+                            )}
+                            title={sitePage.status === "public" ? "공개" : "비공개"}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="my-5 border-t border-slate-100" />
+
+                {/* 섹션 목록 */}
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">섹션 위치</p>
                     <span className="text-xs text-slate-400">Drag</span>
                   </div>
                   <div className="space-y-2">
@@ -5681,24 +5970,6 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
                               EN
                             </span>
                             <Languages className="size-4 text-slate-400" />
-                          </div>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: "pages" as const,
-                      label: "페이지 관리",
-                      desc: "페이지 추가 · 순서 · 공개 설정",
-                      preview: (
-                        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-                          <div className="space-y-1.5">
-                            {draft.pages.slice(0, 4).map((page, index) => (
-                              <div key={page.id} className="flex items-center gap-2">
-                                <span className="size-4 rounded bg-blue-100 text-[9px] font-bold leading-4 text-blue-600">{index + 1}</span>
-                                <span className="h-1.5 flex-1 rounded-full bg-slate-200" />
-                                <span className={cn("h-3 w-8 rounded-full", page.status === "public" ? "bg-emerald-100" : "bg-slate-200")} />
-                              </div>
-                            ))}
                           </div>
                         </div>
                       ),
@@ -5785,7 +6056,7 @@ export function DesignEditor({ site, page }: DesignEditorProps) {
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-slate-500">디자인</span>
                 <span className="text-slate-300">&gt;</span>
-                <span className="font-semibold">메인 페이지</span>
+                <span className="font-semibold">{page.title}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Button size="icon" type="button" variant="ghost">
