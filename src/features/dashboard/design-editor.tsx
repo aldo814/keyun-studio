@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
-  BarChart3, Check, ChevronDown, Copy, CreditCard, Eye, FileText, GripVertical,
-  HelpCircle, Home, Image as ImageIcon, Languages, Laptop, Layers3, Monitor,
-  MoreHorizontal, Palette, Plus, Settings, Smartphone, Sparkles, Star, Tablet,
-  Trash2, UploadCloud, Users, WandSparkles, X, ZoomIn,
+  BarChart3, Check, ChevronDown, ClipboardList, Copy, CreditCard, Eye, FileText,
+  GripVertical, HelpCircle, Home, Image as ImageIcon, Inbox, Languages, Laptop,
+  Layers3, LayoutGrid, Monitor, MoreHorizontal, Newspaper, Palette, Plus, Settings,
+  Smartphone, Sparkles, Star, Tablet, Trash2, UploadCloud, Users, WandSparkles, X, ZoomIn,
 } from "lucide-react";
 import {
   useEffect,
@@ -180,6 +180,8 @@ const sectionTypes = [
   { value: "team", label: "팀", icon: Users },
   { value: "subhero", label: "서브 비주얼", icon: ImageIcon },
   { value: "breadcrumb", label: "브레드크럼", icon: ChevronDown },
+  { value: "board", label: "게시판", icon: Newspaper },
+  { value: "embed-form", label: "폼", icon: ClipboardList },
 ];
 
 const modulePresets: ModulePreset[] = [
@@ -380,6 +382,64 @@ const modulePresets: ModulePreset[] = [
     layout: "list",
     title: "팀 리스트",
     type: "team",
+  },
+  // ── 게시판 ──────────────────────────────────────
+  {
+    category: "게시판",
+    description: "제목·날짜·작성자를 테이블로 나열하는 기본형 목록",
+    layout: "list",
+    title: "목록형 게시판",
+    type: "board",
+  },
+  {
+    category: "게시판",
+    description: "썸네일 이미지를 카드 그리드로 보여주는 갤러리형",
+    layout: "gallery",
+    title: "갤러리형 게시판",
+    type: "board",
+  },
+  {
+    category: "게시판",
+    description: "최신 글을 뉴스레터처럼 카드로 나열하는 구성",
+    layout: "news",
+    title: "뉴스형 게시판",
+    type: "board",
+  },
+  {
+    category: "게시판",
+    description: "주요 공지사항을 강조해서 보여주는 구성",
+    layout: "notice",
+    title: "공지사항형",
+    type: "board",
+  },
+  // ── 폼 ──────────────────────────────────────────
+  {
+    category: "폼",
+    description: "이름·이메일·내용을 입력받는 기본 문의 폼",
+    layout: "contact",
+    title: "문의 폼",
+    type: "embed-form",
+  },
+  {
+    category: "폼",
+    description: "이메일 주소만 받아 뉴스레터를 구독하는 폼",
+    layout: "newsletter",
+    title: "뉴스레터 구독 폼",
+    type: "embed-form",
+  },
+  {
+    category: "폼",
+    description: "상담 일정·내용을 받는 상담 신청 폼",
+    layout: "consult",
+    title: "상담 신청 폼",
+    type: "embed-form",
+  },
+  {
+    category: "폼",
+    description: "여러 항목을 체크하는 설문 폼",
+    layout: "survey",
+    title: "설문 폼",
+    type: "embed-form",
   },
   // ── 서브페이지 전용 ─────────────────────────────
   {
@@ -791,7 +851,11 @@ function createSection(type: string, layout?: string): EditorSection {
                       ? "banner"
                       : type === "breadcrumb"
                         ? "default"
-                        : "media-left");
+                        : type === "board"
+                          ? "list"
+                          : type === "embed-form"
+                            ? "contact"
+                            : "media-left");
 
   const base = {
     builderId: createSectionId(type),
@@ -933,6 +997,28 @@ function createSection(type: string, layout?: string): EditorSection {
         "최마케|CMO|브랜드 & 그로스",
       ],
       title: "팀을 소개합니다",
+    };
+  }
+
+  if (type === "board") {
+    return {
+      ...base,
+      align: "left",
+      badge: "",
+      description: "",
+      postsPerPage: "10",
+      title: "",
+    };
+  }
+
+  if (type === "embed-form") {
+    return {
+      ...base,
+      align: "center",
+      badge: "",
+      buttonLabel: layout === "newsletter" ? "구독하기" : layout === "consult" ? "상담 신청" : "보내기",
+      description: "",
+      title: "",
     };
   }
 
@@ -1950,6 +2036,104 @@ function MiniModulePreview({ preset }: { preset: ModulePreset }) {
           <div className="mt-3 border-t border-slate-100 pt-2">
             <div className="h-3 w-28 rounded bg-slate-800" />
             <div className="mt-1 h-1.5 w-20 rounded bg-slate-200" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "board") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "gallery" ? (
+          <div className="grid grid-cols-3 gap-1">
+            {[0,1,2,3,4,5].map((i) => (
+              <div key={i} className="h-7 rounded bg-gradient-to-br from-slate-100 to-slate-200" />
+            ))}
+          </div>
+        ) : preset.layout === "news" ? (
+          <div className="space-y-1.5">
+            {[0,1,2].map((i) => (
+              <div key={i} className="flex gap-1.5">
+                <div className="size-7 shrink-0 rounded bg-slate-100" />
+                <div className="flex-1 space-y-0.5">
+                  <div className="h-1.5 w-full rounded bg-slate-700" />
+                  <div className="h-1 w-3/4 rounded bg-slate-200" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : preset.layout === "notice" ? (
+          <div className="divide-y divide-slate-100">
+            {[{ pin: true, title: "공지" }, { pin: true, title: "안내" }, { pin: false, title: "업데이트" }].map((item, i) => (
+              <div key={i} className={cn("flex items-center gap-1 py-1", item.pin && "bg-blue-50/50")}>
+                {item.pin && <div className="h-2 w-4 rounded bg-blue-200" />}
+                <div className="h-1 flex-1 rounded bg-slate-600" />
+                <div className="h-1 w-5 rounded bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* list */
+          <div>
+            <div className="mb-1 flex gap-2 border-b border-slate-100 pb-1">
+              <div className="h-1 w-4 rounded bg-slate-300" />
+              <div className="h-1 flex-1 rounded bg-slate-300" />
+              <div className="h-1 w-6 rounded bg-slate-300" />
+            </div>
+            {[0,1,2].map((i) => (
+              <div key={i} className="flex gap-2 py-1">
+                <div className="h-1 w-4 rounded bg-slate-200" />
+                <div className="h-1 flex-1 rounded bg-slate-600" />
+                <div className="h-1 w-6 rounded bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (preset.type === "embed-form") {
+    return (
+      <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
+        {preset.layout === "newsletter" ? (
+          <div className="flex h-full flex-col justify-center gap-1.5">
+            <div className="h-1.5 w-20 rounded bg-slate-700" />
+            <div className="flex gap-1">
+              <div className="h-5 flex-1 rounded border border-slate-200 bg-slate-50" />
+              <div className="h-5 w-10 rounded bg-blue-600" />
+            </div>
+          </div>
+        ) : preset.layout === "survey" ? (
+          <div className="space-y-1.5">
+            {[0,1,2].map((i) => (
+              <div key={i}>
+                <div className="mb-0.5 h-1 w-16 rounded bg-slate-600" />
+                {i === 1 ? (
+                  <div className="flex gap-1.5">
+                    {[0,1,2,3].map((j) => (
+                      <div key={j} className="flex items-center gap-0.5">
+                        <div className="size-2 rounded-full border border-slate-300" />
+                        <div className="h-0.5 w-4 rounded bg-slate-200" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-3 w-full rounded border border-slate-100 bg-slate-50" />
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* contact / consult */
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-2 gap-1">
+              <div className="h-4 rounded border border-slate-100 bg-slate-50" />
+              <div className="h-4 rounded border border-slate-100 bg-slate-50" />
+            </div>
+            <div className="h-6 w-full rounded border border-slate-100 bg-slate-50" />
+            <div className="h-4 w-full rounded bg-blue-600" />
           </div>
         )}
       </div>
@@ -3711,6 +3895,210 @@ function CanvasSection({
                 </div>
               )}
             </nav>
+          </div>
+        ) : null}
+
+        {type === "board" ? (
+          <div className="w-full">
+            {/* 게시판 프리뷰 — 실제 데이터는 공개 렌더링 시 주입 */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              {/* 상단 툴바 */}
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  {layout === "gallery" ? (
+                    <LayoutGrid className="size-4 text-slate-400" />
+                  ) : (
+                    <Newspaper className="size-4 text-slate-400" />
+                  )}
+                  <span className="text-sm font-semibold text-slate-600">
+                    {layout === "gallery" ? "갤러리" : layout === "news" ? "뉴스" : layout === "notice" ? "공지사항" : "게시판"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-7 w-24 rounded border border-slate-200 bg-slate-50 px-2 text-xs flex items-center text-slate-400">검색</div>
+                </div>
+              </div>
+
+              {layout === "gallery" ? (
+                <div className="grid grid-cols-3 gap-3 p-4">
+                  {[
+                    { w: "w-full", h: "h-24", tag: "디자인" },
+                    { w: "w-full", h: "h-24", tag: "개발" },
+                    { w: "w-full", h: "h-24", tag: "마케팅" },
+                    { w: "w-full", h: "h-24", tag: "공지" },
+                    { w: "w-full", h: "h-24", tag: "이벤트" },
+                    { w: "w-full", h: "h-24", tag: "소식" },
+                  ].map((item, i) => (
+                    <div key={i} className="overflow-hidden rounded-lg border border-slate-100">
+                      <div className={cn(item.h, "bg-gradient-to-br from-slate-100 to-slate-200 flex items-end p-2")}>
+                        <span className="rounded bg-blue-600/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">{item.tag}</span>
+                      </div>
+                      <div className="p-2">
+                        <div className="h-1.5 w-full rounded bg-slate-200" />
+                        <div className="mt-1 h-1 w-3/4 rounded bg-slate-100" />
+                        <div className="mt-2 text-[10px] text-slate-400">2026.06.30</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : layout === "news" ? (
+                <div className="divide-y divide-slate-50 p-2">
+                  {["새로운 기능이 출시되었습니다", "서비스 업데이트 안내", "6월 이벤트 공지"].map((title, i) => (
+                    <div key={i} className="flex gap-3 px-2 py-3">
+                      <div className="size-14 shrink-0 rounded-lg bg-gradient-to-br from-slate-100 to-blue-100" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-800">{title}</p>
+                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-400">내용 미리보기가 여기에 표시됩니다.</p>
+                        <p className="mt-1.5 text-[10px] text-slate-300">2026.06.{30 - i}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : layout === "notice" ? (
+                <div className="divide-y divide-slate-100">
+                  {[
+                    { title: "서비스 점검 안내", pin: true },
+                    { title: "개인정보처리방침 개정", pin: true },
+                    { title: "6월 이벤트 당첨자 발표", pin: false },
+                    { title: "업데이트 노트 v2.4", pin: false },
+                  ].map((item, i) => (
+                    <div key={i} className={cn("flex items-center gap-3 px-4 py-3", item.pin && "bg-blue-50/50")}>
+                      {item.pin && (
+                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-600">공지</span>
+                      )}
+                      <span className="flex-1 truncate text-sm font-medium text-slate-700">{item.title}</span>
+                      <span className="shrink-0 text-[11px] text-slate-400">2026.06.{30 - i}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* list */
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50 text-xs text-slate-400">
+                      <th className="py-2.5 pl-4 text-left font-medium">번호</th>
+                      <th className="py-2.5 text-left font-medium">제목</th>
+                      <th className="py-2.5 pr-4 text-right font-medium">날짜</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {["새로운 기능 업데이트 안내", "서비스 이용 방법 안내", "자주 묻는 질문 정리"].map((title, i) => (
+                      <tr key={i} className="hover:bg-slate-50">
+                        <td className="py-3 pl-4 text-slate-400">{3 - i}</td>
+                        <td className="py-3 text-slate-700">{title}</td>
+                        <td className="py-3 pr-4 text-right text-slate-400">2026.06.{30 - i}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <div className="flex items-center justify-center gap-1 border-t border-slate-100 py-3">
+                {[1, 2, 3].map((n) => (
+                  <button
+                    key={n}
+                    className={cn("flex size-7 items-center justify-center rounded text-xs", n === 1 ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-100")}
+                    type="button"
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="mt-2 text-center text-xs text-slate-400">게시판 데이터는 공개 페이지에서 실시간으로 표시됩니다.</p>
+          </div>
+        ) : null}
+
+        {type === "embed-form" ? (
+          <div className="w-full">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-6">
+              {/* 폼 헤더 */}
+              {stringValue(section, "title") && (
+                <InlineEditFrame
+                  active={activeElement("title")}
+                  animationClass={previewAnimationClass("title")}
+                  className="mb-4"
+                  label="폼 제목 수정"
+                  onContextMenu={(event) => openContextMenu(event, index, "title")}
+                  onSelect={() => selectElementForSection("title")}
+                >
+                  <Input
+                    className="h-auto border-0 bg-transparent p-0 text-xl font-bold shadow-none focus-visible:ring-0"
+                    placeholder="폼 제목 (선택)"
+                    style={titleTextStyle(section, design)}
+                    value={stringValue(section, "title")}
+                    onChange={(event) => updateField(index, "title", event.target.value)}
+                  />
+                </InlineEditFrame>
+              )}
+
+              {layout === "newsletter" ? (
+                <div className="flex gap-3">
+                  <input className="h-11 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-400 outline-none" placeholder="이메일 주소를 입력하세요" readOnly />
+                  <button className="h-11 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white" type="button">
+                    {stringValue(section, "buttonLabel", "구독하기")}
+                  </button>
+                </div>
+              ) : layout === "survey" ? (
+                <div className="space-y-4">
+                  {["이 서비스를 어떻게 알게 되셨나요?", "만족도를 선택해주세요", "개선을 원하는 기능이 있나요?"].map((q, i) => (
+                    <div key={i}>
+                      <p className="mb-2 text-sm font-semibold text-slate-700">{i + 1}. {q}</p>
+                      {i === 1 ? (
+                        <div className="flex gap-2">
+                          {["매우 만족", "만족", "보통", "불만족"].map((opt) => (
+                            <label key={opt} className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600">
+                              <div className="size-3.5 rounded-full border border-slate-300 bg-white" />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <input className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-400 outline-none" placeholder="입력" readOnly />
+                      )}
+                    </div>
+                  ))}
+                  <button className="h-10 w-full rounded-lg bg-blue-600 text-sm font-semibold text-white" type="button">
+                    {stringValue(section, "buttonLabel", "보내기")}
+                  </button>
+                </div>
+              ) : (
+                /* contact / consult */
+                <div className="space-y-3">
+                  <div className={cn("grid gap-3", layout === "consult" ? "grid-cols-2" : "grid-cols-2")}>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-500">이름</label>
+                      <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-400 outline-none" placeholder="홍길동" readOnly />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-500">이메일</label>
+                      <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-400 outline-none" placeholder="hello@example.com" readOnly />
+                    </div>
+                  </div>
+                  {layout === "consult" && (
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-500">연락처</label>
+                      <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-400 outline-none" placeholder="010-0000-0000" readOnly />
+                    </div>
+                  )}
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-500">
+                      {layout === "consult" ? "상담 내용" : "문의 내용"}
+                    </label>
+                    <div className="h-24 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400">
+                      내용을 입력하세요
+                    </div>
+                  </div>
+                  <button
+                    className="h-11 w-full rounded-lg bg-blue-600 text-sm font-semibold text-white"
+                    type="button"
+                  >
+                    {stringValue(section, "buttonLabel", layout === "consult" ? "상담 신청" : "보내기")}
+                  </button>
+                </div>
+              )}
+            </div>
+            <p className="mt-2 text-center text-xs text-slate-400">폼 제출 데이터는 콘텐츠 &gt; 문의폼에서 확인할 수 있습니다.</p>
           </div>
         ) : null}
       </div>
