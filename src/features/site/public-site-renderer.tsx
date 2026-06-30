@@ -1820,6 +1820,683 @@ function PublicFooter({
   );
 }
 
+// ── content blocks helper (mirrors editor) ──────────────
+type ContentBlock = { badge: string; description: string; imageUrl: string; mediaPosition: "left" | "right"; title: string };
+function contentBlocks(section: PublicSection): ContentBlock[] {
+  const raw = section.blocks;
+  if (Array.isArray(raw) && raw.length) {
+    return raw.map((b) => {
+      const block = b as Record<string, unknown>;
+      return {
+        badge: String(block.badge ?? ""),
+        description: String(block.description ?? ""),
+        imageUrl: String(block.imageUrl ?? ""),
+        mediaPosition: block.mediaPosition === "right" ? "right" : "left",
+        title: String(block.title ?? ""),
+      };
+    });
+  }
+  return [{ badge: String(section.badge ?? ""), description: String(section.description ?? ""), imageUrl: String(section.imageUrl ?? ""), mediaPosition: section.mediaPosition === "right" ? "right" : "left", title: String(section.title ?? "") }];
+}
+
+// ── ReviewSection ────────────────────────────────────────
+function ReviewSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "grid");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      {layout === "featured" && items[0] ? (() => {
+        const [name, role, quote] = items[0].split("|");
+        return (
+          <div className="mx-auto mt-10 max-w-2xl rounded-2xl bg-white/80 p-8 shadow-sm" style={childCardStyle(section)}>
+            <p className="text-xl font-medium leading-relaxed" style={{ color: design.textColor }}>"{quote || name}"</p>
+            <div className="mt-6 flex items-center gap-3">
+              <div className="size-10 rounded-full bg-slate-200" />
+              <div><p className="font-semibold">{name}</p><p className="text-sm text-slate-500">{role}</p></div>
+            </div>
+          </div>
+        );
+      })() : (
+        <div className={`mt-10 grid gap-5 ${layout === "rating" ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+          {items.map((item, i) => {
+            const [name, role, quote] = item.split("|");
+            return (
+              <article key={i} className="rounded-2xl bg-white/80 p-6" style={childCardStyle(section)}>
+                {layout === "rating" && <div className="mb-3 flex gap-0.5">{[1,2,3,4,5].map((s) => <span key={s} style={{ color: design.mainColor }}>★</span>)}</div>}
+                <p className="text-sm leading-7 text-slate-600">"{quote || name}"</p>
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="size-8 rounded-full bg-slate-200" />
+                  <div><p className="text-sm font-semibold">{name}</p><p className="text-xs text-slate-400">{role}</p></div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── StatsSection ─────────────────────────────────────────
+function StatsSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "counters");
+  const isDark = layout === "dark";
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      {layout === "bars" ? (
+        <div className="mt-10 space-y-5">
+          {items.map((item, i) => {
+            const [label, val] = item.split("|");
+            const pct = Math.min(100, Number(val) || 80);
+            return (
+              <div key={i}>
+                <div className="mb-1 flex justify-between text-sm font-semibold"><span>{label}</span><span>{val}%</span></div>
+                <div className="h-2.5 rounded-full bg-slate-200"><div className="h-full rounded-full" style={{ background: design.mainColor, width: `${pct}%` }} /></div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-10 grid gap-6 sm:grid-cols-3">
+          {items.map((item, i) => {
+            const [label, val, suffix] = item.split("|");
+            return (
+              <div key={i} className="rounded-2xl p-6 text-center" style={isDark ? { background: "rgba(0,0,0,0.3)" } : childCardStyle(section)}>
+                <p className="text-4xl font-black" style={{ color: design.mainColor }}>{val}{suffix}</p>
+                <p className="mt-2 text-sm font-medium opacity-70">{label}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── PricingSection ───────────────────────────────────────
+function PricingSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item, i) => {
+          const [name, price, desc, features] = item.split("|");
+          const featureList = (features ?? "").split(",").filter(Boolean);
+          const isFeatured = i === 1;
+          return (
+            <div key={i} className="rounded-2xl border p-7 text-left" style={{ ...(isFeatured ? { background: design.mainColor, borderColor: design.mainColor, color: "#fff" } : childCardStyle(section)) }}>
+              <p className="text-sm font-bold opacity-70">{name}</p>
+              <p className="mt-2 text-4xl font-black">{price}</p>
+              {desc && <p className="mt-2 text-sm opacity-70">{desc}</p>}
+              {featureList.length > 0 && (
+                <ul className="mt-6 space-y-2">
+                  {featureList.map((f, j) => <li key={j} className="flex items-center gap-2 text-sm"><span>✓</span>{f}</li>)}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── FaqSection ───────────────────────────────────────────
+function FaqSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "accordion");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className={`mt-10 ${layout === "two-col" ? "grid gap-6 sm:grid-cols-2" : "space-y-3"}`}>
+        {items.map((item, i) => {
+          const [q, a] = item.split("|");
+          return (
+            <div key={i} className="rounded-xl border border-slate-200 bg-white/80 p-5" style={layout === "accordion" ? childCardStyle(section) : {}}>
+              <p className="font-semibold" style={{ color: design.textColor }}>{q}</p>
+              {a && <p className="mt-2 text-sm leading-6 text-slate-500">{a}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── TeamSection ──────────────────────────────────────────
+function TeamSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "grid");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className={`mt-10 ${layout === "list" ? "space-y-4" : "grid gap-6 sm:grid-cols-2 lg:grid-cols-4"}`}>
+        {items.map((item, i) => {
+          const [name, role, desc] = item.split("|");
+          return layout === "list" ? (
+            <div key={i} className="flex items-center gap-5 rounded-xl bg-white/80 p-5" style={childCardStyle(section)}>
+              <div className="size-14 shrink-0 rounded-full bg-slate-200" />
+              <div><p className="font-semibold">{name}</p><p className="text-sm" style={{ color: design.mainColor }}>{role}</p>{desc && <p className="mt-1 text-sm text-slate-500">{desc}</p>}</div>
+            </div>
+          ) : (
+            <div key={i} className="rounded-xl bg-white/80 p-5 text-center" style={childCardStyle(section)}>
+              <div className="mx-auto size-16 rounded-full bg-slate-200" />
+              <p className="mt-3 font-semibold">{name}</p>
+              <p className="text-sm" style={{ color: design.mainColor }}>{role}</p>
+              {desc && <p className="mt-1 text-sm text-slate-500">{desc}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── SubheroSection ───────────────────────────────────────
+function SubheroSection({ design, section, siteName }: { design: PublicDesign; section: PublicSection; siteName: string }) {
+  const layout = stringValue(section, "layout", "banner");
+  const title = stringValue(section, "title", siteName);
+  const desc = stringValue(section, "description");
+  const imgUrl = stringValue(section, "imageUrl");
+  const bgStyle: CSSProperties = imgUrl
+    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : { background: stringValue(section, "bgColor", "#f8fafc") };
+  return (
+    <section className="relative overflow-hidden" style={{ ...bgStyle, paddingBottom: `${numberValue(section, "paddingBottom", 56)}px`, paddingTop: `${numberValue(section, "paddingTop", 56)}px` }}>
+      {imgUrl && <div className="absolute inset-0 bg-black/40" />}
+      <div className="relative z-10 mx-auto w-full px-6 md:px-10" style={{ maxWidth: sectionWidth(section, design) }}>
+        {layout === "split" ? (
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold" style={{ color: imgUrl ? "#fff" : design.textColor }}>{title}</h1>
+            {desc && <p className="text-sm text-slate-500">{desc}</p>}
+          </div>
+        ) : (
+          <div>
+            <h1 className="text-3xl font-bold" style={{ color: imgUrl ? "#fff" : design.textColor }}>{title}</h1>
+            {desc && <p className="mt-2 text-sm" style={{ color: imgUrl ? "rgba(255,255,255,0.8)" : "#64748b" }}>{desc}</p>}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── BreadcrumbSection ────────────────────────────────────
+function BreadcrumbSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "default");
+  return (
+    <section style={{ background: stringValue(section, "bgColor", "#ffffff"), paddingBottom: `${numberValue(section, "paddingBottom", 12)}px`, paddingTop: `${numberValue(section, "paddingTop", 12)}px` }}>
+      <div className="mx-auto w-full px-6 md:px-10" style={{ maxWidth: sectionWidth(section, design) }}>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm">
+          {items.map((item, i) => {
+            const [label, href] = item.split("|");
+            const isLast = i === items.length - 1;
+            return (
+              <span key={i} className="flex items-center gap-1.5">
+                {i > 0 && <span className="text-slate-300">›</span>}
+                {isLast ? <span className="font-semibold" style={{ color: design.textColor }}>{label}</span> : <a className="text-slate-400 hover:underline" href={href || "#"}>{label}</a>}
+              </span>
+            );
+          })}
+        </nav>
+        {layout === "with-title" && stringValue(section, "title") && (
+          <h1 className="mt-3 text-xl font-bold" style={{ color: design.textColor }}>{stringValue(section, "title")}</h1>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── OrgChartSection ──────────────────────────────────────
+function OrgChartSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "tree");
+  const levels: Record<string, Array<{ name: string; role: string }>> = {};
+  items.forEach((item) => {
+    const [name, role, level] = item.split("|");
+    const l = level || "1";
+    if (!levels[l]) levels[l] = [];
+    levels[l].push({ name, role });
+  });
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className="mt-10">
+        {Object.entries(levels).map(([level, members]) => (
+          <div key={level} className="mb-6 flex flex-wrap justify-center gap-4">
+            {members.map((m, i) => (
+              <div key={i} className={`rounded-xl border p-4 text-center ${level === "0" ? "border-2" : "border"}`} style={{ borderColor: level === "0" ? design.mainColor : undefined, minWidth: 120 }}>
+                <div className="mx-auto mb-2 size-10 rounded-full bg-slate-200" />
+                <p className="font-semibold text-sm">{m.name}</p>
+                <p className="text-xs" style={{ color: design.mainColor }}>{m.role}</p>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── HistorySection ───────────────────────────────────────
+function HistorySection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "timeline");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className={`mt-10 ${layout === "zigzag" ? "space-y-8" : "relative pl-8"}`}>
+        {layout !== "zigzag" && <div className="absolute left-3 top-0 h-full w-px bg-slate-200" />}
+        {items.map((item, i) => {
+          const [year, title, desc] = item.split("|");
+          return layout === "zigzag" ? (
+            <div key={i} className={`flex items-center gap-8 ${i % 2 === 1 ? "flex-row-reverse" : ""}`}>
+              <div className="flex-1 rounded-xl border bg-white/80 p-5" style={childCardStyle(section)}>
+                <span className="text-sm font-bold" style={{ color: design.mainColor }}>{year}</span>
+                <p className="mt-1 font-semibold">{title}</p>
+                {desc && <p className="mt-1 text-sm text-slate-500">{desc}</p>}
+              </div>
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold" style={{ borderColor: design.mainColor, color: design.mainColor }}>{i + 1}</div>
+              <div className="flex-1" />
+            </div>
+          ) : (
+            <div key={i} className="relative mb-8">
+              <div className="absolute -left-5 top-1.5 size-3 rounded-full border-2" style={{ background: "#fff", borderColor: design.mainColor }} />
+              <span className="inline-block rounded bg-blue-100 px-2 py-0.5 text-xs font-bold" style={{ color: design.mainColor }}>{year}</span>
+              <p className="mt-1 font-semibold">{title}</p>
+              {desc && <p className="mt-1 text-sm text-slate-500">{desc}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── VisionSection ────────────────────────────────────────
+function VisionSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const layout = stringValue(section, "layout", "centered");
+  const items = itemList(section);
+  return (
+    <SectionShell design={design} section={section}>
+      {layout === "split" ? (
+        <div className="grid gap-8 sm:grid-cols-2">
+          {[{ label: "비전", color: design.mainColor }, { label: "미션", color: design.subColor || design.mainColor }].map(({ label, color }) => (
+            <div key={label} className="rounded-2xl p-8" style={{ background: `${color}15`, borderLeft: `4px solid ${color}` }}>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color }}>{label}</p>
+              <h2 className="text-xl font-bold" style={{ color: design.textColor }}>{stringValue(section, "title")}</h2>
+              <p className="mt-2 text-sm leading-7 text-slate-500">{stringValue(section, "description")}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center">
+          <SectionHeader design={design} section={section} />
+          <div className="mt-10 grid gap-5 sm:grid-cols-3">
+            {items.map((item, i) => {
+              const [name, desc] = item.split("|");
+              return (
+                <div key={i} className="rounded-xl border bg-white/80 p-6" style={childCardStyle(section)}>
+                  <p className="font-semibold">{name}</p>
+                  {desc && <p className="mt-2 text-sm text-slate-500">{desc}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── ValuesSection ────────────────────────────────────────
+function ValuesSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "grid");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className={`mt-10 ${layout === "list" ? "space-y-4" : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3"}`}>
+        {items.map((item, i) => {
+          const [name, , desc] = item.split("|");
+          return layout === "list" ? (
+            <div key={i} className="flex items-start gap-4 rounded-xl bg-white/80 p-5" style={childCardStyle(section)}>
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: `${design.mainColor}20`, color: design.mainColor }}>{i + 1}</div>
+              <div><p className="font-semibold">{name}</p>{desc && <p className="mt-1 text-sm text-slate-500">{desc}</p>}</div>
+            </div>
+          ) : (
+            <div key={i} className="rounded-xl bg-white/80 p-6" style={childCardStyle(section)}>
+              <div className="mb-3 flex size-10 items-center justify-center rounded-full text-sm font-bold" style={{ background: `${design.mainColor}20`, color: design.mainColor }}>{i + 1}</div>
+              <p className="font-semibold">{name}</p>
+              {desc && <p className="mt-2 text-sm text-slate-500">{desc}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── LocationSection ──────────────────────────────────────
+function LocationSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const layout = stringValue(section, "layout", "map-text");
+  const address = stringValue(section, "address");
+  const phone = stringValue(section, "phone");
+  const email = stringValue(section, "email");
+  const transportItems = itemList(section);
+  const mapSrc = address ? `https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed&hl=ko` : "";
+  const info = [
+    address && { label: "주소", val: address },
+    phone && { label: "전화", val: phone },
+    email && { label: "이메일", val: email },
+  ].filter(Boolean) as Array<{ label: string; val: string }>;
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      {layout === "text-only" ? (
+        <div className="mt-10 grid gap-8 sm:grid-cols-2">
+          <div className="space-y-4">{info.map(({ label, val }) => (
+            <div key={label}><p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 text-slate-700">{val}</p></div>
+          ))}</div>
+          <div className="space-y-3">
+            {transportItems.map((item, i) => {
+              const [mode, desc] = item.split("|");
+              return <div key={i}><span className="font-semibold" style={{ color: design.mainColor }}>{mode}</span> <span className="text-sm text-slate-600">{desc}</span></div>;
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-10 grid items-start gap-8 lg:grid-cols-2">
+          <div className="overflow-hidden rounded-2xl" style={{ height: 320 }}>
+            {mapSrc ? (
+              <iframe allowFullScreen className="h-full w-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={mapSrc} title="지도" />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-slate-100 text-sm text-slate-400">주소를 설정하면 지도가 표시됩니다</div>
+            )}
+          </div>
+          <div className="space-y-4 py-2">
+            {stringValue(section, "title") && <h2 className="text-xl font-bold">{stringValue(section, "title")}</h2>}
+            {info.map(({ label, val }) => (
+              <div key={label}><p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-0.5 text-sm text-slate-700">{val}</p></div>
+            ))}
+            {transportItems.filter(i => i.includes("|")).map((item, i) => {
+              const [mode, desc] = item.split("|");
+              return <div key={i} className="text-sm"><span className="font-semibold" style={{ color: design.mainColor }}>{mode}</span> <span className="text-slate-600">{desc}</span></div>;
+            })}
+          </div>
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── PartnersSection ──────────────────────────────────────
+function PartnersSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "logo-grid");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className={`mt-10 ${layout === "logo-strip" ? "flex flex-wrap items-center justify-center gap-6" : "grid grid-cols-2 gap-5 sm:grid-cols-3"}`}>
+        {items.map((name, i) => (
+          <div key={i} className="flex h-16 items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 font-semibold text-slate-400">{name}</div>
+        ))}
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── AwardsSection ────────────────────────────────────────
+function AwardsSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "grid");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      {layout === "list" ? (
+        <div className="mt-10 space-y-4">
+          {items.map((item, i) => {
+            const [title, org, year] = item.split("|");
+            return (
+              <div key={i} className="flex items-center gap-4 rounded-xl bg-white/80 p-5" style={childCardStyle(section)}>
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-full text-xl" style={{ background: "#fef9c3" }}>🏆</div>
+                <div className="flex-1"><p className="font-semibold">{title}</p><p className="text-sm text-slate-500">{org}</p></div>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">{year}</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {items.map((item, i) => {
+            const [title, org, year] = item.split("|");
+            return (
+              <div key={i} className="rounded-xl bg-white/80 p-6" style={childCardStyle(section)}>
+                <div className="mb-3 flex size-10 items-center justify-center rounded-full text-xl" style={{ background: "#fef9c3" }}>🏆</div>
+                <p className="font-semibold">{title}</p>
+                <p className="mt-1 text-sm text-slate-500">{org}</p>
+                <span className="mt-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-400">{year}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── PressSection ─────────────────────────────────────────
+function PressSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "list");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      {layout === "cards" ? (
+        <div className="mt-10 grid gap-5 sm:grid-cols-3">
+          {items.map((item, i) => {
+            const [title, media, date] = item.split("|");
+            return (
+              <div key={i} className="overflow-hidden rounded-xl bg-white/80" style={childCardStyle(section)}>
+                <div className="h-28 bg-gradient-to-br from-slate-100 to-slate-200" />
+                <div className="p-4"><p className="text-xs font-bold" style={{ color: design.mainColor }}>{media}</p><p className="mt-1 font-semibold text-sm">{title}</p><p className="mt-2 text-xs text-slate-400">{date}</p></div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-10 divide-y rounded-xl border bg-white/80" style={childCardStyle(section)}>
+          {items.map((item, i) => {
+            const [title, media, date] = item.split("|");
+            return (
+              <div key={i} className="flex items-center gap-4 px-5 py-4">
+                <span className="rounded px-2 py-0.5 text-xs font-bold" style={{ background: `${design.mainColor}20`, color: design.mainColor }}>{media}</span>
+                <p className="flex-1 text-sm font-medium">{title}</p>
+                <span className="text-xs text-slate-400">{date}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── PhotoGallerySection ──────────────────────────────────
+function PhotoGallerySection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "masonry");
+  const heights = [200, 150, 250, 180, 220, 160];
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      {layout === "masonry" ? (
+        <div className="mt-10 columns-2 gap-4 md:columns-3" style={{ columnFill: "balance" }}>
+          {items.map((item, i) => (
+            <div key={i} className="mb-4 break-inside-avoid overflow-hidden rounded-xl bg-slate-200" style={{ height: heights[i % heights.length] }}>
+              {item && item !== "사진1" && <img alt="" className="h-full w-full object-cover" src={item} />}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3">
+          {items.map((item, i) => (
+            <div key={i} className="aspect-square overflow-hidden rounded-xl bg-slate-200">
+              {item && item !== "사진1" && <img alt="" className="h-full w-full object-cover" src={item} />}
+            </div>
+          ))}
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── JobsSection ──────────────────────────────────────────
+function JobsSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "list");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      {layout === "cards" ? (
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {items.map((item, i) => {
+            const [position, dept, career, deadline] = item.split("|");
+            return (
+              <div key={i} className="rounded-xl bg-white/80 p-6" style={childCardStyle(section)}>
+                <div className="flex items-start justify-between">
+                  <div><p className="font-semibold">{position}</p><p className="mt-0.5 text-sm text-slate-500">{dept}</p></div>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: `${design.mainColor}20`, color: design.mainColor }}>채용중</span>
+                </div>
+                <div className="mt-4 flex gap-2 text-xs text-slate-400">
+                  <span className="rounded bg-slate-100 px-2 py-0.5">{career}</span>
+                  <span className="rounded bg-slate-100 px-2 py-0.5">마감 {deadline}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-10 divide-y rounded-xl border bg-white/80" style={childCardStyle(section)}>
+          {items.map((item, i) => {
+            const [position, dept, career, deadline] = item.split("|");
+            return (
+              <div key={i} className="flex items-center gap-4 px-5 py-4">
+                <div className="flex-1"><p className="font-semibold">{position}</p><p className="text-sm text-slate-400">{dept} · {career}</p></div>
+                <span className="text-xs text-slate-400">마감 {deadline}</span>
+                <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: `${design.mainColor}20`, color: design.mainColor }}>채용중</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── DownloadsSection ─────────────────────────────────────
+function DownloadsSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const items = itemList(section);
+  const layout = stringValue(section, "layout", "list");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      {layout === "cards" ? (
+        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+          {items.map((item, i) => {
+            const [name, ext, date, href] = item.split("|");
+            return (
+              <a key={i} className="flex items-center gap-4 rounded-xl bg-white/80 p-4 transition hover:opacity-80" href={href || "#"} rel="noopener noreferrer" style={childCardStyle(section)} target="_blank">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-red-100 text-xs font-bold text-red-500">{ext || "PDF"}</div>
+                <div className="min-w-0 flex-1"><p className="truncate font-semibold">{name}</p><p className="text-xs text-slate-400">{date}</p></div>
+                <span className="text-slate-400">↓</span>
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-10 divide-y rounded-xl border bg-white/80" style={childCardStyle(section)}>
+          {items.map((item, i) => {
+            const [name, ext, date, href] = item.split("|");
+            return (
+              <a key={i} className="flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50" href={href || "#"} rel="noopener noreferrer" target="_blank">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded bg-red-100 text-xs font-bold text-red-500">{ext || "PDF"}</div>
+                <div className="min-w-0 flex-1"><p className="truncate font-semibold text-sm">{name}</p><p className="text-xs text-slate-400">{date}</p></div>
+                <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">다운로드</span>
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── BoardSection ─────────────────────────────────────────
+function BoardSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const layout = stringValue(section, "layout", "list");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className="mt-10 rounded-xl border bg-white/80 p-4 text-center text-sm text-slate-400" style={childCardStyle(section)}>
+        게시판 데이터는 콘텐츠 관리에서 등록한 글이 표시됩니다.
+        <p className="mt-1 text-xs">(layout: {layout})</p>
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── EmbedFormSection ─────────────────────────────────────
+function EmbedFormSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const layout = stringValue(section, "layout", "contact");
+  const buttonLabel = stringValue(section, "buttonLabel", layout === "newsletter" ? "구독하기" : layout === "consult" ? "상담 신청" : "보내기");
+  return (
+    <SectionShell design={design} section={section}>
+      <SectionHeader design={design} section={section} />
+      <div className="mx-auto mt-10 max-w-xl rounded-2xl border bg-white/90 p-8" style={childCardStyle(section)}>
+        {layout === "newsletter" ? (
+          <form className="flex gap-3" onSubmit={(e) => e.preventDefault()}>
+            <input className="h-11 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm outline-none" placeholder="이메일 주소를 입력하세요" type="email" />
+            <button className="h-11 rounded-lg px-5 text-sm font-semibold text-white" style={{ background: design.mainColor }} type="submit">{buttonLabel}</button>
+          </form>
+        ) : (
+          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            {layout !== "survey" && (
+              <div className="grid grid-cols-2 gap-4">
+                <input className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" placeholder="이름" />
+                <input className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" placeholder="이메일" type="email" />
+              </div>
+            )}
+            {layout === "consult" && <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" placeholder="연락처" />}
+            <textarea className="h-28 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none" placeholder="내용을 입력하세요" />
+            <button className="h-11 w-full rounded-lg text-sm font-semibold text-white" style={{ background: design.mainColor }} type="submit">{buttonLabel}</button>
+          </form>
+        )}
+      </div>
+    </SectionShell>
+  );
+}
+
+// ── SectionHeader helper ─────────────────────────────────
+function SectionHeader({ design, section }: { design: PublicDesign; section: PublicSection }) {
+  const badge = stringValue(section, "badge");
+  const title = stringValue(section, "title");
+  const description = stringValue(section, "description");
+  if (!badge && !title && !description) return null;
+  return (
+    <div className={`max-w-2xl ${positionClass(section)} ${alignClass(section)}`}>
+      {badge && <p className="mb-3 text-sm font-bold" style={{ color: design.mainColor }}>{badge}</p>}
+      {title && <h2 className="font-bold tracking-normal" style={titleStyle(section, design)}>{title}</h2>}
+      {description && <p className="mt-4" style={descriptionStyle(section, design)}>{description}</p>}
+    </div>
+  );
+}
+
 function PublicSectionRenderer({
   design,
   section,
@@ -1831,16 +2508,55 @@ function PublicSectionRenderer({
 }) {
   const type = stringValue(section, "type", "content");
 
-  if (type === "hero") {
-    return <HeroSection design={design} section={section} siteName={siteName} />;
-  }
+  if (type === "hero") return <HeroSection design={design} section={section} siteName={siteName} />;
+  if (type === "features") return <FeaturesSection design={design} section={section} />;
+  if (type === "cta") return <CtaSection design={design} section={section} />;
+  if (type === "review") return <ReviewSection design={design} section={section} />;
+  if (type === "stats") return <StatsSection design={design} section={section} />;
+  if (type === "pricing") return <PricingSection design={design} section={section} />;
+  if (type === "faq") return <FaqSection design={design} section={section} />;
+  if (type === "team") return <TeamSection design={design} section={section} />;
+  if (type === "subhero") return <SubheroSection design={design} section={section} siteName={siteName} />;
+  if (type === "breadcrumb") return <BreadcrumbSection design={design} section={section} />;
+  if (type === "org-chart") return <OrgChartSection design={design} section={section} />;
+  if (type === "history") return <HistorySection design={design} section={section} />;
+  if (type === "vision") return <VisionSection design={design} section={section} />;
+  if (type === "values") return <ValuesSection design={design} section={section} />;
+  if (type === "location") return <LocationSection design={design} section={section} />;
+  if (type === "partners") return <PartnersSection design={design} section={section} />;
+  if (type === "awards") return <AwardsSection design={design} section={section} />;
+  if (type === "press") return <PressSection design={design} section={section} />;
+  if (type === "photo-gallery") return <PhotoGallerySection design={design} section={section} />;
+  if (type === "jobs") return <JobsSection design={design} section={section} />;
+  if (type === "downloads") return <DownloadsSection design={design} section={section} />;
+  if (type === "board") return <BoardSection design={design} section={section} />;
+  if (type === "embed-form") return <EmbedFormSection design={design} section={section} />;
 
-  if (type === "features") {
-    return <FeaturesSection design={design} section={section} />;
-  }
-
-  if (type === "cta") {
-    return <CtaSection design={design} section={section} />;
+  // content — 멀티블록 지원
+  if (type === "content") {
+    const blocks = contentBlocks(section);
+    return (
+      <SectionShell design={design} section={section}>
+        <div className="space-y-20">
+          {blocks.map((block, i) => {
+            const visual = block.imageUrl ? (
+              <img alt={block.title} className="w-full rounded-xl object-cover" src={block.imageUrl} />
+            ) : null;
+            return (
+              <div key={i} className="grid items-center gap-10 lg:grid-cols-[0.85fr_1fr]">
+                {block.mediaPosition === "left" && visual ? <div className="lg:order-1">{visual}</div> : null}
+                <div className={`${alignClass(section)} ${block.mediaPosition === "right" ? "lg:order-1" : "lg:order-2"}`}>
+                  {block.badge && <p className="mb-4 text-sm font-bold" style={{ color: design.mainColor }}>{block.badge}</p>}
+                  {block.title && <h2 className="font-bold tracking-normal" style={titleStyle(section, design)}>{block.title}</h2>}
+                  {block.description && <p className="mt-4 leading-7 text-slate-600" style={descriptionStyle(section, design)}>{block.description}</p>}
+                </div>
+                {block.mediaPosition !== "left" && visual ? <div className="lg:order-2">{visual}</div> : null}
+              </div>
+            );
+          })}
+        </div>
+      </SectionShell>
+    );
   }
 
   return <ContentSection design={design} section={section} siteName={siteName} />;
