@@ -5436,9 +5436,6 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
     if (isMainPage) return pt === "main" || pt === "all";
     return pt === "sub" || pt === "all";
   });
-  const visibleModules = pageFilteredPresets.filter(
-    (preset) => preset.category === activeLibraryCategory,
-  );
   const availableLibraryCategories = Array.from(
     new Set(pageFilteredPresets.map((preset) => preset.category)),
   ).sort((a, b) => {
@@ -5448,6 +5445,15 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
     if (b === "히어로") return 1;
     return 0;
   });
+  // 페이지 전환 시 현재 카테고리가 없으면 첫 번째로 리셋
+  useEffect(() => {
+    if (!availableLibraryCategories.includes(activeLibraryCategory)) {
+      setActiveLibraryCategory(availableLibraryCategories[0] ?? "");
+    }
+  }, [page.id]);
+  const visibleModules = pageFilteredPresets.filter(
+    (preset) => preset.category === activeLibraryCategory,
+  );
   const previewSection = useMemo(
     () => (previewPreset ? createSection(previewPreset.type, previewPreset.layout) : null),
     [previewPreset],
@@ -9207,25 +9213,72 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                           />
                         </label>
                       </div>
-                      {stringValue(selectedSection, "type") === "features" ? (
-                        <label className="space-y-2">
-                          <span className="text-sm font-semibold">
-                            항목 리스트, 한 줄에 하나
-                          </span>
-                          <Textarea
-                            className="min-h-36"
-                            value={itemsValue(
-                              localizedSelectedSection ?? selectedSection,
-                            )}
-                            onChange={(event) =>
-                              updateLocalizedSectionItems(
-                                selectedIndex,
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </label>
+                      {/* location 전용 필드 */}
+                      {stringValue(selectedSection, "type") === "location" ? (
+                        <div className="space-y-4">
+                          {(["address", "phone", "email"] as const).map((field) => (
+                            <label key={field} className="space-y-2">
+                              <span className="text-sm font-semibold">
+                                {field === "address" ? "주소" : field === "phone" ? "전화번호" : "이메일"}
+                              </span>
+                              <Input
+                                placeholder={
+                                  field === "address" ? "서울특별시 강남구 테헤란로 123" :
+                                  field === "phone" ? "02-1234-5678" : "hello@example.com"
+                                }
+                                value={stringValue(selectedSection, field, "")}
+                                onChange={(e) => updateSectionField(selectedIndex, field, e.target.value)}
+                              />
+                            </label>
+                          ))}
+                          <label className="space-y-2">
+                            <span className="text-sm font-semibold">교통편 안내</span>
+                            <p className="text-xs text-slate-400">한 줄에 하나 · 형식: 교통수단|설명</p>
+                            <Textarea
+                              className="min-h-24 font-mono text-xs"
+                              placeholder={"지하철|2호선 강남역 3번 출구 도보 5분\n버스|강남역 정류장 하차"}
+                              value={itemsValue(selectedSection)}
+                              onChange={(e) => updateLocalizedSectionItems(selectedIndex, e.target.value)}
+                            />
+                          </label>
+                        </div>
                       ) : null}
+
+                      {/* items 편집기 — 타입별 안내 문구 포함 */}
+                      {(() => {
+                        const t = stringValue(selectedSection, "type");
+                        const itemsTypes: Record<string, { label: string; hint: string }> = {
+                          features:     { label: "항목",     hint: "한 줄에 하나" },
+                          review:       { label: "후기",     hint: "형식: 이름|직책·회사|후기 내용" },
+                          team:         { label: "팀원",     hint: "형식: 이름|직책|소개" },
+                          faq:          { label: "FAQ",      hint: "형식: 질문|답변" },
+                          stats:        { label: "수치",     hint: "형식: 라벨|숫자|단위(예: 고객사|5000|+)" },
+                          pricing:      { label: "플랜",     hint: "형식: 이름|가격|설명|기능1,기능2" },
+                          "org-chart":  { label: "구성원",   hint: "형식: 이름|직책|레벨(0=최상위)|" },
+                          history:      { label: "연혁",     hint: "형식: 연도|제목|설명" },
+                          vision:       { label: "핵심 항목", hint: "형식: 이름|설명" },
+                          values:       { label: "가치",     hint: "형식: 이름|아이콘|설명" },
+                          partners:     { label: "파트너",   hint: "한 줄에 하나 (파트너 이름)" },
+                          awards:       { label: "수상·인증", hint: "형식: 제목|기관|연도" },
+                          press:        { label: "보도자료",  hint: "형식: 제목|매체|날짜" },
+                          jobs:         { label: "채용공고",  hint: "형식: 직책|부서|경력조건|마감일" },
+                          downloads:    { label: "파일",     hint: "형식: 파일명|확장자|날짜|경로" },
+                          breadcrumb:   { label: "경로",     hint: "형식: 라벨|URL" },
+                        };
+                        const cfg = itemsTypes[t];
+                        if (!cfg || t === "location") return null;
+                        return (
+                          <label className="space-y-2">
+                            <span className="text-sm font-semibold">{cfg.label} 목록</span>
+                            <p className="text-xs text-slate-400">{cfg.hint}</p>
+                            <Textarea
+                              className="min-h-36 font-mono text-xs"
+                              value={itemsValue(localizedSelectedSection ?? selectedSection)}
+                              onChange={(e) => updateLocalizedSectionItems(selectedIndex, e.target.value)}
+                            />
+                          </label>
+                        );
+                      })()}
                     </>
                     )
                   ) : (
