@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { resolveEffectiveRole } from "@/lib/auth/super-admin";
+import { builtInTemplates } from "@/features/dashboard/template-presets";
 import type { Json } from "@/types/database";
 
 type DashboardSiteRow = {
@@ -252,25 +253,6 @@ const demoTemplateJson: Json = {
   ],
 };
 
-const demoTemplates = [
-  {
-    id: "demo_template_landing",
-    name: "데모 브랜드 랜딩",
-    description: "Hero, Features, CTA로 구성된 기본 랜딩 템플릿",
-    thumbnailUrl: "",
-    status: "featured",
-    templateJson: demoTemplateJson,
-  },
-  {
-    id: "demo_template_portfolio",
-    name: "데모 포트폴리오",
-    description: "개인/스튜디오 포트폴리오 시작용 템플릿",
-    thumbnailUrl: "",
-    status: "active",
-    templateJson: demoTemplateJson,
-  },
-];
-
 const demoSites = [
   {
     id: "demo_site_keyun",
@@ -497,14 +479,14 @@ export async function canUseContentPostDatabase() {
 
 export async function getDashboardTemplates() {
   if (!hasSupabaseEnv()) {
-    return demoTemplates;
+    return builtInTemplates;
   }
 
   const supabase = await createClient();
   const authenticated = await isAuthenticated();
 
   if (!authenticated) {
-    return demoTemplates;
+    return builtInTemplates;
   }
 
   const { data } = await supabase
@@ -515,14 +497,22 @@ export async function getDashboardTemplates() {
     .order("is_featured", { ascending: false })
     .order("updated_at", { ascending: false });
 
-  return ((data ?? []) as DashboardTemplateRow[]).map((template) => ({
+  const databaseTemplates = ((data ?? []) as DashboardTemplateRow[]).map((template) => ({
+    category: template.id.includes("portfolio")
+      ? "포트폴리오"
+      : template.id.includes("shop")
+        ? "쇼핑몰"
+        : "비즈니스",
     id: template.id,
+    isFeatured: template.is_featured,
     name: template.name,
     description: template.description ?? "",
     thumbnailUrl: template.thumbnail_url ?? "",
     status: template.is_featured ? "featured" : template.status,
     templateJson: template.template_json,
   }));
+
+  return [...builtInTemplates, ...databaseTemplates];
 }
 
 export async function getDashboardSites() {
@@ -776,10 +766,10 @@ export async function getSiteEditorState(siteId: string, pageId?: string) {
   const homeDraft = readPublicJson(homePage?.draft_json);
   const draftJson = {
     ...pageDraft,
-    design: pageDraft.design ?? homeDraft.design,
-    i18n: pageDraft.i18n ?? homeDraft.i18n,
-    navigation: pageDraft.navigation ?? homeDraft.navigation,
-    pages: pageDraft.pages ?? homeDraft.pages,
+    design: homeDraft.design ?? pageDraft.design,
+    i18n: homeDraft.i18n ?? pageDraft.i18n,
+    navigation: homeDraft.navigation ?? pageDraft.navigation,
+    pages: homeDraft.pages ?? pageDraft.pages,
   } satisfies Json;
 
   return {
@@ -879,12 +869,8 @@ export async function getPublicTemplates() {
   const templates = await getDashboardTemplates();
   return templates.map((t) => ({
     ...t,
-    category: t.id.includes("portfolio")
-      ? "포트폴리오"
-      : t.id.includes("shop")
-        ? "쇼핑몰"
-        : "비즈니스",
-    isFeatured: t.status === "featured",
+    category: t.category,
+    isFeatured: t.isFeatured,
   }));
 }
 
@@ -919,12 +905,14 @@ export async function getPublishedSitePageBySlug(siteSlug: string, pagePath = "/
       .select("id,site_id,title,path,published_json")
       .eq("site_id", site.id)
       .eq("path", normalizedPath)
+      .or("is_hidden.is.null,is_hidden.eq.false")
       .maybeSingle(),
     supabase
       .from("site_pages")
       .select("id,site_id,title,path,published_json")
       .eq("site_id", site.id)
       .eq("path", "/")
+      .or("is_hidden.is.null,is_hidden.eq.false")
       .maybeSingle(),
     getSiteSeoSettings(site.id),
   ]);
@@ -935,10 +923,10 @@ export async function getPublishedSitePageBySlug(siteSlug: string, pagePath = "/
   const homeJson = readPublicJson(homePage?.published_json);
   const publishedJson = {
     ...pageJson,
-    design: pageJson.design ?? homeJson.design,
-    i18n: pageJson.i18n ?? homeJson.i18n,
-    navigation: pageJson.navigation ?? homeJson.navigation,
-    pages: pageJson.pages ?? homeJson.pages,
+    design: homeJson.design ?? pageJson.design,
+    i18n: homeJson.i18n ?? pageJson.i18n,
+    navigation: homeJson.navigation ?? pageJson.navigation,
+    pages: homeJson.pages ?? pageJson.pages,
   } satisfies Json;
 
   return {

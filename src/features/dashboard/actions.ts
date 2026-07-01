@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { getBuiltInTemplate } from "@/features/dashboard/template-presets";
 import type { Json } from "@/types/database";
 
 function value(formData: FormData, key: string) {
@@ -144,6 +145,30 @@ function buildGeneratedContentJson({
     ],
     title,
     version: 1,
+  } satisfies Json;
+}
+
+function applyTemplateToSiteJson(siteJson: Json, templateJson: Json | null) {
+  if (!templateJson) return siteJson;
+
+  const siteRecord = readRecord(siteJson);
+  const templateRecord = readRecord(templateJson);
+  const templateSections = templateRecord.sections;
+
+  return {
+    ...siteRecord,
+    ...templateRecord,
+    design: {
+      ...readRecord(siteRecord.design),
+      ...readRecord(templateRecord.design),
+    },
+    navigation: siteRecord.navigation ?? [],
+    pages: siteRecord.pages ?? [],
+    sections:
+      Array.isArray(templateSections) && templateSections.length
+        ? templateSections
+        : siteRecord.sections ?? [],
+    version: Number(templateRecord.version ?? siteRecord.version ?? 1),
   } satisfies Json;
 }
 
@@ -287,12 +312,10 @@ function buildInitialSiteJson({
   ].slice(0, 4);
   const navItems = [
     { enabled: true, id: "nav-home", label: "홈", pageId: "home" },
+    { enabled: true, id: "nav-about", label: "회사소개", pageId: "about" },
     { enabled: true, id: "nav-service", label: "서비스", pageId: "service" },
     featureSet.has("portfolio")
       ? { enabled: true, id: "nav-portfolio", label: "사례", pageId: "portfolio" }
-      : null,
-    featureSet.has("blog") || featureSet.has("notice") || featureSet.has("faq")
-      ? { enabled: true, id: "nav-blog", label: "게시글", pageId: "blog" }
       : null,
     featureSet.has("location")
       ? { enabled: true, id: "nav-location", label: "오시는 길", pageId: "location" }
@@ -304,17 +327,15 @@ function buildInitialSiteJson({
   );
   const pageItems = [
     { id: "home", path: "/", status: "public", title: "메인 페이지" },
+    { id: "about", path: "/about", status: "public", title: "회사소개" },
     { id: "service", path: "/service", status: "public", title: "서비스" },
     featureSet.has("portfolio")
       ? { id: "portfolio", path: "/portfolio", status: "public", title: "사례" }
       : null,
-    featureSet.has("blog") || featureSet.has("notice") || featureSet.has("faq")
-      ? { id: "blog", path: "/posts", status: "public", title: "게시글" }
-      : null,
     featureSet.has("location")
       ? { id: "location", path: "/location", status: "public", title: "오시는 길" }
       : null,
-    { id: "contact", path: "#contact", status: "public", title: "문의" },
+    { id: "contact", path: "/contact", status: "public", title: "문의" },
   ].filter(
     (item): item is { id: string; path: string; status: string; title: string } =>
       Boolean(item),
@@ -555,11 +576,36 @@ export async function createDashboardSite(formData: FormData) {
     );
   }
 
+  let selectedTemplateId: string | null = null;
+  let selectedTemplateJson: Json | null = null;
+  const builtInTemplate = templateId ? getBuiltInTemplate(templateId) : null;
+
+  if (builtInTemplate) {
+    selectedTemplateJson = builtInTemplate.templateJson;
+  } else if (templateId) {
+    const { data: selectedTemplate, error: templateError } = await supabase
+      .from("templates")
+      .select("id,template_json")
+      .eq("id", templateId)
+      .eq("visibility", "public")
+      .in("status", ["active", "featured"])
+      .maybeSingle();
+
+    if (templateError) {
+      throw new Error(templateError.message);
+    }
+
+    if (selectedTemplate) {
+      selectedTemplateId = String(selectedTemplate.id);
+      selectedTemplateJson = selectedTemplate.template_json as Json;
+    }
+  }
+
   const { data: site, error: siteError } = await supabase
     .from("sites")
     .insert({
       workspace_id: workspaceId,
-      template_id: templateId,
+      template_id: selectedTemplateId,
       name,
       slug,
       status: "draft",
@@ -571,16 +617,19 @@ export async function createDashboardSite(formData: FormData) {
     throw new Error(siteError?.message ?? "사이트 생성에 실패했어.");
   }
 
-  const initialSiteJson = buildInitialSiteJson({
-    brandMessage,
-    businessType,
-    contactPhone,
-    launchGoal,
-    name,
-    selectedFeatures,
-    siteStyle,
-    targetCustomer,
-  });
+  const initialSiteJson = applyTemplateToSiteJson(
+    buildInitialSiteJson({
+      brandMessage,
+      businessType,
+      contactPhone,
+      launchGoal,
+      name,
+      selectedFeatures,
+      siteStyle,
+      targetCustomer,
+    }),
+    selectedTemplateJson,
+  );
 
   const { data: page, error: pageError } = await supabase
     .from("site_pages")
@@ -607,13 +656,33 @@ export async function createDashboardSite(formData: FormData) {
   const generatedPages = [
     {
       bodyText:
+        "브랜드가 시작된 배경, 핵심 가치, 일하는 방식과 구성원을 소개하는 페이지입니다. 고객이 브랜드를 신뢰할 수 있는 정보를 정리하세요.",
+      description: `${name}의 이야기와 핵심 가치를 소개합니다.`,
+      menuCode: "about",
+      menuName: "회사소개",
+      path: "/about",
+      sortOrder: 1,
+      title: "회사소개",
+    },
+    {
+      bodyText:
         "제공 서비스, 진행 방식, 강점, 상담 절차를 정리하는 페이지입니다. 고객이 구매 또는 문의 전 필요한 정보를 확인할 수 있도록 구성하세요.",
       description: `${name}의 서비스와 운영 방식을 소개합니다.`,
       menuCode: "service",
       menuName: "서비스",
       path: "/service",
-      sortOrder: 1,
+      sortOrder: 2,
       title: "서비스",
+    },
+    {
+      bodyText:
+        "문의 유형, 연락처, 운영 시간과 상담 전에 필요한 정보를 안내하는 페이지입니다. 방문자가 바로 문의를 남길 수 있도록 문의폼을 연결하세요.",
+      description: `${name}에 궁금한 내용을 편하게 문의하세요.`,
+      menuCode: "contact",
+      menuName: "문의",
+      path: "/contact",
+      sortOrder: 3,
+      title: "문의",
     },
     selectedFeatures.includes("portfolio")
       ? {
@@ -623,7 +692,7 @@ export async function createDashboardSite(formData: FormData) {
           menuCode: "portfolio",
           menuName: "사례",
           path: "/portfolio",
-          sortOrder: 2,
+          sortOrder: 4,
           title: "사례",
         }
       : null,
@@ -635,7 +704,7 @@ export async function createDashboardSite(formData: FormData) {
           menuCode: "location",
           menuName: "오시는 길",
           path: "/location",
-          sortOrder: selectedFeatures.includes("portfolio") ? 3 : 2,
+          sortOrder: selectedFeatures.includes("portfolio") ? 5 : 4,
           title: "오시는 길",
         }
       : null,
@@ -680,6 +749,8 @@ export async function createDashboardSite(formData: FormData) {
       throw new Error(generatedPagesError.message);
     }
   }
+
+  await syncSiteNavigationDraft(site.id as string);
 
   const { error: seoError } = await supabase.from("site_seo_settings").insert({
     site_id: site.id,
@@ -834,7 +905,7 @@ export async function publishSite(formData: FormData) {
 
   const { data: pages, error: pagesError } = await supabase
     .from("site_pages")
-    .select("id,path,draft_json")
+    .select("id,path,draft_json,is_hidden")
     .eq("site_id", siteId);
 
   if (pagesError) {
@@ -846,7 +917,7 @@ export async function publishSite(formData: FormData) {
       supabase
         .from("site_pages")
         .update({
-          published_json: page.draft_json,
+          published_json: page.is_hidden ? null : page.draft_json,
           updated_at: new Date().toISOString(),
         })
         .eq("id", page.id),
@@ -959,6 +1030,271 @@ export async function createEditorPage(formData: FormData) {
   };
 }
 
+export async function updateEditorPageSettings(formData: FormData) {
+  await getCurrentUser();
+
+  const siteId = value(formData, "site_id");
+  const pageId = value(formData, "page_id");
+  const title = value(formData, "title");
+  const requestedPath = value(formData, "path");
+  const isHidden = value(formData, "status") !== "public";
+
+  if (!siteId || !pageId || !title) {
+    throw new Error("페이지 정보가 부족합니다.");
+  }
+
+  const supabase = await createClient();
+  const { data: current, error: currentError } = await supabase
+    .from("site_pages")
+    .select("path")
+    .eq("site_id", siteId)
+    .eq("id", pageId)
+    .maybeSingle();
+
+  if (currentError || !current) {
+    throw new Error(currentError?.message ?? "페이지를 찾지 못했습니다.");
+  }
+
+  const isHome = current.path === "/";
+  const baseSlug = slugify(requestedPath || title) || "page";
+  let nextPath = isHome ? "/" : `/${baseSlug}`;
+  let suffix = 2;
+
+  while (!isHome) {
+    const { data: existing, error: pathError } = await supabase
+      .from("site_pages")
+      .select("id")
+      .eq("site_id", siteId)
+      .eq("path", nextPath)
+      .neq("id", pageId)
+      .maybeSingle();
+
+    if (pathError) {
+      throw new Error(pathError.message);
+    }
+    if (!existing) break;
+    nextPath = `/${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  const nextHidden = isHome ? false : isHidden;
+  const { error } = await supabase
+    .from("site_pages")
+    .update({
+      title,
+      path: nextPath,
+      menu_code: isHome ? "home" : nextPath.slice(1),
+      menu_name: title,
+      is_hidden: nextHidden,
+      ...(nextHidden ? { published_json: null } : {}),
+      updated_at: new Date().toISOString(),
+    } as never)
+    .eq("site_id", siteId)
+    .eq("id", pageId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await syncSiteNavigationDraft(siteId);
+  revalidateSiteSitemap(siteId);
+
+  return {
+    id: pageId,
+    path: nextPath,
+    status: nextHidden ? "private" as const : "public" as const,
+    title,
+  };
+}
+
+export async function duplicateEditorPage(formData: FormData) {
+  await getCurrentUser();
+
+  const siteId = value(formData, "site_id");
+  const pageId = value(formData, "page_id");
+
+  if (!siteId || !pageId) {
+    throw new Error("복제할 페이지 정보가 필요합니다.");
+  }
+
+  const supabase = await createClient();
+  const [{ data: source, error: sourceError }, { count }] = await Promise.all([
+    supabase
+      .from("site_pages")
+      .select("title,path,draft_json,page_json,page_type,sub_layout,locale_json")
+      .eq("site_id", siteId)
+      .eq("id", pageId)
+      .maybeSingle(),
+    supabase
+      .from("site_pages")
+      .select("id", { count: "exact", head: true })
+      .eq("site_id", siteId),
+  ]);
+
+  if (sourceError || !source) {
+    throw new Error(sourceError?.message ?? "복제할 페이지를 찾지 못했습니다.");
+  }
+
+  const title = `${source.title} 복사본`;
+  const pathBase =
+    source.path === "/"
+      ? "home-copy"
+      : `${String(source.path).replace(/^\/+/, "")}-copy`;
+  let path = `/${pathBase}`;
+  let suffix = 2;
+
+  while (true) {
+    const { data: existing, error: pathError } = await supabase
+      .from("site_pages")
+      .select("id")
+      .eq("site_id", siteId)
+      .eq("path", path)
+      .maybeSingle();
+
+    if (pathError) {
+      throw new Error(pathError.message);
+    }
+    if (!existing) break;
+    path = `/${pathBase}-${suffix}`;
+    suffix += 1;
+  }
+
+  const draftJson = (source.draft_json ?? source.page_json ?? {
+    version: 1,
+    sections: [],
+  }) as Json;
+  const { data: duplicated, error } = await supabase
+    .from("site_pages")
+    .insert({
+      site_id: siteId,
+      title,
+      path,
+      menu_code: path.slice(1),
+      menu_name: title,
+      page_type: source.page_type || "custom",
+      sub_layout: source.sub_layout,
+      is_hidden: true,
+      sort_order: count ?? 0,
+      locale_json: source.locale_json ?? {},
+      page_json: draftJson,
+      draft_json: draftJson,
+      published_json: null,
+    } as never)
+    .select("id,title,path")
+    .single();
+
+  if (error || !duplicated) {
+    throw new Error(error?.message ?? "페이지를 복제하지 못했습니다.");
+  }
+
+  await syncSiteNavigationDraft(siteId);
+  revalidateSiteSitemap(siteId);
+
+  return {
+    id: String(duplicated.id),
+    path: String(duplicated.path),
+    status: "private" as const,
+    title: String(duplicated.title),
+  };
+}
+
+export async function deleteEditorPage(formData: FormData) {
+  await getCurrentUser();
+
+  const siteId = value(formData, "site_id");
+  const pageId = value(formData, "page_id");
+
+  if (!siteId || !pageId) {
+    throw new Error("삭제할 페이지 정보가 필요합니다.");
+  }
+
+  const supabase = await createClient();
+  const { data: current, error: currentError } = await supabase
+    .from("site_pages")
+    .select("path")
+    .eq("site_id", siteId)
+    .eq("id", pageId)
+    .maybeSingle();
+
+  if (currentError || !current) {
+    throw new Error(currentError?.message ?? "삭제할 페이지를 찾지 못했습니다.");
+  }
+  if (current.path === "/") {
+    throw new Error("메인 페이지는 삭제할 수 없습니다.");
+  }
+
+  const { error } = await supabase
+    .from("site_pages")
+    .delete()
+    .eq("site_id", siteId)
+    .eq("id", pageId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await syncSiteNavigationDraft(siteId);
+  revalidateSiteSitemap(siteId);
+  return { id: pageId };
+}
+
+export async function moveEditorPage(formData: FormData) {
+  await getCurrentUser();
+
+  const siteId = value(formData, "site_id");
+  const pageId = value(formData, "page_id");
+  const direction = value(formData, "direction");
+
+  if (!siteId || !pageId || !["up", "down"].includes(direction)) {
+    throw new Error("페이지 순서 정보가 올바르지 않습니다.");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("site_pages")
+    .select("id,path,sort_order,title")
+    .eq("site_id", siteId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const ordered = (data ?? []).filter((item) => item.path !== "/");
+  const currentIndex = ordered.findIndex((item) => String(item.id) === pageId);
+  const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+  if (currentIndex < 0 || targetIndex < 0 || targetIndex >= ordered.length) {
+    return { id: pageId };
+  }
+
+  const current = ordered[currentIndex];
+  const target = ordered[targetIndex];
+  const currentOrder = Number(current.sort_order ?? currentIndex + 1);
+  const targetOrder = Number(target.sort_order ?? targetIndex + 1);
+  const [{ error: currentError }, { error: targetError }] = await Promise.all([
+    supabase
+      .from("site_pages")
+      .update({ sort_order: targetOrder, updated_at: new Date().toISOString() } as never)
+      .eq("site_id", siteId)
+      .eq("id", current.id),
+    supabase
+      .from("site_pages")
+      .update({ sort_order: currentOrder, updated_at: new Date().toISOString() } as never)
+      .eq("site_id", siteId)
+      .eq("id", target.id),
+  ]);
+
+  if (currentError || targetError) {
+    throw new Error(currentError?.message ?? targetError?.message ?? "순서를 변경하지 못했습니다.");
+  }
+
+  await syncSiteNavigationDraft(siteId);
+  revalidateSiteSitemap(siteId);
+  return { id: pageId };
+}
+
 export async function updateDraftJson(formData: FormData) {
   await getCurrentUser();
 
@@ -974,24 +1310,64 @@ export async function updateDraftJson(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const updatedAt = new Date().toISOString();
   const { error } = await supabase
     .from("site_pages")
     .update({
       draft_json: draftJson,
       page_json: draftJson,
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAt,
     })
+    .eq("site_id", siteId)
     .eq("id", pageId);
 
   if (error) {
     throw new Error(error.message);
   }
 
+  const { data: homePage, error: homePageError } = await supabase
+    .from("site_pages")
+    .select("id,draft_json")
+    .eq("site_id", siteId)
+    .eq("path", "/")
+    .neq("id", pageId)
+    .maybeSingle();
+
+  if (homePageError) {
+    throw new Error(homePageError.message);
+  }
+
+  if (homePage) {
+    const selectedDraft = readRecord(draftJson as Json);
+    const homeDraft = readRecord(homePage.draft_json);
+    const nextHomeDraft: Record<string, Json | undefined> = { ...homeDraft };
+
+    for (const key of ["design", "i18n", "navigation", "pages", "version"] as const) {
+      if (selectedDraft[key] !== undefined) {
+        nextHomeDraft[key] = selectedDraft[key];
+      }
+    }
+
+    const { error: homeUpdateError } = await supabase
+      .from("site_pages")
+      .update({
+        draft_json: nextHomeDraft as Json,
+        page_json: nextHomeDraft as Json,
+        updated_at: updatedAt,
+      })
+      .eq("site_id", siteId)
+      .eq("id", homePage.id);
+
+    if (homeUpdateError) {
+      throw new Error(homeUpdateError.message);
+    }
+  }
+
   await supabase
     .from("sites")
     .update({
       status: "draft",
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAt,
     })
     .eq("id", siteId);
 

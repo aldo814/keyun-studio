@@ -10,8 +10,15 @@ function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-function redirectWithResult(siteSlug: string, result: "sent" | "failed") {
-  redirect(`/s/${siteSlug}?contact=${result}#contact`);
+function redirectWithResult(
+  siteSlug: string,
+  result: "sent" | "failed",
+  sourcePath?: string,
+) {
+  const defaultPath = `/s/${siteSlug}`;
+  const safePath = sourcePath?.startsWith(defaultPath) ? sourcePath : defaultPath;
+  const separator = safePath.includes("?") ? "&" : "?";
+  redirect(`${safePath}${separator}contact=${result}#contact`);
 }
 
 type ContactNotificationPayload = {
@@ -94,18 +101,19 @@ export async function submitPublicContact(formData: FormData) {
   const subject = value(formData, "subject") || "문의";
   const message = value(formData, "message");
   const sourcePath = value(formData, "source_path") || `/s/${siteSlug}`;
+  const formName = value(formData, "form_name") || "문의폼";
   const honeypot = value(formData, "company");
 
   if (!siteSlug || honeypot) {
-    redirectWithResult(siteSlug || "keyun-demo", "failed");
+    redirectWithResult(siteSlug || "keyun-demo", "failed", sourcePath);
   }
 
   if (!name || !message || (!email && !phone)) {
-    redirectWithResult(siteSlug, "failed");
+    redirectWithResult(siteSlug, "failed", sourcePath);
   }
 
   if (!hasSupabaseEnv()) {
-    redirectWithResult(siteSlug, "sent");
+    redirectWithResult(siteSlug, "sent", sourcePath);
   }
 
   const supabase = await createClient();
@@ -119,12 +127,12 @@ export async function submitPublicContact(formData: FormData) {
   const siteId = site?.id;
 
   if (!siteId) {
-    redirectWithResult(siteSlug, "failed");
+    redirectWithResult(siteSlug, "failed", sourcePath);
   }
 
   const { error } = await supabase.from("contact_submissions").insert({
     email: email || null,
-    form_name: "문의폼",
+    form_name: formName,
     message,
     name,
     phone: phone || null,
@@ -135,7 +143,7 @@ export async function submitPublicContact(formData: FormData) {
 
   if (error) {
     console.error(error.message);
-    redirectWithResult(siteSlug, "failed");
+    redirectWithResult(siteSlug, "failed", sourcePath);
   }
 
   await sendContactSubmissionNotification({
@@ -150,5 +158,5 @@ export async function submitPublicContact(formData: FormData) {
   });
 
   revalidatePath("/dashboard/content/forms");
-  redirectWithResult(siteSlug, "sent");
+  redirectWithResult(siteSlug, "sent", sourcePath);
 }

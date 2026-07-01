@@ -18,6 +18,10 @@ type DesignEditorLoaderProps = {
     title: string;
     updatedAt: string;
   };
+  siteBoards: Array<{
+    id: string | null;
+    name: string;
+  }>;
   sitePages: Array<{
     id: string;
     path: string;

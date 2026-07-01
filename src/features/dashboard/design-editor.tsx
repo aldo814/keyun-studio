@@ -6,7 +6,7 @@ import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   Award, BarChart3, Briefcase, Camera, Check, ChevronDown, ClipboardList, Clock,
   Copy, CreditCard, Download, Eye, FileText, GitBranch, GripVertical, HelpCircle,
-  Home, Image as ImageIcon, Inbox, Languages, Laptop, Layers3, LayoutGrid, MapPin,
+  Home, Image as ImageIcon, Languages, Laptop, Layers3, LayoutGrid, MapPin,
   Monitor, MoreHorizontal, Newspaper, Palette, Plus, Settings, Smartphone, Sparkles,
   Star, Tablet, Trash2, UploadCloud, Users, WandSparkles, X, ZoomIn,
 } from "lucide-react";
@@ -28,10 +28,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createEditorPage,
+  deleteEditorPage,
+  duplicateEditorPage,
+  moveEditorPage,
   publishSite,
+  updateEditorPageSettings,
   updateDraftJson,
 } from "@/features/dashboard/actions";
-import { initialBoards } from "@/features/dashboard/content-posts-data";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/types/database";
 
@@ -108,6 +111,10 @@ type DesignEditorProps = {
     title: string;
     updatedAt: string;
   };
+  siteBoards: Array<{
+    id: string | null;
+    name: string;
+  }>;
   sitePages: EditorPageItem[];
 };
 
@@ -2516,7 +2523,7 @@ function MiniModulePreview({ preset }: { preset: ModulePreset }) {
       <div className="relative h-20 overflow-hidden rounded-md border border-slate-200 bg-white p-2">
         {preset.layout === "text-only" ? (
           <div className="grid grid-cols-2 gap-2">
-            {[["주소", 14], ["교통", 10], ["전화", 10], ["이메일", 12]].map(([label, w], i) => (
+            {[["주소", 14], ["교통", 10], ["전화", 10], ["이메일", 12]].map(([, w], i) => (
               <div key={i} className="flex gap-1">
                 <div className="mt-0.5 size-2 rounded-sm bg-blue-300" />
                 <div>
@@ -5406,7 +5413,7 @@ function CanvasSection({
   );
 }
 
-export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
+export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditorProps) {
   const router = useRouter();
   const [draft, setDraft] = useState<EditableDraft>(() => toEditableJson(page.draftJson));
   const [savedDraft, setSavedDraft] = useState<EditableDraft>(() =>
@@ -5433,9 +5440,9 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
   const [isLibraryFullOpen, setIsLibraryFullOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [leftPanel, setLeftPanel] =
-    useState<"pages" | "sections" | "settings">("settings");
+    useState<"sections" | "settings">("settings");
   const [settingsSubPanel, setSettingsSubPanel] =
-    useState<null | "language" | "pages" | "menu" | "footer">(null);
+    useState<null | "language" | "menu" | "footer">(null);
   const [headerSettingsTab, setHeaderSettingsTab] = useState<"layout" | "color" | "menu">("layout");
   const [footerSettingsTab, setFooterSettingsTab] = useState<"layout" | "color">("layout");
   const [saveMessage, setSaveMessage] = useState("저장 전 상태");
@@ -5443,6 +5450,12 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
   const [isCreatingPage, setIsCreatingPage] = useState(false);
   const [isPageComposerOpen, setIsPageComposerOpen] = useState(false);
   const [isPagePathTouched, setIsPagePathTouched] = useState(false);
+  const [managedPageId, setManagedPageId] = useState<string | null>(null);
+  const [managedPagePath, setManagedPagePath] = useState("");
+  const [managedPageStatus, setManagedPageStatus] =
+    useState<"public" | "private">("private");
+  const [managedPageTitle, setManagedPageTitle] = useState("");
+  const [isPageActionPending, setIsPageActionPending] = useState(false);
   const [newPageTitle, setNewPageTitle] = useState("");
   const [newPagePath, setNewPagePath] = useState("");
   const [uploadMessage, setUploadMessage] = useState("");
@@ -5493,6 +5506,12 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
     ? responsivePaddingValue(selectedSection, "paddingTop", activeStyleViewport, "96")
     : "96";
   const isMainPage = page.path === "/";
+  const managedPage =
+    sitePages.find((sitePage) => sitePage.id === managedPageId) ?? null;
+  const movablePages = sitePages.filter((sitePage) => sitePage.path !== "/");
+  const managedPageMoveIndex = managedPage
+    ? movablePages.findIndex((sitePage) => sitePage.id === managedPage.id)
+    : -1;
   const pageFilteredPresets = modulePresets.filter((preset) => {
     const pt = preset.pageType ?? "all";
     if (isMainPage) return pt === "main" || pt === "all";
@@ -5507,14 +5526,13 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
     if (b === "히어로") return 1;
     return 0;
   });
-  // 페이지 전환 시 현재 카테고리가 없으면 첫 번째로 리셋
-  useEffect(() => {
-    if (!availableLibraryCategories.includes(activeLibraryCategory)) {
-      setActiveLibraryCategory(availableLibraryCategories[0] ?? "");
-    }
-  }, [page.id]);
+  const resolvedLibraryCategory = availableLibraryCategories.includes(
+    activeLibraryCategory,
+  )
+    ? activeLibraryCategory
+    : availableLibraryCategories[0] ?? "";
   const visibleModules = pageFilteredPresets.filter(
-    (preset) => preset.category === activeLibraryCategory,
+    (preset) => preset.category === resolvedLibraryCategory,
   );
   const previewSection = useMemo(
     () => (previewPreset ? createSection(previewPreset.type, previewPreset.layout) : null),
@@ -5669,54 +5687,6 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
   }
 
 
-  function updatePages(nextPages: EditorPageItem[]) {
-    const pageIds = new Set(nextPages.map((page) => page.id));
-    const nextNavigation = draft.navigation.filter((item) => pageIds.has(item.pageId));
-
-    updateDraft({
-      navigation: nextNavigation.length ? nextNavigation : normalizeNavigation([], nextPages),
-      pages: nextPages,
-    });
-  }
-
-  function updatePage(pageId: string, nextPage: Partial<EditorPageItem>) {
-    updatePages(
-      draft.pages.map((page) =>
-        page.id === pageId
-          ? {
-              ...page,
-              ...nextPage,
-              path: nextPage.path ? (nextPage.path.startsWith("/") ? nextPage.path : `/${nextPage.path}`) : page.path,
-            }
-          : page,
-      ),
-    );
-  }
-
-  function updateLocalizedPageTitle(pageId: string, title: string) {
-    if (activeLocale === "ko") {
-      updatePage(pageId, { title });
-      return;
-    }
-
-    updatePages(
-      draft.pages.map((page) =>
-        page.id === pageId
-          ? {
-              ...page,
-              translations: {
-                ...(page.translations ?? {}),
-                [activeLocale]: {
-                  ...(page.translations?.[activeLocale] ?? {}),
-                  title,
-                },
-              },
-            }
-          : page,
-      ),
-    );
-  }
-
   async function addPage() {
     const title = newPageTitle.trim();
 
@@ -5768,49 +5738,108 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
     router.push(`/dashboard/editor/${site.id}?pageId=${pageId}`);
   }
 
-  function duplicatePage(pageId: string) {
-    const source = draft.pages.find((page) => page.id === pageId);
-
-    if (!source) return;
-
-    const page: EditorPageItem = {
-      ...source,
-      id: `page-${Date.now()}`,
-      path: `${source.path === "/" ? "/home" : source.path}-copy`,
-      status: "private",
-      title: `${source.title} 복사본`,
-    };
-
-    updateDraft({
-      navigation: [
-        ...draft.navigation,
-        { enabled: false, id: `nav-${Date.now()}`, label: page.title, pageId: page.id },
-      ],
-      pages: [...draft.pages, page],
-    });
+  function openPageManager(sitePage: EditorPageItem) {
+    setManagedPageId(sitePage.id);
+    setManagedPagePath(sitePage.path === "/" ? "" : sitePage.path.replace(/^\/+/, ""));
+    setManagedPageStatus(sitePage.status);
+    setManagedPageTitle(sitePage.title);
   }
 
-  function removePage(pageId: string) {
-    if (pageId === "home" || draft.pages.length <= 1) {
+  function pageActionFormData(pageId: string) {
+    const formData = new FormData();
+    formData.set("site_id", site.id);
+    formData.set("page_id", pageId);
+    return formData;
+  }
+
+  async function saveManagedPage() {
+    if (!managedPageId || !managedPageTitle.trim()) return;
+
+    setIsPageActionPending(true);
+    setSaveMessage("페이지 설정을 저장하는 중...");
+
+    try {
+      const formData = pageActionFormData(managedPageId);
+      formData.set("title", managedPageTitle);
+      formData.set("path", managedPagePath);
+      formData.set("status", managedPageStatus);
+      await updateEditorPageSettings(formData);
+      setManagedPageId(null);
+      setSaveMessage("페이지 설정을 저장했습니다.");
+      router.refresh();
+    } catch (error) {
+      setSaveMessage(
+        error instanceof Error ? error.message : "페이지 설정을 저장하지 못했습니다.",
+      );
+    } finally {
+      setIsPageActionPending(false);
+    }
+  }
+
+  async function duplicateManagedPage(pageId: string) {
+    setIsPageActionPending(true);
+    setSaveMessage("페이지를 복제하는 중...");
+
+    try {
+      const duplicated = await duplicateEditorPage(pageActionFormData(pageId));
+      setManagedPageId(null);
+      setSaveMessage("페이지를 복제했습니다.");
+      router.push(`/dashboard/editor/${site.id}?pageId=${duplicated.id}`);
+      router.refresh();
+    } catch (error) {
+      setSaveMessage(
+        error instanceof Error ? error.message : "페이지를 복제하지 못했습니다.",
+      );
+    } finally {
+      setIsPageActionPending(false);
+    }
+  }
+
+  async function deleteManagedPage(pageId: string) {
+    if (!window.confirm("이 페이지를 삭제할까요? 삭제한 페이지는 복구할 수 없습니다.")) {
       return;
     }
 
-    updatePages(draft.pages.filter((page) => page.id !== pageId));
+    setIsPageActionPending(true);
+    setSaveMessage("페이지를 삭제하는 중...");
+
+    try {
+      await deleteEditorPage(pageActionFormData(pageId));
+      const fallbackPage =
+        sitePages.find((sitePage) => sitePage.path === "/") ??
+        sitePages.find((sitePage) => sitePage.id !== pageId);
+      setManagedPageId(null);
+      setSaveMessage("페이지를 삭제했습니다.");
+
+      if (pageId === page.id && fallbackPage) {
+        router.push(`/dashboard/editor/${site.id}?pageId=${fallbackPage.id}`);
+      } else {
+        router.refresh();
+      }
+    } catch (error) {
+      setSaveMessage(
+        error instanceof Error ? error.message : "페이지를 삭제하지 못했습니다.",
+      );
+    } finally {
+      setIsPageActionPending(false);
+    }
   }
 
-  function movePage(pageId: string, direction: -1 | 1) {
-    const index = draft.pages.findIndex((page) => page.id === pageId);
-    const targetIndex = index + direction;
+  async function moveManagedPage(pageId: string, direction: "up" | "down") {
+    setIsPageActionPending(true);
 
-    if (index < 0 || targetIndex < 0 || targetIndex >= draft.pages.length) {
-      return;
+    try {
+      const formData = pageActionFormData(pageId);
+      formData.set("direction", direction);
+      await moveEditorPage(formData);
+      router.refresh();
+    } catch (error) {
+      setSaveMessage(
+        error instanceof Error ? error.message : "페이지 순서를 변경하지 못했습니다.",
+      );
+    } finally {
+      setIsPageActionPending(false);
     }
-
-    const nextPages = [...draft.pages];
-    const current = nextPages[index];
-    nextPages[index] = nextPages[targetIndex];
-    nextPages[targetIndex] = current;
-    updatePages(nextPages);
   }
 
   function updateNavigationItem(itemId: string, nextItem: Partial<EditorNavigationItem>) {
@@ -7439,7 +7468,6 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
     "--brand-soft": draft.design.subColor,
     "--canvas-text": draft.design.textColor,
   } as CSSProperties;
-  const isPageSettingsMode = leftPanel === "settings" && settingsSubPanel === "pages";
   const isHeaderSettingsMode = leftPanel === "settings" && settingsSubPanel === "menu";
   const isFooterSettingsMode = leftPanel === "settings" && settingsSubPanel === "footer";
   const isLanguageSettingsMode =
@@ -7651,141 +7679,6 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
               })}
             </nav>
 
-            {leftPanel === "pages" ? (
-              <div className="mt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">페이지</p>
-                    <p className="mt-1 text-xs text-slate-400">{sitePages.length}개</p>
-                  </div>
-                  <Button
-                    className="h-8 px-3 text-xs"
-                    type="button"
-                    onClick={() => setIsPageComposerOpen((current) => !current)}
-                  >
-                    <Plus className="size-3.5" />
-                    추가
-                  </Button>
-                </div>
-
-                {isPageComposerOpen ? (
-                  <div className="mt-3 space-y-3 rounded-lg border border-blue-200 bg-white p-3">
-                    <label className="block space-y-1.5">
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        페이지명
-                      </span>
-                      <Input
-                        autoFocus
-                        className="h-9 text-sm"
-                        placeholder="예: 회사 소개"
-                        value={newPageTitle}
-                        onChange={(event) => {
-                          const title = event.target.value;
-                          setNewPageTitle(title);
-                          if (!isPagePathTouched) {
-                            setNewPagePath(slugifyPath(title).replace(/^\//, ""));
-                          }
-                        }}
-                      />
-                    </label>
-                    <label className="block space-y-1.5">
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        페이지 주소
-                      </span>
-                      <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-2">
-                        <span className="text-xs text-slate-400">/</span>
-                        <input
-                          className="min-w-0 flex-1 bg-transparent px-1 text-xs outline-none"
-                          placeholder="company"
-                          value={newPagePath}
-                          onChange={(event) => {
-                            setIsPagePathTouched(true);
-                            setNewPagePath(
-                              event.target.value.replace(/^\/+/, "").replace(/\s+/g, "-"),
-                            );
-                          }}
-                        />
-                      </div>
-                    </label>
-                    <div className="flex gap-2">
-                      <Button
-                        className="h-8 flex-1 text-xs"
-                        disabled={isCreatingPage || !newPageTitle.trim()}
-                        type="button"
-                        onClick={() => void addPage()}
-                      >
-                        {isCreatingPage ? "생성 중..." : "페이지 만들기"}
-                      </Button>
-                      <Button
-                        className="h-8 px-3 text-xs"
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsPageComposerOpen(false)}
-                      >
-                        취소
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="mt-4 space-y-2">
-                  {sitePages.map((sitePage) => {
-                    const isActive = sitePage.id === page.id;
-                    const PageIcon = sitePage.path === "/" ? Home : FileText;
-
-                    return (
-                      <button
-                        aria-current={isActive ? "page" : undefined}
-                        className={cn(
-                          "group flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors",
-                          isActive
-                            ? "border-blue-300 bg-blue-50"
-                            : "border-slate-200 bg-white hover:border-blue-200",
-                        )}
-                        key={sitePage.id}
-                        type="button"
-                        onClick={() => openEditorPage(sitePage.id)}
-                      >
-                        <span
-                          className={cn(
-                            "flex size-9 shrink-0 items-center justify-center rounded-md",
-                            isActive
-                              ? "bg-blue-600 text-white"
-                              : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600",
-                          )}
-                        >
-                          <PageIcon className="size-4" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold">
-                            {sitePage.title}
-                          </span>
-                          <span className="mt-0.5 block truncate text-[11px] text-slate-400">
-                            {sitePage.path}
-                          </span>
-                        </span>
-                        <span
-                          className={cn(
-                            "size-2 shrink-0 rounded-full",
-                            sitePage.status === "public"
-                              ? "bg-emerald-500"
-                              : "bg-slate-300",
-                          )}
-                          title={sitePage.status === "public" ? "공개" : "비공개"}
-                        />
-                        <ArrowRight
-                          className={cn(
-                            "size-4 shrink-0 text-slate-300 transition-transform",
-                            !isActive && "group-hover:translate-x-0.5 group-hover:text-blue-500",
-                          )}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
             {/* 디자인 탭 — 페이지 스위처 + 섹션 순서 */}
             {leftPanel === "sections" && (
               <>
@@ -7864,30 +7757,47 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                       const isActive = sitePage.id === page.id;
                       const PageIcon = sitePage.path === "/" ? Home : FileText;
                       return (
-                        <button
-                          key={sitePage.id}
-                          aria-current={isActive ? "page" : undefined}
+                        <div
                           className={cn(
-                            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors",
+                            "group flex items-center rounded-lg transition-colors",
                             isActive
                               ? "bg-blue-600 text-white"
                               : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                           )}
-                          type="button"
-                          onClick={() => openEditorPage(sitePage.id)}
+                          key={sitePage.id}
                         >
-                          <PageIcon className={cn("size-3.5 shrink-0", isActive ? "text-blue-200" : "text-slate-400")} />
-                          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                            {sitePage.title}
-                          </span>
-                          <span
+                          <button
+                            aria-current={isActive ? "page" : undefined}
+                            className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left"
+                            type="button"
+                            onClick={() => openEditorPage(sitePage.id)}
+                          >
+                            <PageIcon className={cn("size-3.5 shrink-0", isActive ? "text-blue-200" : "text-slate-400")} />
+                            <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                              {sitePage.title}
+                            </span>
+                            <span
+                              className={cn(
+                                "size-1.5 shrink-0 rounded-full",
+                                sitePage.status === "public" ? "bg-emerald-400" : isActive ? "bg-blue-300" : "bg-slate-300",
+                              )}
+                              title={sitePage.status === "public" ? "공개" : "비공개"}
+                            />
+                          </button>
+                          <button
+                            aria-label={`${sitePage.title} 페이지 설정`}
                             className={cn(
-                              "size-1.5 shrink-0 rounded-full",
-                              sitePage.status === "public" ? "bg-emerald-400" : isActive ? "bg-blue-300" : "bg-slate-300",
+                              "mr-1 flex size-7 shrink-0 items-center justify-center rounded-md transition-colors",
+                              isActive
+                                ? "text-blue-100 hover:bg-white/15 hover:text-white"
+                                : "text-slate-300 hover:bg-white hover:text-blue-600",
                             )}
-                            title={sitePage.status === "public" ? "공개" : "비공개"}
-                          />
-                        </button>
+                            type="button"
+                            onClick={() => openPageManager(sitePage)}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -8483,112 +8393,6 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
               </div>
             ) : null}
 
-            {/* 페이지 관리 floating 패널 */}
-            {isPageSettingsMode ? (
-              <div className="fixed bottom-5 left-[340px] right-[380px] z-40">
-                <div className="rounded-2xl border border-blue-100 bg-white/95 shadow-2xl shadow-blue-950/10 backdrop-blur">
-                  <div className="max-h-[420px] overflow-hidden p-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold">페이지 생성 및 관리</p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          페이지를 추가하고 공개 상태, 경로, 메뉴 연결 기준을 관리합니다.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          className="h-8 px-3 text-xs"
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setSettingsSubPanel(null);
-                            setLeftPanel("sections");
-                            setIsPageComposerOpen(true);
-                          }}
-                        >
-                          <Plus className="size-3.5" />
-                          페이지 추가
-                        </Button>
-                        <Button size="icon" type="button" variant="ghost" onClick={() => setSettingsSubPanel(null)}>
-                          <X className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="max-h-[330px] space-y-2 overflow-auto pr-1">
-                      {draft.pages.map((pageItem, index) => (
-                        <div
-                          key={pageItem.id}
-                          className="grid gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 md:grid-cols-[56px_1.1fr_1fr_88px_128px] md:items-center"
-                        >
-                          <div className="flex items-center gap-1">
-                            <GripVertical className="size-4 text-slate-300" />
-                            <Button className="size-6" disabled={index === 0} size="icon" title="위로" type="button" variant="ghost" onClick={() => movePage(pageItem.id, -1)}>
-                              <ArrowUp className="size-3" />
-                            </Button>
-                            <Button className="size-6" disabled={index === draft.pages.length - 1} size="icon" title="아래로" type="button" variant="ghost" onClick={() => movePage(pageItem.id, 1)}>
-                              <ArrowDown className="size-3" />
-                            </Button>
-                          </div>
-
-                          <label className="space-y-1">
-                            <span className="text-[10px] font-semibold text-slate-400">페이지명</span>
-                            <Input
-                              className="h-8 bg-white text-xs"
-                              value={localizedPageTitle(pageItem, activeLocale)}
-                              onChange={(event) =>
-                                updateLocalizedPageTitle(pageItem.id, event.target.value)
-                              }
-                            />
-                          </label>
-
-                          <label className="space-y-1">
-                            <span className="text-[10px] font-semibold text-slate-400">주소</span>
-                            <Input
-                              className="h-8 bg-white font-mono text-xs"
-                              disabled={activeLocale !== "ko"}
-                              value={pageItem.path}
-                              onChange={(event) => updatePage(pageItem.id, { path: event.target.value })}
-                            />
-                          </label>
-
-                          <button
-                            className={cn(
-                              "mt-4 h-8 rounded-md border px-2 text-xs font-semibold md:mt-5",
-                              pageItem.status === "public"
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border-slate-200 bg-white text-slate-500",
-                            )}
-                            type="button"
-                            onClick={() => updatePage(pageItem.id, { status: pageItem.status === "public" ? "private" : "public" })}
-                          >
-                            {pageItem.status === "public" ? "공개" : "비공개"}
-                          </button>
-
-                          <div className="mt-4 flex items-center justify-end gap-1 md:mt-5">
-                            <Button className="h-8 px-2 text-xs" type="button" variant="outline" onClick={() => duplicatePage(pageItem.id)}>
-                              <Copy className="size-3.5" />
-                              복제
-                            </Button>
-                            <Button
-                              className="h-8 px-2 text-xs"
-                              disabled={pageItem.id === "home" || draft.pages.length <= 1}
-                              type="button"
-                              variant="outline"
-                              onClick={() => removePage(pageItem.id)}
-                            >
-                              <Trash2 className="size-3.5" />
-                              삭제
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
             {/* 헤더 설정 floating 패널 */}
             {isHeaderSettingsMode ? (
               <div className="fixed bottom-5 left-[340px] right-[380px] z-40">
@@ -8961,7 +8765,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                             key={category}
                             className={cn(
                               "h-7 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors",
-                              activeLibraryCategory === category
+                              resolvedLibraryCategory === category
                                 ? "bg-blue-600 text-white"
                                 : "bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600",
                             )}
@@ -8975,7 +8779,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                       {/* 프리셋 그리드 */}
                       <div className="overflow-y-auto p-4">
                         <div className="mb-3 flex items-center justify-between">
-                          <p className="text-sm font-semibold">{activeLibraryCategory} 섹션</p>
+                          <p className="text-sm font-semibold">{resolvedLibraryCategory} 섹션</p>
                           <span className="text-xs text-slate-400">{visibleModules.length}개 레이아웃</span>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -9057,7 +8861,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                               key={category}
                               className={cn(
                                 "block h-8 w-full rounded-md px-3 text-left text-sm",
-                                activeLibraryCategory === category
+                                resolvedLibraryCategory === category
                                   ? "bg-blue-50 text-blue-600"
                                   : "text-slate-600 hover:bg-slate-50",
                               )}
@@ -9072,7 +8876,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                         <div className="max-h-[260px] overflow-auto pr-1">
                           <div className="mb-3 flex items-center justify-between">
                             <p className="text-sm font-semibold">
-                              {activeLibraryCategory} 섹션
+                              {resolvedLibraryCategory} 섹션
                             </p>
                             <span className="text-xs text-slate-400">
                               {visibleModules.length}개 레이아웃
@@ -9143,7 +8947,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                             key={category}
                             className={cn(
                               "h-8 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors",
-                              activeLibraryCategory === category
+                              resolvedLibraryCategory === category
                                 ? "bg-blue-50 text-blue-600"
                                 : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
                             )}
@@ -9386,7 +9190,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                               onChange={(e) => updateSectionField(selectedIndex, "boardName", e.target.value)}
                             >
                               <option value="">전체 게시글</option>
-                              {initialBoards.map((board) => (
+                              {siteBoards.map((board) => (
                                 <option key={board.id ?? board.name} value={board.name}>{board.name}</option>
                               ))}
                             </select>
@@ -10515,7 +10319,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                         key={category}
                         className={cn(
                           "h-9 rounded-lg border text-xs font-semibold transition-colors",
-                          activeLibraryCategory === category
+                          resolvedLibraryCategory === category
                             ? "border-blue-500 bg-blue-50 text-blue-600"
                             : "border-slate-200 bg-white text-slate-500 hover:border-blue-200",
                         )}
@@ -10532,7 +10336,7 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
                   <div className="mb-4 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">
-                        {activeLibraryCategory} 모듈
+                        {resolvedLibraryCategory} 모듈
                       </h3>
                       <p className="mt-1 text-xs text-slate-500">
                         클릭하면 큰 미리보기에서 적용 방식을 선택합니다.
@@ -10641,6 +10445,164 @@ export function DesignEditor({ site, page, sitePages }: DesignEditorProps) {
           </aside>
         </div>
       </main>
+
+      {managedPage ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isPageActionPending) {
+              setManagedPageId(null);
+            }
+          }}
+        >
+          <section
+            aria-labelledby="page-settings-title"
+            aria-modal="true"
+            className="w-full max-w-lg overflow-hidden rounded-lg border border-slate-200 bg-white"
+            role="dialog"
+          >
+            <header className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold text-blue-600">페이지 관리</p>
+                <h2 className="mt-1 text-lg font-bold" id="page-settings-title">
+                  {managedPage.title}
+                </h2>
+              </div>
+              <Button
+                disabled={isPageActionPending}
+                size="icon"
+                type="button"
+                variant="ghost"
+                onClick={() => setManagedPageId(null)}
+              >
+                <X className="size-4" />
+              </Button>
+            </header>
+
+            <div className="space-y-5 px-5 py-5">
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold">페이지명</span>
+                <Input
+                  disabled={isPageActionPending}
+                  value={managedPageTitle}
+                  onChange={(event) => setManagedPageTitle(event.target.value)}
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold">페이지 주소</span>
+                <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3">
+                  <span className="text-sm text-slate-400">/</span>
+                  <input
+                    className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none disabled:text-slate-400"
+                    disabled={managedPage.path === "/" || isPageActionPending}
+                    value={managedPage.path === "/" ? "" : managedPagePath}
+                    onChange={(event) =>
+                      setManagedPagePath(
+                        event.target.value.replace(/^\/+/, "").replace(/\s+/g, "-"),
+                      )
+                    }
+                  />
+                </div>
+              </label>
+
+              <div className="space-y-2">
+                <span className="text-sm font-semibold">공개 상태</span>
+                <div className="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200">
+                  {[
+                    { label: "공개", value: "public" as const },
+                    { label: "비공개", value: "private" as const },
+                  ].map((option) => (
+                    <button
+                      aria-pressed={managedPageStatus === option.value}
+                      className={cn(
+                        "h-10 text-sm font-semibold transition-colors",
+                        managedPageStatus === option.value
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-slate-500 hover:bg-slate-50",
+                      )}
+                      disabled={managedPage.path === "/" || isPageActionPending}
+                      key={option.value}
+                      type="button"
+                      onClick={() => setManagedPageStatus(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {managedPage.path !== "/" ? (
+                <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                  <span className="text-sm font-semibold">페이지 순서</span>
+                  <div className="flex gap-2">
+                    <Button
+                      disabled={isPageActionPending || managedPageMoveIndex <= 0}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={() => void moveManagedPage(managedPage.id, "up")}
+                    >
+                      <ArrowUp className="size-4" />
+                      위로
+                    </Button>
+                    <Button
+                      disabled={
+                        isPageActionPending ||
+                        managedPageMoveIndex < 0 ||
+                        managedPageMoveIndex >= movablePages.length - 1
+                      }
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={() => void moveManagedPage(managedPage.id, "down")}
+                    >
+                      <ArrowDown className="size-4" />
+                      아래로
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4">
+              <div className="flex gap-2">
+                <Button
+                  disabled={isPageActionPending}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                  onClick={() => void duplicateManagedPage(managedPage.id)}
+                >
+                  <Copy className="size-4" />
+                  복제
+                </Button>
+                {managedPage.path !== "/" ? (
+                  <Button
+                    className="text-red-600 hover:text-red-700"
+                    disabled={isPageActionPending}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                    onClick={() => void deleteManagedPage(managedPage.id)}
+                  >
+                    <Trash2 className="size-4" />
+                    삭제
+                  </Button>
+                ) : null}
+              </div>
+              <Button
+                disabled={isPageActionPending || !managedPageTitle.trim()}
+                type="button"
+                onClick={() => void saveManagedPage()}
+              >
+                {isPageActionPending ? "처리 중..." : "설정 저장"}
+              </Button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
 
       {contextMenu ? (
         <div

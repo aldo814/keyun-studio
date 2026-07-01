@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 
 import { DesignEditorLoader } from "@/features/dashboard/design-editor-loader";
-import { getSiteEditorState } from "@/features/dashboard/queries";
+import {
+  getDashboardContentBoards,
+  getSiteEditorState,
+} from "@/features/dashboard/queries";
 
 type EditorPageProps = {
   params: Promise<{
@@ -19,7 +22,10 @@ function firstSearchValue(value: string | string[] | undefined) {
 export default async function EditorPage({ params, searchParams }: EditorPageProps) {
   const { siteId } = await params;
   const query = await searchParams;
-  const state = await getSiteEditorState(siteId, firstSearchValue(query?.pageId));
+  const [state, boards] = await Promise.all([
+    getSiteEditorState(siteId, firstSearchValue(query?.pageId)),
+    getDashboardContentBoards(),
+  ]);
 
   if (!state) {
     notFound();
@@ -30,6 +36,9 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
       key={state.page.id}
       page={state.page}
       site={state.site}
+      siteBoards={boards
+        .filter((board) => board.siteId === siteId)
+        .map((board) => ({ id: board.id, name: board.name }))}
       sitePages={state.sitePages}
     />
   );

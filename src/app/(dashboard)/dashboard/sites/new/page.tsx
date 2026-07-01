@@ -394,6 +394,24 @@ export default async function NewSitePage({ searchParams }: NewSitePageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-zinc-300">
+                <div>
+                  <p className="flex items-center gap-2 font-medium text-white">
+                    <FileText className="size-4 text-blue-300" />
+                    기본 페이지와 GNB 자동 연결
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+                    {["홈", "회사소개", "서비스", "문의"].map((page, index) => (
+                      <div className="contents" key={page}>
+                        {index > 0 ? (
+                          <ArrowRight className="size-3 text-zinc-600" />
+                        ) : null}
+                        <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-zinc-200">
+                          {page}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <p className="flex items-center gap-2">
                   <MessageSquareText className="size-4 text-blue-300" />
                   콘텐츠 운영용 게시판 3개

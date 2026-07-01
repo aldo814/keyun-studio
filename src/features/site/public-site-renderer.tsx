@@ -1850,7 +1850,7 @@ function ReviewSection({ design, section }: { design: PublicDesign; section: Pub
         const [name, role, quote] = items[0].split("|");
         return (
           <div className="mx-auto mt-10 max-w-2xl rounded-2xl bg-white/80 p-8 shadow-sm" style={childCardStyle(section)}>
-            <p className="text-xl font-medium leading-relaxed" style={{ color: design.textColor }}>"{quote || name}"</p>
+            <p className="text-xl font-medium leading-relaxed" style={{ color: design.textColor }}>&ldquo;{quote || name}&rdquo;</p>
             <div className="mt-6 flex items-center gap-3">
               <div className="size-10 rounded-full bg-slate-200" />
               <div><p className="font-semibold">{name}</p><p className="text-sm text-slate-500">{role}</p></div>
@@ -1864,7 +1864,7 @@ function ReviewSection({ design, section }: { design: PublicDesign; section: Pub
             return (
               <article key={i} className="rounded-2xl bg-white/80 p-6" style={childCardStyle(section)}>
                 {layout === "rating" && <div className="mb-3 flex gap-0.5">{[1,2,3,4,5].map((s) => <span key={s} style={{ color: design.mainColor }}>★</span>)}</div>}
-                <p className="text-sm leading-7 text-slate-600">"{quote || name}"</p>
+                <p className="text-sm leading-7 text-slate-600">&ldquo;{quote || name}&rdquo;</p>
                 <div className="mt-4 flex items-center gap-2">
                   <div className="size-8 rounded-full bg-slate-200" />
                   <div><p className="text-sm font-semibold">{name}</p><p className="text-xs text-slate-400">{role}</p></div>
@@ -2055,7 +2055,6 @@ function BreadcrumbSection({ design, section }: { design: PublicDesign; section:
 // ── OrgChartSection ──────────────────────────────────────
 function OrgChartSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
   const items = itemList(section);
-  const layout = stringValue(section, "layout", "tree");
   const levels: Record<string, Array<{ name: string; role: string }>> = {};
   items.forEach((item) => {
     const [name, role, level] = item.split("|");
@@ -2339,6 +2338,7 @@ function PhotoGallerySection({ design, section }: { design: PublicDesign; sectio
         <div className="mt-10 columns-2 gap-4 md:columns-3" style={{ columnFill: "balance" }}>
           {items.map((item, i) => (
             <div key={i} className="mb-4 break-inside-avoid overflow-hidden rounded-xl bg-slate-200" style={{ height: heights[i % heights.length] }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               {item && item !== "사진1" && <img alt="" className="h-full w-full object-cover" src={item} />}
             </div>
           ))}
@@ -2347,6 +2347,7 @@ function PhotoGallerySection({ design, section }: { design: PublicDesign; sectio
         <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3">
           {items.map((item, i) => (
             <div key={i} className="aspect-square overflow-hidden rounded-xl bg-slate-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               {item && item !== "사진1" && <img alt="" className="h-full w-full object-cover" src={item} />}
             </div>
           ))}
@@ -2526,29 +2527,81 @@ function BoardSection({ design, posts, section, siteSlug }: { design: PublicDesi
 }
 
 // ── EmbedFormSection ─────────────────────────────────────
-function EmbedFormSection({ design, section }: { design: PublicDesign; section: PublicSection }) {
+function EmbedFormSection({
+  contactEnabled,
+  contactResult,
+  design,
+  locale,
+  pagePath,
+  section,
+  siteSlug,
+}: {
+  contactEnabled: boolean;
+  contactResult?: string;
+  design: PublicDesign;
+  locale: SiteLocale;
+  pagePath: string;
+  section: PublicSection;
+  siteSlug: string;
+}) {
   const layout = stringValue(section, "layout", "contact");
   const buttonLabel = stringValue(section, "buttonLabel", layout === "newsletter" ? "구독하기" : layout === "consult" ? "상담 신청" : "보내기");
+  const formName = stringValue(section, "title", layout === "newsletter" ? "뉴스레터" : "문의폼");
+  const sourcePath = `${locale === "en" ? `/s/${siteSlug}/en` : `/s/${siteSlug}`}${
+    pagePath === "/" ? "" : pagePath
+  }`;
+  const hiddenFields = (
+    <>
+      <input name="site_slug" type="hidden" value={siteSlug} />
+      <input name="source_path" type="hidden" value={sourcePath} />
+      <input name="form_name" type="hidden" value={formName} />
+      <input aria-hidden="true" autoComplete="off" className="hidden" name="company" tabIndex={-1} />
+    </>
+  );
+
   return (
     <SectionShell design={design} section={section}>
       <SectionHeader design={design} section={section} />
-      <div className="mx-auto mt-10 max-w-xl rounded-2xl border bg-white/90 p-8" style={childCardStyle(section)}>
+      <div className="mx-auto mt-10 max-w-xl rounded-2xl border bg-white/90 p-8" id="contact" style={childCardStyle(section)}>
+        {contactResult === "sent" ? (
+          <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+            정상적으로 접수되었습니다.
+          </p>
+        ) : null}
+        {contactResult === "failed" ? (
+          <p className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+            필수 입력값을 확인해 주세요.
+          </p>
+        ) : null}
         {layout === "newsletter" ? (
-          <form className="flex gap-3" onSubmit={(e) => e.preventDefault()}>
-            <input className="h-11 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm outline-none" placeholder="이메일 주소를 입력하세요" type="email" />
-            <button className="h-11 rounded-lg px-5 text-sm font-semibold text-white" style={{ background: design.mainColor }} type="submit">{buttonLabel}</button>
+          <form action={submitPublicContact} className="flex gap-3">
+            {hiddenFields}
+            <input name="name" type="hidden" value="뉴스레터 구독 신청" />
+            <input name="subject" type="hidden" value={formName} />
+            <input name="message" type="hidden" value="뉴스레터 구독을 신청했습니다." />
+            <input className="h-11 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm outline-none" name="email" placeholder="이메일 주소를 입력하세요" required type="email" />
+            <button className="h-11 rounded-lg px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={!contactEnabled} style={{ background: design.mainColor }} type="submit">{buttonLabel}</button>
           </form>
         ) : (
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-            {layout !== "survey" && (
+          <form action={submitPublicContact} className="space-y-4">
+            {hiddenFields}
+            <input name="subject" type="hidden" value={formName} />
+            {layout === "survey" ? (
+              <input name="name" type="hidden" value="설문 응답" />
+            ) : (
               <div className="grid grid-cols-2 gap-4">
-                <input className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" placeholder="이름" />
-                <input className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" placeholder="이메일" type="email" />
+                <input className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" name="name" placeholder="이름" required />
+                <input className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" name="email" placeholder="이메일" required type="email" />
               </div>
             )}
-            {layout === "consult" && <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" placeholder="연락처" />}
-            <textarea className="h-28 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none" placeholder="내용을 입력하세요" />
-            <button className="h-11 w-full rounded-lg text-sm font-semibold text-white" style={{ background: design.mainColor }} type="submit">{buttonLabel}</button>
+            {layout === "survey" ? (
+              <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" name="email" placeholder="회신받을 이메일" required type="email" />
+            ) : null}
+            {layout === "consult" ? (
+              <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none" name="phone" placeholder="연락처" />
+            ) : null}
+            <textarea className="h-28 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none" name="message" placeholder="내용을 입력하세요" required />
+            <button className="h-11 w-full rounded-lg text-sm font-semibold text-white disabled:opacity-50" disabled={!contactEnabled} style={{ background: design.mainColor }} type="submit">{buttonLabel}</button>
           </form>
         )}
       </div>
@@ -2572,13 +2625,21 @@ function SectionHeader({ design, section }: { design: PublicDesign; section: Pub
 }
 
 function PublicSectionRenderer({
+  contactEnabled,
+  contactResult,
   design,
+  locale,
+  pagePath,
   posts,
   section,
   siteName,
   siteSlug,
 }: {
+  contactEnabled: boolean;
+  contactResult?: string;
   design: PublicDesign;
+  locale: SiteLocale;
+  pagePath: string;
   posts: DashboardPost[];
   section: PublicSection;
   siteName: string;
@@ -2608,7 +2669,19 @@ function PublicSectionRenderer({
   if (type === "jobs") return <JobsSection design={design} section={section} />;
   if (type === "downloads") return <DownloadsSection design={design} section={section} />;
   if (type === "board") return <BoardSection design={design} posts={posts} section={section} siteSlug={siteSlug} />;
-  if (type === "embed-form") return <EmbedFormSection design={design} section={section} />;
+  if (type === "embed-form") {
+    return (
+      <EmbedFormSection
+        contactEnabled={contactEnabled}
+        contactResult={contactResult}
+        design={design}
+        locale={locale}
+        pagePath={pagePath}
+        section={section}
+        siteSlug={siteSlug}
+      />
+    );
+  }
 
   // content — 멀티블록 지원
   if (type === "content") {
@@ -2618,6 +2691,7 @@ function PublicSectionRenderer({
         <div className="space-y-20">
           {blocks.map((block, i) => {
             const visual = block.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img alt={block.title} className="w-full rounded-xl object-cover" src={block.imageUrl} />
             ) : null;
             return (
@@ -2658,6 +2732,14 @@ export function PublicSiteRenderer({
   const localizedCopyright =
     i18n.footerCopyright[locale] ||
     (locale === "en" ? "All rights reserved." : "모든 권리 보유.");
+  const hasBoardSection = sections.some(
+    (section) => stringValue(section, "type") === "board",
+  );
+  const hasEmbeddedContactForm = sections.some((section) => {
+    if (stringValue(section, "type") !== "embed-form") return false;
+    const layout = stringValue(section, "layout", "contact");
+    return layout === "contact" || layout === "consult";
+  });
 
   return (
     <div
@@ -2681,8 +2763,12 @@ export function PublicSiteRenderer({
       <main style={{ display: "grid", gap: `${Math.max(0, Number(design.sectionGap) || 0)}px` }}>
         {sections.map((section, index) => (
           <PublicSectionRenderer
+            contactEnabled={contactEnabled}
+            contactResult={contactResult}
             design={design}
+            locale={locale}
             key={stringValue(section, "builderId", `${stringValue(section, "type", "section")}-${index}`)}
+            pagePath={pagePath}
             posts={posts}
             section={section}
             siteName={localizedSiteName}
@@ -2697,7 +2783,7 @@ export function PublicSiteRenderer({
             </div>
           </section>
         ) : null}
-        {siteSlug ? (
+        {siteSlug && !hasBoardSection ? (
           <LatestPostsSection
             design={design}
             locale={locale}
@@ -2705,7 +2791,7 @@ export function PublicSiteRenderer({
             siteSlug={siteSlug}
           />
         ) : null}
-        {siteSlug ? (
+        {siteSlug && !hasEmbeddedContactForm ? (
           <ContactSection
             contactEnabled={contactEnabled}
             contactResult={contactResult}
