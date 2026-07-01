@@ -35,6 +35,10 @@ import {
   updateEditorPageSettings,
   updateDraftJson,
 } from "@/features/dashboard/actions";
+import {
+  medicalSectionPresets,
+  type ReusableSectionPreset,
+} from "@/features/dashboard/medical-section-presets";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/types/database";
 
@@ -120,11 +124,20 @@ type DesignEditorProps = {
 
 type ModulePreset = {
   category: string;
+  componentName?: string;
+  defaults?: Record<string, Json>;
   description: string;
+  editableFields?: string[];
+  id?: string;
+  industries?: string[];
   layout: string;
   pageType?: "main" | "sub" | "all";
+  purpose?: string;
+  responsiveBehavior?: string;
+  reuseNotes?: string;
   title: string;
   type: string;
+  variants?: string[];
 };
 
 type HeroSlide = {
@@ -204,7 +217,7 @@ const sectionTypes = [
   { value: "downloads", label: "자료실", icon: Download },
 ];
 
-const modulePresets: ModulePreset[] = [
+const baseModulePresets: ModulePreset[] = [
   {
     category: "히어로",
     description: "메시지와 실제 에디터 화면을 한눈에 보여주는 제품 중심 구성",
@@ -687,6 +700,11 @@ const modulePresets: ModulePreset[] = [
     title: "자료실 카드",
     type: "downloads",
   },
+];
+
+const modulePresets: ModulePreset[] = [
+  ...baseModulePresets,
+  ...(medicalSectionPresets satisfies ReusableSectionPreset[]),
 ];
 
 const defaultPages: EditorPageItem[] = [
@@ -1451,6 +1469,15 @@ function createSection(type: string, layout?: string): EditorSection {
   };
 }
 
+function createSectionFromPreset(preset: ModulePreset): EditorSection {
+  return {
+    ...createSection(preset.type, preset.layout),
+    ...(preset.defaults ?? {}),
+    builderId: createSectionId(preset.type),
+    presetId: preset.id ?? "",
+  };
+}
+
 function stringValue(record: Record<string, unknown>, key: string, fallback = "") {
   const value = record[key];
 
@@ -1917,11 +1944,31 @@ function sectionLabel(type: string) {
 
 function layoutLabel(section: EditorSection) {
   const layout = stringValue(section, "layout");
+  const presetId = stringValue(section, "presetId");
   const preset = modulePresets.find(
-    (preset) => preset.type === stringValue(section, "type") && preset.layout === layout,
+    (preset) =>
+      (presetId && preset.id === presetId) ||
+      (!presetId &&
+        preset.type === stringValue(section, "type") &&
+        preset.layout === layout),
   );
 
   return preset?.title ?? layout;
+}
+
+function presetMatchesSection(section: EditorSection, preset: ModulePreset) {
+  const presetId = stringValue(section, "presetId");
+
+  if (presetId) return preset.id === presetId;
+
+  return (
+    stringValue(section, "type") === preset.type &&
+    stringValue(section, "layout") === preset.layout
+  );
+}
+
+function modulePresetKey(preset: ModulePreset, suffix: string) {
+  return `${preset.id ?? `${preset.type}-${preset.layout}`}-${suffix}`;
 }
 
 function elementPanelTitle(element: SelectedElement) {
@@ -4074,37 +4121,46 @@ function CanvasSection({
                 layout === "timeline" ? "grid-cols-1" : "md:grid-cols-3",
               )}
             >
-              {items.map((item, itemIndex) => (
-                <div
-                  key={`${item}-${itemIndex}`}
-                  className="rounded-2xl border border-blue-100 bg-white/70 p-5 text-left"
-                  style={cardStyle}
-                >
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-600">
-                    {String(itemIndex + 1).padStart(2, "0")}
-                  </span>
-                  <InlineEditFrame className="mt-5" label="카드 문구 수정">
-                    <Input
-                      className="h-auto border-0 bg-transparent p-0 text-sm font-semibold shadow-none focus-visible:ring-0"
-                      style={{
-                        color: stringValue(section, "titleColor", design.textColor),
-                        fontFamily: fontStack(
-                          stringValue(section, "descriptionFontFamily", "site-body"),
-                          design,
-                          "body",
-                        ),
-                      }}
-                      value={item}
-                      onChange={(event) => {
-                        const nextItems = [...items];
+              {items.map((item, itemIndex) => {
+                const [itemTitle, itemDescription] = item.split("|");
 
-                        nextItems[itemIndex] = event.target.value;
-                        updateItems(index, nextItems.join("\n"));
-                      }}
-                    />
-                  </InlineEditFrame>
-                </div>
-              ))}
+                return (
+                  <div
+                    key={`${item}-${itemIndex}`}
+                    className="rounded-2xl border border-blue-100 bg-white/70 p-5 text-left"
+                    style={cardStyle}
+                  >
+                    <span className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-600">
+                      {String(itemIndex + 1).padStart(2, "0")}
+                    </span>
+                    <InlineEditFrame className="mt-5" label="카드 문구 수정">
+                      <Input
+                        className="h-auto border-0 bg-transparent p-0 text-sm font-semibold shadow-none focus-visible:ring-0"
+                        style={{
+                          color: stringValue(section, "titleColor", design.textColor),
+                          fontFamily: fontStack(
+                            stringValue(section, "descriptionFontFamily", "site-body"),
+                            design,
+                            "body",
+                          ),
+                        }}
+                        value={itemTitle}
+                        onChange={(event) => {
+                          const nextItems = [...items];
+
+                          nextItems[itemIndex] = `${event.target.value}|${itemDescription ?? ""}`;
+                          updateItems(index, nextItems.join("\n"));
+                        }}
+                      />
+                    </InlineEditFrame>
+                    {itemDescription ? (
+                      <p className="mt-3 text-xs leading-5 text-slate-500">
+                        {itemDescription}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
             <Textarea
               className="sr-only"
@@ -4411,7 +4467,11 @@ function CanvasSection({
             ) : (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {items.map((item, i) => {
-                  const [value, label] = item.split("|");
+                  const parts = item.split("|");
+                  const [value, label] =
+                    parts.length >= 3
+                      ? [`${parts[1]}${parts[2]}`, parts[0]]
+                      : [parts[0], parts[1]];
                   return (
                     <div key={i} className={cn("rounded-2xl p-6 text-center", layout === "dark" ? "bg-slate-800 text-white" : "border border-slate-100 bg-white")}>
                       <p className={cn("text-4xl font-bold", layout === "dark" ? "text-white" : "text-blue-600")}>{value}</p>
@@ -4571,11 +4631,16 @@ function CanvasSection({
             {layout === "list" ? (
               <div className="mx-auto max-w-2xl divide-y divide-slate-100">
                 {items.map((item, i) => {
-                  const [name, role, specialty] = item.split("|");
+                  const [name, role, specialty, imageUrl] = item.split("|");
                   return (
                     <div key={i} className="flex items-center gap-4 py-4">
-                      <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
-                        {name?.charAt(0)}
+                      <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+                        {imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img alt="" className="h-full w-full object-cover" src={imageUrl} />
+                        ) : (
+                          name?.charAt(0)
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-semibold">{name}</p>
@@ -4589,11 +4654,16 @@ function CanvasSection({
             ) : (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {items.map((item, i) => {
-                  const [name, role, specialty] = item.split("|");
+                  const [name, role, specialty, imageUrl] = item.split("|");
                   return (
                     <div key={i} className="rounded-2xl border border-slate-100 bg-white p-6 text-center">
-                      <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-blue-100 text-xl font-bold text-blue-600">
-                        {name?.charAt(0)}
+                      <div className="mx-auto mb-4 flex size-16 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-xl font-bold text-blue-600">
+                        {imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img alt="" className="h-full w-full object-cover" src={imageUrl} />
+                        ) : (
+                          name?.charAt(0)
+                        )}
                       </div>
                       <p className="text-sm font-semibold">{name}</p>
                       <p className="mt-1 text-xs text-slate-500">{role}</p>
@@ -5524,6 +5594,8 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
     if (b === "페이지 헤더") return 1;
     if (a === "히어로") return -1;
     if (b === "히어로") return 1;
+    if (a === "의료") return -1;
+    if (b === "의료") return 1;
     return 0;
   });
   const resolvedLibraryCategory = availableLibraryCategories.includes(
@@ -5535,7 +5607,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
     (preset) => preset.category === resolvedLibraryCategory,
   );
   const previewSection = useMemo(
-    () => (previewPreset ? createSection(previewPreset.type, previewPreset.layout) : null),
+    () => (previewPreset ? createSectionFromPreset(previewPreset) : null),
     [previewPreset],
   );
 
@@ -6171,7 +6243,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
   function applyModule(preset: ModulePreset) {
     const current = selectedSection;
     const nextSection = {
-      ...createSection(preset.type, preset.layout),
+      ...createSectionFromPreset(preset),
       builderId: current ? stringValue(current, "builderId") : createSectionId(preset.type),
     };
 
@@ -6193,7 +6265,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
   }
 
   function insertSectionAfter(preset: ModulePreset, afterIndex: number) {
-    const nextSection = createSection(preset.type, preset.layout);
+    const nextSection = createSectionFromPreset(preset);
     const insertIndex = draft.sections.length
       ? Math.max(0, Math.min(afterIndex + 1, draft.sections.length))
       : 0;
@@ -8785,14 +8857,13 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                         <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                           {visibleModules.map((preset) => (
                             <div
-                              key={`${preset.type}-${preset.layout}-full`}
+                              key={modulePresetKey(preset, "full")}
                               role="button"
                               tabIndex={0}
                               className={cn(
                                 "cursor-pointer rounded-xl border p-2.5 text-left transition hover:border-blue-300 hover:bg-blue-50/40",
                                 selectedSection &&
-                                  stringValue(selectedSection, "type") === preset.type &&
-                                  stringValue(selectedSection, "layout") === preset.layout
+                                  presetMatchesSection(selectedSection, preset)
                                   ? "border-blue-500 bg-blue-50"
                                   : "border-slate-100 bg-white",
                               )}
@@ -8885,14 +8956,13 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                           <div className="grid gap-3 md:grid-cols-4">
                             {visibleModules.map((preset) => (
                               <div
-                                key={`${preset.type}-${preset.layout}`}
+                                key={modulePresetKey(preset, "compact")}
                                 role="button"
                                 tabIndex={0}
                                 className={cn(
                                   "rounded-lg border p-2 text-left transition hover:border-blue-300 hover:bg-blue-50/40",
                                   selectedSection &&
-                                    stringValue(selectedSection, "type") === preset.type &&
-                                    stringValue(selectedSection, "layout") === preset.layout
+                                    presetMatchesSection(selectedSection, preset)
                                     ? "border-blue-500"
                                     : "border-slate-100",
                                 )}
@@ -9257,8 +9327,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                               const currentPreset =
                                 modulePresets.find(
                                   (preset) =>
-                                    preset.type === stringValue(selectedSection, "type") &&
-                                    preset.layout === stringValue(selectedSection, "layout"),
+                                    presetMatchesSection(selectedSection, preset),
                                 ) ?? modulePresets[0];
 
                               openModulePreview(currentPreset);
@@ -10350,7 +10419,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                   <div className="space-y-3">
                     {visibleModules.map((preset) => (
                       <div
-                        key={`${preset.type}-${preset.layout}-right`}
+                        key={modulePresetKey(preset, "right")}
                         role="button"
                         tabIndex={0}
                         className="rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-blue-300 hover:bg-blue-50/40"
@@ -10831,6 +10900,67 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                     {previewPreset.description}
                   </p>
                 </div>
+
+                {previewPreset.componentName ? (
+                  <section className="mt-5 space-y-4 border-b border-slate-100 pb-5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-[10px] font-semibold text-slate-400">컴포넌트</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-700">
+                          {previewPreset.componentName}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-[10px] font-semibold text-slate-400">사용 업종</p>
+                        <p className="mt-1 line-clamp-2 text-xs font-semibold text-slate-700">
+                          {previewPreset.industries?.join(" · ")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">사용 목적</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        {previewPreset.purpose}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">수정 가능 항목</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {previewPreset.editableFields?.map((field) => (
+                          <span
+                            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-600"
+                            key={field}
+                          >
+                            {field}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Variants</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        {previewPreset.variants?.join(" · ")}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">반응형</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        {previewPreset.responsiveBehavior}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
+                      <p className="text-[10px] font-semibold text-amber-700">재사용 주의사항</p>
+                      <p className="mt-1 text-xs leading-5 text-amber-800/80">
+                        {previewPreset.reuseNotes}
+                      </p>
+                    </div>
+                  </section>
+                ) : null}
 
                 <section className="mt-6 space-y-3">
                   <div className="flex items-center justify-between">

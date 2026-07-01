@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ArrowRight, Eye } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,44 +88,71 @@ export function TemplateGallery({ templates }: TemplateGalleryProps) {
           {filtered.map((template) => (
             <div
               key={template.id}
-              className="group overflow-hidden rounded-xl border border-border bg-card transition-shadow"
+              className="group overflow-hidden rounded-lg border border-border bg-card"
             >
-              {/* 썸네일 */}
-              <div
+              <Link
+                aria-label={`${template.name} 미리보기`}
                 className={cn(
-                  "relative aspect-[4/3] bg-gradient-to-br",
+                  "relative block aspect-[16/10] overflow-hidden bg-gradient-to-br",
                   GRADIENT_MAP[template.category] ?? GRADIENT_MAP["기타"],
                 )}
+                href={`/dashboard/design/templates/${template.id}/preview`}
               >
+                {template.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    height={750}
+                    loading="lazy"
+                    src={template.thumbnailUrl}
+                    width={1200}
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 p-6">
+                    <div className="h-4 w-32 rounded bg-white/60" />
+                    <div className="h-8 w-44 rounded bg-white/80" />
+                    <div className="h-2 w-36 rounded bg-white/40" />
+                    <div className="mt-2 h-2 w-28 rounded bg-white/40" />
+                    <div className="mt-3 h-8 w-24 rounded-lg bg-blue-500/70" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
                 {template.isFeatured && (
                   <span className="absolute left-3 top-3 rounded-full bg-blue-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
                     추천
                   </span>
                 )}
-                <div className="flex h-full flex-col items-center justify-center gap-3 p-6">
-                  <div className="h-4 w-32 rounded bg-white/60" />
-                  <div className="h-8 w-44 rounded bg-white/80" />
-                  <div className="h-2 w-36 rounded bg-white/40" />
-                  <div className="mt-2 h-2 w-28 rounded bg-white/40" />
-                  <div className="mt-3 h-8 w-24 rounded-lg bg-blue-500/70" />
+                <div className="absolute inset-x-3 bottom-3 flex items-center justify-between text-white">
+                  <span className="text-xs font-semibold">전체 미리보기</span>
+                  <Eye className="size-4" />
                 </div>
-              </div>
+              </Link>
 
-              {/* 카드 하단 */}
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
+              <div className="p-4">
+                <div>
                   <p className="truncate text-sm font-semibold">{template.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{template.category}</p>
+                  <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">
+                    {template.description}
+                  </p>
                 </div>
-                <Link
-                  className={cn(
-                    buttonVariants({ size: "sm", variant: "default" }),
-                    "shrink-0",
-                  )}
-                  href={`/dashboard/sites/new?templateId=${template.id}`}
-                >
-                  사용
-                </Link>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Link
+                    className={buttonVariants({ size: "sm", variant: "outline" })}
+                    href={`/dashboard/design/templates/${template.id}/preview`}
+                  >
+                    <Eye />
+                    미리보기
+                  </Link>
+                  <Link
+                    className={buttonVariants({ size: "sm", variant: "default" })}
+                    href={`/dashboard/sites/new?templateId=${template.id}`}
+                  >
+                    사용
+                    <ArrowRight />
+                  </Link>
+                </div>
               </div>
             </div>
           ))}

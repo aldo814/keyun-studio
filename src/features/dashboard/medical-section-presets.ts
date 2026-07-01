@@ -1,0 +1,548 @@
+import type { Json } from "@/types/database";
+
+export type ReusableSectionPreset = {
+  category: string;
+  componentName: string;
+  defaults: Record<string, Json>;
+  description: string;
+  editableFields: string[];
+  id: string;
+  industries: string[];
+  layout: string;
+  pageType: "main" | "sub" | "all";
+  purpose: string;
+  responsiveBehavior: string;
+  reuseNotes: string;
+  templateOrder?: number;
+  title: string;
+  type: string;
+  variants: string[];
+};
+
+type MedicalPresetInput = Omit<
+  ReusableSectionPreset,
+  "category" | "editableFields" | "industries" | "responsiveBehavior"
+> & {
+  editableFields?: string[];
+  industries?: string[];
+  responsiveBehavior?: string;
+};
+
+const commonSectionDefaults = {
+  align: "left",
+  backgroundType: "color",
+  bgColor: "#ffffff",
+  paddingBottom: "96",
+  paddingBottomDesktop: "96",
+  paddingBottomMobile: "56",
+  paddingBottomTablet: "76",
+  paddingTop: "96",
+  paddingTopDesktop: "96",
+  paddingTopMobile: "56",
+  paddingTopTablet: "76",
+  radius: "8",
+  shadow: "none",
+  width: "1200",
+} satisfies Record<string, Json>;
+
+function medicalPreset(input: MedicalPresetInput): ReusableSectionPreset {
+  return {
+    category: "의료",
+    editableFields: input.editableFields ?? [
+      "배지",
+      "제목",
+      "설명",
+      "목록",
+      "배경색",
+      "텍스트색",
+      "여백",
+    ],
+    industries: input.industries ?? [
+      "병원",
+      "의원",
+      "한의원",
+      "치과",
+      "검진센터",
+      "의료기관",
+    ],
+    responsiveBehavior:
+      input.responsiveBehavior ??
+      "데스크톱 다열 구조가 태블릿 2열, 모바일 1열로 재배치됩니다.",
+    ...input,
+    defaults: {
+      ...commonSectionDefaults,
+      ...input.defaults,
+      layout: input.layout,
+      presetId: input.id,
+      type: input.type,
+    },
+  };
+}
+
+export const medicalSectionPresets: ReusableSectionPreset[] = [
+  medicalPreset({
+    componentName: "HeroSection",
+    defaults: {
+      badge: "정확한 진단 · 편안한 진료",
+      buttonLabel: "진료 예약하기",
+      buttonLink: "/contact",
+      description:
+        "환자의 이야기를 충분히 듣고 꼭 필요한 진료를 제안합니다. 예약부터 치료 후 관리까지 한 곳에서 편안하게 경험하세요.",
+      gradientFrom: "#eef6ff",
+      gradientTo: "#ffffff",
+      imageUrl: "/templates/medical-clinic.jpg",
+      mediaPosition: "right",
+      secondaryButtonLabel: "진료과 보기",
+      secondaryButtonLink: "/service",
+      title: "환자의 일상까지 생각하는 전문 의료 서비스",
+    },
+    description: "진료 철학과 예약 행동을 이미지와 함께 전달하는 의료기관 첫 화면",
+    editableFields: [
+      "배지",
+      "제목",
+      "설명",
+      "대표 이미지",
+      "기본/보조 버튼",
+      "텍스트 정렬",
+      "배경",
+    ],
+    id: "medical-hero-split",
+    layout: "split-visual",
+    pageType: "main",
+    purpose: "병원의 핵심 진료 메시지와 예약 CTA를 첫 화면에서 전달",
+    responsiveBehavior: "모바일에서는 텍스트 다음에 대표 이미지가 배치되고 버튼은 줄바꿈됩니다.",
+    reuseNotes: "의료 광고 문구는 실제 진료 범위와 관련 법규를 확인한 뒤 사용해야 합니다.",
+    templateOrder: 1,
+    title: "의료 히어로 · 이미지 분할형",
+    type: "hero",
+    variants: ["A 이미지 우측", "B 이미지 좌측", "C 배경 이미지형"],
+  }),
+  medicalPreset({
+    componentName: "FeaturesSection",
+    defaults: {
+      align: "center",
+      badge: "Departments",
+      description: "증상과 목적에 맞는 진료 분야를 빠르게 확인하세요.",
+      items: [
+        "척추·관절 클리닉|목, 허리, 어깨와 무릎 통증을 세밀하게 진단합니다.",
+        "도수·재활 치료|현재 기능과 생활 패턴에 맞춘 회복 프로그램을 설계합니다.",
+        "건강검진 센터|예방 중심의 검사와 결과 상담을 체계적으로 제공합니다.",
+        "통증 클리닉|급성·만성 통증의 원인을 찾아 단계적으로 관리합니다.",
+        "스포츠 손상|운동 손상 이후 빠르고 안전한 복귀를 돕습니다.",
+        "맞춤 상담|진료 전 궁금한 내용을 편하게 상담할 수 있습니다.",
+      ],
+      title: "필요한 진료를 한눈에 확인하세요",
+    },
+    description: "진료 분야를 제목과 간단한 설명으로 탐색하는 카드 구성",
+    id: "medical-departments-cards",
+    layout: "cards",
+    pageType: "all",
+    purpose: "진료과와 클리닉을 빠르게 비교하고 상세 페이지로 연결",
+    reuseNotes: "진료 분야가 7개 이상이면 카테고리별로 나누거나 별도 페이지로 연결하세요.",
+    templateOrder: 2,
+    title: "진료과 소개 · 카드형",
+    type: "features",
+    variants: ["A 3열 카드", "B 아이콘 리스트", "C 대표 진료 강조"],
+  }),
+  medicalPreset({
+    componentName: "FeaturesSection",
+    defaults: {
+      badge: "Condition Guide",
+      bgColor: "#f7faff",
+      description: "자주 겪는 증상과 가능한 원인을 이해하기 쉽게 정리합니다.",
+      items: [
+        "주요 증상|통증 위치와 지속 시간, 일상에서 불편한 움직임을 확인합니다.",
+        "발생 원인|생활 습관, 반복 동작, 외상과 기저 질환을 함께 살펴봅니다.",
+        "치료 대상|검사와 전문의 상담을 통해 개인별 치료 필요성을 판단합니다.",
+      ],
+      title: "내 증상, 그냥 지나치지 마세요",
+    },
+    description: "질환의 증상·원인·치료 대상을 동일한 정보 카드로 설명",
+    id: "medical-condition-guide",
+    layout: "cards",
+    pageType: "sub",
+    purpose: "질환 정보를 과도한 전문용어 없이 단계적으로 안내",
+    reuseNotes: "자가 진단으로 오해되지 않도록 전문의 상담 안내를 함께 배치하세요.",
+    title: "질환 정보 · 증상/원인/대상",
+    type: "features",
+    variants: ["A 3단 정보 카드", "B 증상 체크리스트", "C 질환별 비교"],
+  }),
+  medicalPreset({
+    componentName: "TeamSection",
+    defaults: {
+      align: "center",
+      badge: "Medical Team",
+      description: "진료 경험과 전문 분야를 확인하고 의료진을 선택할 수 있습니다.",
+      items: [
+        "김도현 원장|정형외과 전문의|척추·관절 비수술 치료|",
+        "이서윤 원장|재활의학과 전문의|도수·운동 재활|",
+        "박지훈 원장|영상의학과 전문의|정밀 영상 진단|",
+        "최하은 원장|가정의학과 전문의|건강검진·예방 관리|",
+      ],
+      title: "환자의 회복을 함께 설계하는 의료진",
+    },
+    description: "의료진 사진, 이름, 전문 분야를 카드로 소개하는 구성",
+    editableFields: [
+      "섹션 제목",
+      "의료진 사진",
+      "이름",
+      "직책",
+      "전문 분야",
+      "배경색",
+    ],
+    id: "medical-doctors-grid",
+    layout: "grid",
+    pageType: "all",
+    purpose: "의료진의 전문성과 신뢰도를 명확하게 전달",
+    reuseNotes: "약력 전체를 카드에 넣지 말고 상세 프로필 페이지로 연결하는 것이 좋습니다.",
+    templateOrder: 3,
+    title: "의료진 소개 · 프로필 카드",
+    type: "team",
+    variants: ["A 4열 프로필", "B 대표 원장 강조", "C 의료진 리스트"],
+  }),
+  medicalPreset({
+    componentName: "FeaturesSection",
+    defaults: {
+      badge: "Treatment Process",
+      description: "현재 상태를 확인하고 필요한 치료만 단계적으로 진행합니다.",
+      items: [
+        "예약 및 문진|증상과 불편한 점을 미리 확인합니다.",
+        "전문의 진료|충분한 상담과 신체 검사를 진행합니다.",
+        "정밀 검사|필요한 경우 영상·기능 검사를 시행합니다.",
+        "맞춤 치료|진단 결과에 맞는 치료 계획을 안내합니다.",
+        "회복 관리|치료 후 경과와 일상 복귀를 함께 관리합니다.",
+      ],
+      layout: "timeline",
+      title: "처음 방문해도 알기 쉬운 진료 과정",
+    },
+    description: "예약부터 사후관리까지 순서대로 설명하는 타임라인",
+    id: "medical-treatment-process",
+    layout: "timeline",
+    pageType: "all",
+    purpose: "환자가 방문 전에 전체 진료 흐름을 예측할 수 있도록 안내",
+    reuseNotes: "실제 병원 운영 절차와 일치하도록 단계 수와 명칭을 조정하세요.",
+    templateOrder: 4,
+    title: "치료 과정 · 타임라인",
+    type: "features",
+    variants: ["A 세로 타임라인", "B 가로 스텝", "C 번호 강조형"],
+  }),
+  medicalPreset({
+    componentName: "FeaturesSection",
+    defaults: {
+      badge: "Examination",
+      bgColor: "#f7faff",
+      description: "검사 목적과 소요 과정을 미리 안내해 불안함을 줄입니다.",
+      items: [
+        "검사 전 안내|주의사항과 준비 항목을 확인합니다.",
+        "정밀 검사|필요 부위를 안전하게 검사합니다.",
+        "결과 판독|전문의가 검사 결과를 세밀하게 확인합니다.",
+        "결과 상담|현재 상태와 다음 치료 계획을 설명합니다.",
+      ],
+      layout: "timeline",
+      title: "검사는 이렇게 진행됩니다",
+    },
+    description: "검사 전 준비부터 결과 상담까지 안내하는 단계형 섹션",
+    id: "medical-examination-process",
+    layout: "timeline",
+    pageType: "sub",
+    purpose: "검사 과정과 준비사항을 환자에게 명확히 전달",
+    reuseNotes: "검사별 금식·약물 중단 등 중요한 주의사항은 별도 강조 영역을 사용하세요.",
+    title: "검사 과정 · 단계형",
+    type: "features",
+    variants: ["A 4단계", "B 준비사항 포함", "C 검사별 탭"],
+  }),
+  medicalPreset({
+    componentName: "ContentSection",
+    defaults: {
+      badge: "Medical Equipment",
+      bgColor: "#f7faff",
+      blocks: [
+        {
+          badge: "정밀 진단",
+          description:
+            "선명한 영상과 세밀한 판독으로 통증의 원인을 정확하게 확인합니다.",
+          imageUrl: "/templates/medical-clinic.jpg",
+          mediaPosition: "left",
+          title: "진단의 정확도를 높이는 검사 장비",
+        },
+        {
+          badge: "안전한 치료",
+          description:
+            "환자의 상태와 치료 목적에 맞춰 필요한 장비만 선택적으로 사용합니다.",
+          imageUrl: "/templates/medical-clinic.jpg",
+          mediaPosition: "right",
+          title: "회복 과정까지 고려한 치료 시스템",
+        },
+      ],
+      description: "검사와 치료에 사용하는 주요 장비를 확인하세요.",
+      layout: "media-left",
+      title: "정확한 진단을 위한 의료 장비",
+    },
+    description: "장비 이미지와 역할을 번갈아 설명하는 이미지·텍스트 구성",
+    editableFields: [
+      "배지",
+      "제목",
+      "설명",
+      "장비 이미지",
+      "이미지 좌우 배치",
+      "배경",
+    ],
+    id: "medical-equipment-showcase",
+    layout: "media-left",
+    pageType: "all",
+    purpose: "병원의 검사·치료 장비와 도입 목적을 신뢰감 있게 설명",
+    responsiveBehavior: "모바일에서는 이미지와 설명이 한 열로 쌓이며 각 블록 순서를 유지합니다.",
+    reuseNotes: "장비 보유가 치료 효과를 보장하는 표현으로 이어지지 않도록 주의하세요.",
+    templateOrder: 5,
+    title: "장비 소개 · 이미지 교차형",
+    type: "content",
+    variants: ["A 이미지 교차", "B 장비 카드", "C 대형 이미지"],
+  }),
+  medicalPreset({
+    componentName: "PhotoGallerySection",
+    defaults: {
+      align: "center",
+      badge: "Before & After",
+      description: "치료 전후 이미지를 동일한 조건과 기준으로 비교합니다.",
+      items: ["", "", "", "", "", ""],
+      title: "치료 전후 변화",
+    },
+    description: "동일한 비율의 전후 이미지를 나란히 비교하는 갤러리",
+    editableFields: ["제목", "설명", "Before 이미지", "After 이미지", "캡션", "배경"],
+    id: "medical-before-after-grid",
+    layout: "grid",
+    pageType: "sub",
+    purpose: "시술·치료 전후 기록을 정돈된 비교 구조로 제공",
+    reuseNotes: "환자 동의, 개인정보 보호, 의료광고 심의 기준을 반드시 확인해야 합니다.",
+    title: "Before / After · 비교 갤러리",
+    type: "photo-gallery",
+    variants: ["A 2열 비교", "B 슬라이더 비교", "C 사례 갤러리"],
+  }),
+  medicalPreset({
+    componentName: "FeaturesSection",
+    defaults: {
+      align: "center",
+      badge: "Why Us",
+      description: "진료의 시작부터 회복까지 놓치지 않는 기준을 지킵니다.",
+      items: [
+        "전문의 직접 진료|충분한 상담을 바탕으로 진단과 치료 계획을 세웁니다.",
+        "필요한 치료 우선|과도한 치료보다 현재 상태에 필요한 선택을 안내합니다.",
+        "회복까지 관리|치료 이후 일상 복귀와 재발 예방을 함께 살핍니다.",
+      ],
+      title: "환자가 안심할 수 있는 세 가지 원칙",
+    },
+    description: "병원의 핵심 강점을 설명과 함께 전달하는 카드 섹션",
+    id: "medical-strengths-cards",
+    layout: "cards",
+    pageType: "all",
+    purpose: "병원이 중요하게 지키는 진료 원칙과 차별점을 설명",
+    reuseNotes: "검증하기 어려운 최고·유일 등의 표현보다 실제 운영 기준을 사용하세요.",
+    templateOrder: 6,
+    title: "병원 강점 · 원칙 카드",
+    type: "features",
+    variants: ["A 3열 원칙", "B 체크리스트", "C 숫자 결합형"],
+  }),
+  medicalPreset({
+    componentName: "StatsSection",
+    defaults: {
+      align: "center",
+      badge: "Trust in Numbers",
+      bgColor: "#0f2747",
+      description: "병원의 경험과 운영 현황을 투명하게 안내합니다.",
+      items: ["누적 진료 경험|1200|+", "환자 만족도|98|%", "전문 의료진|12|명"],
+      layout: "dark",
+      title: "숫자로 확인하는 진료 신뢰도",
+      titleColor: "#ffffff",
+      descriptionColor: "#dbeafe",
+    },
+    description: "진료 경험과 만족도 등 핵심 지표를 강조하는 통계 구성",
+    id: "medical-stats-dark",
+    layout: "dark",
+    pageType: "all",
+    purpose: "수치 기반의 신뢰 정보를 간결하게 전달",
+    reuseNotes: "수치는 실제 근거와 집계 기준을 함께 관리해야 합니다.",
+    templateOrder: 7,
+    title: "의료 통계 · 다크 인포그래픽",
+    type: "stats",
+    variants: ["A 다크 카운터", "B 밝은 카운터", "C 진행 지표"],
+  }),
+  medicalPreset({
+    componentName: "ReviewSection",
+    defaults: {
+      align: "center",
+      badge: "Patient Reviews",
+      bgColor: "#f7faff",
+      description: "내원 과정에서 환자들이 경험한 편안함과 신뢰를 확인하세요.",
+      items: [
+        "김OO|허리 통증 진료|설명을 충분히 들은 뒤 치료를 선택할 수 있어 안심됐습니다.",
+        "이OO|재활 치료|현재 상태에 맞춰 단계별로 안내해주셔서 회복에 도움이 됐어요.",
+        "박OO|건강검진|예약부터 결과 상담까지 동선이 명확하고 편리했습니다.",
+      ],
+      title: "환자들이 전하는 진료 경험",
+    },
+    description: "개인정보를 최소화한 환자 후기 카드 구성",
+    id: "medical-reviews-rating",
+    layout: "rating",
+    pageType: "all",
+    purpose: "실제 내원 경험을 통해 병원의 서비스 신뢰도를 보완",
+    reuseNotes: "치료 효과를 단정하는 후기와 개인 식별 정보는 사용하지 마세요.",
+    templateOrder: 8,
+    title: "환자 후기 · 별점 카드",
+    type: "review",
+    variants: ["A 별점 카드", "B 대표 후기", "C 짧은 후기 리스트"],
+  }),
+  medicalPreset({
+    componentName: "FaqSection",
+    defaults: {
+      align: "center",
+      badge: "FAQ",
+      description: "예약과 내원 전에 자주 묻는 내용을 확인하세요.",
+      items: [
+        "처음 방문할 때 무엇을 준비해야 하나요?|신분증과 복용 중인 약 정보, 기존 검사 자료가 있다면 함께 준비해주세요.",
+        "예약 없이 방문해도 되나요?|방문 진료도 가능하지만 대기 시간을 줄이려면 사전 예약을 권장합니다.",
+        "검사 결과는 언제 확인할 수 있나요?|검사 종류에 따라 다르며 진료 시 예상 일정을 안내드립니다.",
+        "주차 지원이 가능한가요?|건물 주차장을 이용할 수 있으며 진료 시간에 따라 지원 기준이 달라질 수 있습니다.",
+      ],
+      title: "내원 전 자주 묻는 질문",
+    },
+    description: "예약, 준비사항, 검사, 주차 등 반복 문의를 정리하는 FAQ",
+    id: "medical-faq-accordion",
+    layout: "accordion",
+    pageType: "all",
+    purpose: "내원 전 문의를 줄이고 환자가 필요한 정보를 빠르게 확인",
+    reuseNotes: "운영 정책이 바뀌면 FAQ도 함께 갱신해야 합니다.",
+    templateOrder: 9,
+    title: "의료 FAQ · 아코디언",
+    type: "faq",
+    variants: ["A 아코디언", "B 2열 질문", "C 카테고리 FAQ"],
+  }),
+  medicalPreset({
+    componentName: "CtaSection",
+    defaults: {
+      align: "center",
+      backgroundType: "gradient",
+      buttonAlign: "center",
+      buttonLabel: "진료 예약하기",
+      buttonLink: "/contact",
+      description: "증상과 예약 희망 시간을 남겨주시면 확인 후 안내드리겠습니다.",
+      gradientFrom: "#0f2747",
+      gradientTo: "#2563eb",
+      title: "불편함을 참지 말고 지금 상담하세요",
+      titleColor: "#ffffff",
+      descriptionColor: "#dbeafe",
+    },
+    description: "진료 예약 페이지로 연결하는 대비가 강한 전환 섹션",
+    editableFields: ["제목", "설명", "버튼 문구", "버튼 링크", "배경색", "정렬"],
+    id: "medical-reservation-cta",
+    layout: "dark",
+    pageType: "all",
+    purpose: "페이지 탐색을 마친 방문자를 예약 행동으로 연결",
+    reuseNotes: "CTA는 한 화면에 하나의 명확한 행동만 제안하는 것이 좋습니다.",
+    templateOrder: 10,
+    title: "예약 CTA · 다크 배너",
+    type: "cta",
+    variants: ["A 다크 배너", "B 이미지 배경", "C 전화 예약형"],
+  }),
+  medicalPreset({
+    componentName: "CtaSection",
+    defaults: {
+      buttonLabel: "상담 문의하기",
+      buttonLink: "/contact",
+      description: "진료 가능 여부와 준비사항을 먼저 확인할 수 있습니다.",
+      title: "방문 전 궁금한 점을 편하게 문의하세요",
+    },
+    description: "전화·온라인 상담으로 연결하는 간결한 CTA",
+    id: "medical-consultation-cta",
+    layout: "banner",
+    pageType: "all",
+    purpose: "예약 전 문의가 필요한 방문자에게 낮은 진입장벽 제공",
+    reuseNotes: "실시간 답변이 아닌 경우 예상 응답 시간을 함께 안내하세요.",
+    title: "상담 CTA · 라이트 배너",
+    type: "cta",
+    variants: ["A 온라인 문의", "B 전화 상담", "C 카카오 상담"],
+  }),
+  medicalPreset({
+    componentName: "EmbedFormSection",
+    defaults: {
+      align: "center",
+      badge: "Consultation",
+      buttonLabel: "상담 신청",
+      description: "남겨주신 연락처로 진료 가능 시간과 준비사항을 안내드립니다.",
+      title: "간편 상담 신청",
+    },
+    description: "이름, 이메일, 연락처와 상담 내용을 받는 신청 폼",
+    editableFields: ["제목", "설명", "버튼 문구", "폼 연결", "배경색"],
+    id: "medical-consult-form",
+    layout: "consult",
+    pageType: "all",
+    purpose: "방문자가 페이지 안에서 바로 상담 정보를 제출",
+    reuseNotes: "개인정보 수집 동의와 보관 정책을 실제 폼 설정에서 반드시 연결하세요.",
+    title: "상담 신청 · 입력 폼",
+    type: "embed-form",
+    variants: ["A 기본 상담폼", "B 예약 일정 포함", "C 간단 연락처형"],
+  }),
+  medicalPreset({
+    componentName: "ContentSection",
+    defaults: {
+      badge: "Our Philosophy",
+      description:
+        "진료의 중심에는 언제나 환자의 삶이 있습니다. 충분히 듣고 이해한 뒤 필요한 선택을 함께 결정합니다.",
+      imageUrl: "/templates/medical-clinic.jpg",
+      mediaPosition: "right",
+      title: "치료보다 먼저 사람을 이해합니다",
+    },
+    description: "병원의 철학과 브랜드 메시지를 이미지와 함께 소개",
+    id: "medical-brand-introduction",
+    layout: "media-left",
+    pageType: "all",
+    purpose: "병원의 태도와 진료 철학을 감성적이지만 명확하게 전달",
+    reuseNotes: "추상적인 문구만 사용하지 말고 실제 진료 원칙과 연결하세요.",
+    title: "병원 브랜드 소개 · 이미지형",
+    type: "content",
+    variants: ["A 이미지 우측", "B 이미지 좌측", "C 텍스트 집중형"],
+  }),
+  medicalPreset({
+    componentName: "ContentSection",
+    defaults: {
+      badge: "Compare",
+      bgColor: "#f7faff",
+      blocks: [
+        {
+          badge: "일반 관리",
+          description: "통증이 나타난 부위와 현재 불편함을 중심으로 관리합니다.",
+          imageUrl: "",
+          mediaPosition: "left",
+          title: "현재 증상에 집중",
+        },
+        {
+          badge: "통합 관리",
+          description: "원인, 생활 습관, 회복 과정과 재발 예방까지 함께 살펴봅니다.",
+          imageUrl: "",
+          mediaPosition: "right",
+          title: "일상 복귀까지 연결",
+        },
+      ],
+      title: "치료 방식 비교",
+    },
+    description: "두 치료 방식이나 프로그램의 차이를 나란히 설명",
+    id: "medical-treatment-comparison",
+    layout: "media-left",
+    pageType: "sub",
+    purpose: "선택지가 있는 치료·검사 프로그램의 차이점을 이해하기 쉽게 비교",
+    reuseNotes: "특정 치료의 우월성을 단정하기보다 적용 대상과 차이를 객관적으로 설명하세요.",
+    title: "치료 비교 · 2개 블록",
+    type: "content",
+    variants: ["A 이미지 비교", "B 표형 비교", "C 장단점 카드"],
+  }),
+];
+
+export const medicalTemplateSections = medicalSectionPresets
+  .filter(
+    (
+      preset,
+    ): preset is ReusableSectionPreset & {
+      templateOrder: number;
+    } => typeof preset.templateOrder === "number",
+  )
+  .sort((a, b) => a.templateOrder - b.templateOrder)
+  .map((preset) => preset.defaults);

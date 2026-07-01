@@ -1343,29 +1343,33 @@ function FeaturesSection({ design, section }: { design: PublicDesign; section: P
         </p>
       </div>
       <div className={`mt-10 grid gap-5 ${layout === "timeline" ? "grid-cols-1" : "md:grid-cols-3"}`}>
-        {items.map((item, index) => (
-          <article
-            key={`${item}-${index}`}
-            className="rounded-2xl border border-blue-100 bg-white/70 p-6 text-left"
-            style={childCardStyle(section)}
-          >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-600">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <h3
-              className="mt-5 text-base font-bold"
-              style={{
-                color: stringValue(section, "titleColor", design.textColor),
-                fontFamily: fontStack(stringValue(section, "descriptionFontFamily", design.bodyFontFamily), design.bodyFontFamily),
-              }}
+        {items.map((item, index) => {
+          const [itemTitle, itemDescription] = item.split("|");
+
+          return (
+            <article
+              key={`${item}-${index}`}
+              className="rounded-2xl border border-blue-100 bg-white/70 p-6 text-left"
+              style={childCardStyle(section)}
             >
-              {item}
-            </h3>
-            <p className="mt-3 text-sm leading-7 text-slate-500">
-              운영자가 선택한 레이아웃 안에서 안정적으로 노출됩니다.
-            </p>
-          </article>
-        ))}
+              <span className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-600">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3
+                className="mt-5 text-base font-bold"
+                style={{
+                  color: stringValue(section, "titleColor", design.textColor),
+                  fontFamily: fontStack(stringValue(section, "descriptionFontFamily", design.bodyFontFamily), design.bodyFontFamily),
+                }}
+              >
+                {itemTitle}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-slate-500">
+                {itemDescription || "운영자가 선택한 레이아웃 안에서 안정적으로 노출됩니다."}
+              </p>
+            </article>
+          );
+        })}
       </div>
     </SectionShell>
   );
@@ -1902,7 +1906,11 @@ function StatsSection({ design, section }: { design: PublicDesign; section: Publ
       ) : (
         <div className="mt-10 grid gap-6 sm:grid-cols-3">
           {items.map((item, i) => {
-            const [label, val, suffix] = item.split("|");
+            const parts = item.split("|");
+            const [label, val, suffix] =
+              parts.length >= 3
+                ? [parts[0], parts[1], parts[2]]
+                : [parts[1] || "", parts[0] || "", ""];
             return (
               <div key={i} className="rounded-2xl p-6 text-center" style={isDark ? { background: "rgba(0,0,0,0.3)" } : childCardStyle(section)}>
                 <p className="text-4xl font-black" style={{ color: design.mainColor }}>{val}{suffix}</p>
@@ -1976,15 +1984,20 @@ function TeamSection({ design, section }: { design: PublicDesign; section: Publi
       <SectionHeader design={design} section={section} />
       <div className={`mt-10 ${layout === "list" ? "space-y-4" : "grid gap-6 sm:grid-cols-2 lg:grid-cols-4"}`}>
         {items.map((item, i) => {
-          const [name, role, desc] = item.split("|");
+          const [name, role, desc, imageUrl] = item.split("|");
+          const avatar = imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt={name} className="h-full w-full object-cover" src={imageUrl} />
+          ) : null;
+
           return layout === "list" ? (
             <div key={i} className="flex items-center gap-5 rounded-xl bg-white/80 p-5" style={childCardStyle(section)}>
-              <div className="size-14 shrink-0 rounded-full bg-slate-200" />
+              <div className="size-14 shrink-0 overflow-hidden rounded-full bg-slate-200">{avatar}</div>
               <div><p className="font-semibold">{name}</p><p className="text-sm" style={{ color: design.mainColor }}>{role}</p>{desc && <p className="mt-1 text-sm text-slate-500">{desc}</p>}</div>
             </div>
           ) : (
             <div key={i} className="rounded-xl bg-white/80 p-5 text-center" style={childCardStyle(section)}>
-              <div className="mx-auto size-16 rounded-full bg-slate-200" />
+              <div className="mx-auto size-16 overflow-hidden rounded-full bg-slate-200">{avatar}</div>
               <p className="mt-3 font-semibold">{name}</p>
               <p className="text-sm" style={{ color: design.mainColor }}>{role}</p>
               {desc && <p className="mt-1 text-sm text-slate-500">{desc}</p>}

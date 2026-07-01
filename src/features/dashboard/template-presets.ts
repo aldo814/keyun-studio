@@ -1,4 +1,5 @@
 import type { Json } from "@/types/database";
+import { medicalTemplateSections } from "@/features/dashboard/medical-section-presets";
 
 export type BuiltInTemplate = {
   category: "비즈니스" | "포트폴리오" | "쇼핑몰" | "기타";
@@ -153,6 +154,17 @@ function createTemplateJson(seed: TemplateSeed) {
       },
     ],
     version: 1,
+  } satisfies Json;
+}
+
+function createIndustryTemplateJson(seed: TemplateSeed) {
+  const templateJson = createTemplateJson(seed);
+
+  if (seed.id !== "builtin-medical-clinic") return templateJson;
+
+  return {
+    ...templateJson,
+    sections: medicalTemplateSections,
   } satisfies Json;
 }
 
@@ -360,7 +372,7 @@ export const builtInTemplates: BuiltInTemplate[] = templateSeeds.map((seed) => (
   isFeatured: seed.featured ?? false,
   name: seed.name,
   status: seed.featured ? "featured" : "active",
-  templateJson: createTemplateJson(seed),
+  templateJson: createIndustryTemplateJson(seed),
   thumbnailUrl: `/templates/${seed.id.replace("builtin-", "")}.jpg`,
 }));
 
