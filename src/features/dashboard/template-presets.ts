@@ -361,7 +361,7 @@ export const builtInTemplates: BuiltInTemplate[] = templateSeeds.map((seed) => (
   name: seed.name,
   status: seed.featured ? "featured" : "active",
   templateJson: createTemplateJson(seed),
-  thumbnailUrl: "",
+  thumbnailUrl: `/templates/${seed.id.replace("builtin-", "")}.jpg`,
 }));
 
 export function getBuiltInTemplate(templateId: string) {
