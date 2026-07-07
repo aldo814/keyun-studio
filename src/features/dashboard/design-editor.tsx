@@ -7,8 +7,9 @@ import {
   Award, BarChart3, Briefcase, Camera, Check, ChevronDown, ClipboardList, Clock,
   Copy, CreditCard, Download, Eye, FileText, GitBranch, GripVertical, HelpCircle,
   Home, Image as ImageIcon, Languages, Laptop, Layers3, LayoutGrid, MapPin,
-  Monitor, MoreHorizontal, Newspaper, Palette, Plus, Settings, Smartphone, Sparkles,
-  Star, Tablet, Trash2, UploadCloud, Users, WandSparkles, X, ZoomIn,
+  Maximize2, Minimize2, Monitor, MoreHorizontal, Newspaper, Palette, Plus, Settings,
+  Smartphone, Sparkles, Star, Tablet, Trash2, UploadCloud, Users, WandSparkles, X,
+  ZoomIn,
 } from "lucide-react";
 import {
   useEffect,
@@ -5506,6 +5507,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
   const [previewPreset, setPreviewPreset] = useState<ModulePreset | null>(null);
   const [previewViewport, setPreviewViewport] = useState<EditorViewport>("desktop");
   const [previewInsertAfterIndex, setPreviewInsertAfterIndex] = useState(0);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isSectionLibraryOpen, setIsSectionLibraryOpen] = useState(false);
   const [isLibraryFullOpen, setIsLibraryFullOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -6226,6 +6228,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
     setPreviewPreset(preset);
     setPreviewViewport(viewport);
     setPreviewInsertAfterIndex(Math.max(0, selectedIndex));
+    setIsPreviewExpanded(false);
   }
 
   function openAddSectionFromContext(index: number) {
@@ -6233,11 +6236,13 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
     setPreviewPreset(visibleModules[0] ?? modulePresets[0]);
     setPreviewViewport(viewport);
     setPreviewInsertAfterIndex(Math.max(0, index));
+    setIsPreviewExpanded(false);
     setContextMenu(null);
   }
 
   function closeModulePreview() {
     setPreviewPreset(null);
+    setIsPreviewExpanded(false);
   }
 
   function applyModule(preset: ModulePreset) {
@@ -10804,21 +10809,53 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
 
       {previewPreset && previewSection ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-6 backdrop-blur-sm">
-          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-blue-100 bg-white">
-            <header className="flex items-center justify-between border-b border-blue-100 px-6 py-4">
-              <div>
+          <div
+            className={cn(
+              "flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl border border-blue-100 bg-white transition-all",
+              isPreviewExpanded ? "max-w-[min(96vw,1540px)]" : "max-w-6xl",
+            )}
+          >
+            <header className="flex items-start justify-between gap-5 border-b border-blue-100 px-6 py-4">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold text-blue-600">
                   {previewPreset.category} 섹션 미리보기
                 </p>
-                <h2 className="mt-1 text-xl font-bold">{previewPreset.title}</h2>
-                <p className="mt-1 text-sm text-slate-500">{previewPreset.description}</p>
+                <h2 className="mt-1 text-xl font-bold leading-tight text-slate-950">
+                  {previewPreset.title}
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                  {previewPreset.description}
+                </p>
               </div>
-              <Button size="icon" type="button" variant="ghost" onClick={closeModulePreview}>
-                <X />
-              </Button>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  aria-label={isPreviewExpanded ? "미리보기 원래 크기" : "미리보기 크게 보기"}
+                  size="icon"
+                  title={isPreviewExpanded ? "원래 크기" : "크게 보기"}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsPreviewExpanded((value) => !value)}
+                >
+                  {isPreviewExpanded ? (
+                    <Minimize2 className="size-4" />
+                  ) : (
+                    <Maximize2 className="size-4" />
+                  )}
+                </Button>
+                <Button size="icon" type="button" variant="ghost" onClick={closeModulePreview}>
+                  <X />
+                </Button>
+              </div>
             </header>
 
-            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_320px]">
+            <div
+              className={cn(
+                "grid min-h-0 flex-1",
+                isPreviewExpanded
+                  ? "grid-cols-1"
+                  : "grid-cols-[minmax(0,1fr)_320px]",
+              )}
+            >
               <div className="min-h-0 overflow-auto bg-[#f5f8ff] p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex rounded-lg bg-white p-1">
@@ -10855,12 +10892,18 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                   className={cn(
                     "mx-auto overflow-hidden rounded-xl border border-blue-100 bg-white transition-all",
                     previewViewport === "desktop"
-                      ? "max-w-[920px]"
+                      ? isPreviewExpanded
+                        ? "max-w-[1180px]"
+                        : "max-w-[980px]"
                       : previewViewport === "tablet"
                         ? "max-w-[720px]"
                         : "max-w-[390px]",
                   )}
-                  style={canvasStyle}
+                  style={{
+                    ...canvasStyle,
+                    overflowWrap: "break-word",
+                    wordBreak: "keep-all",
+                  }}
                 >
                   <div className="pointer-events-none">
                     <CanvasSection
@@ -10892,10 +10935,13 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                 </div>
               </div>
 
+              {!isPreviewExpanded ? (
               <aside className="min-h-0 overflow-auto border-l border-blue-100 p-5">
                 <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3">
                   <MiniModulePreview preset={previewPreset} />
-                  <p className="mt-3 text-sm font-semibold">{previewPreset.title}</p>
+                  <p className="mt-3 text-sm font-semibold leading-5 text-slate-900">
+                    {previewPreset.title}
+                  </p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
                     {previewPreset.description}
                   </p>
@@ -10912,7 +10958,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                       </div>
                       <div className="rounded-lg bg-slate-50 p-3">
                         <p className="text-[10px] font-semibold text-slate-400">사용 업종</p>
-                        <p className="mt-1 line-clamp-2 text-xs font-semibold text-slate-700">
+                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-700">
                           {previewPreset.industries?.join(" · ")}
                         </p>
                       </div>
@@ -11017,7 +11063,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                             <span className="block text-xs opacity-70">
                               {sectionLabel(type)}
                             </span>
-                            <span className="block truncate text-sm font-semibold">
+                            <span className="block line-clamp-2 text-sm font-semibold leading-5">
                               {stringValue(section, "title", "Untitled")}
                             </span>
                           </span>
@@ -11028,6 +11074,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                   </div>
                 </section>
               </aside>
+              ) : null}
             </div>
 
             <footer className="flex items-center justify-end gap-3 border-t border-blue-100 px-6 py-4">

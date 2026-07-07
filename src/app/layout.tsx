@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { SuperAdminDesignMode } from "@/components/admin/super-admin-design-mode";
+import { SessionTimeoutGuard } from "@/features/auth/session-timeout-guard";
 
 import "./globals.css";
 
@@ -22,6 +23,7 @@ export default function RootLayout({
     <html lang="ko" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         {children}
+        <SessionTimeoutGuard />
         <SuperAdminDesignMode />
       </body>
     </html>

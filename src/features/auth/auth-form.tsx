@@ -17,6 +17,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { resolvePostLoginPath, sanitizeDashboardNext } from "@/features/auth/post-login-redirect";
+import {
+  PERSISTENT_SESSION_MAX_AGE_SECONDS,
+  SESSION_LAST_ACTIVE_COOKIE,
+  SESSION_MODE_COOKIE,
+  SESSION_POLICY_COOKIE,
+  SESSION_MODE_PERSISTENT,
+  SESSION_MODE_STANDARD,
+} from "@/features/auth/session-policy";
 import { hasAnySiteForUser } from "@/features/auth/session-context";
 import {
   getConfiguredSuperAdminEmail,
@@ -44,6 +52,31 @@ function normalizeLoginEmail(input: string) {
   return trimmed;
 }
 
+function getCookieAttributes(maxAge?: number) {
+  const attributes = ["path=/", "SameSite=Lax"];
+
+  if (typeof maxAge === "number") {
+    attributes.push(`Max-Age=${maxAge}`);
+  }
+
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    attributes.push("Secure");
+  }
+
+  return attributes.join("; ");
+}
+
+function setLoginSessionPolicy(keepSignedIn: boolean) {
+  const mode = keepSignedIn ? SESSION_MODE_PERSISTENT : SESSION_MODE_STANDARD;
+  const maxAge = keepSignedIn ? PERSISTENT_SESSION_MAX_AGE_SECONDS : undefined;
+  const attributes = getCookieAttributes(maxAge);
+  const policyAttributes = getCookieAttributes(PERSISTENT_SESSION_MAX_AGE_SECONDS);
+
+  document.cookie = `${SESSION_POLICY_COOKIE}=${mode}; ${policyAttributes}`;
+  document.cookie = `${SESSION_MODE_COOKIE}=${mode}; ${attributes}`;
+  document.cookie = `${SESSION_LAST_ACTIVE_COOKIE}=${Date.now()}; ${attributes}`;
+}
+
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState(() =>
@@ -63,6 +96,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       ? true
       : Boolean(window.localStorage.getItem("keyun_login_email")),
   );
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
 
   const isSignup = mode === "signup";
   const passwordChecks = useMemo(
@@ -226,6 +260,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       const loginContext = await trackProfileLogin(authEmail);
+      setLoginSessionPolicy(keepSignedIn);
 
       if (rememberEmail) {
         window.localStorage.setItem("keyun_login_email", email);
@@ -262,6 +297,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       const nextPath = getNextPath();
       const callbackUrl = new URL("/auth/callback", window.location.origin);
       callbackUrl.searchParams.set("next", nextPath);
+      callbackUrl.searchParams.set("keep_signed_in", keepSignedIn ? "1" : "0");
 
       if (socialName || name) {
         callbackUrl.searchParams.set("display_name", socialName || name);
@@ -418,23 +454,39 @@ export function AuthForm({ mode }: AuthFormProps) {
               </label>
 
               {!isSignup ? (
-                <label className="flex items-center justify-between gap-3 text-sm">
-                  <span className="flex items-center gap-2 text-slate-500">
-                    <input
-                      checked={rememberEmail}
-                      className="size-4 rounded border-slate-300 accent-blue-600"
-                      type="checkbox"
-                      onChange={(event) => setRememberEmail(event.target.checked)}
-                    />
-                    이메일 저장
-                  </span>
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-slate-500">
+                    <label className="flex items-center gap-2">
+                      <input
+                        checked={keepSignedIn}
+                        className="size-4 rounded border-slate-300 accent-blue-600"
+                        type="checkbox"
+                        onChange={(event) => setKeepSignedIn(event.target.checked)}
+                      />
+                      로그인 유지
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        checked={rememberEmail}
+                        className="size-4 rounded border-slate-300 accent-blue-600"
+                        type="checkbox"
+                        onChange={(event) => setRememberEmail(event.target.checked)}
+                      />
+                      이메일 저장
+                    </label>
+                  </div>
                   <Link
                     className="font-medium text-slate-700 hover:text-blue-600"
                     href="/reset-password"
                   >
                     비밀번호 찾기
                   </Link>
-                </label>
+                  {!keepSignedIn ? (
+                    <p className="basis-full text-xs leading-5 text-slate-400">
+                      로그인 유지를 끄면 30분 동안 조작이 없을 때 자동 로그아웃됩니다.
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
 
               {message ? (

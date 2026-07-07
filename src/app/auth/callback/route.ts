@@ -1,6 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { resolvePostLoginPath, sanitizeDashboardNext } from "@/features/auth/post-login-redirect";
+import {
+  PERSISTENT_SESSION_MAX_AGE_SECONDS,
+  SESSION_LAST_ACTIVE_COOKIE,
+  SESSION_MODE_COOKIE,
+  SESSION_POLICY_COOKIE,
+  SESSION_MODE_PERSISTENT,
+  SESSION_MODE_STANDARD,
+} from "@/features/auth/session-policy";
 import { hasAnySiteForUser } from "@/features/auth/session-context";
 import { isConfiguredSuperAdminEmail, resolveEffectiveRole } from "@/lib/auth/super-admin";
 import { createClient } from "@/lib/supabase/server";
@@ -17,6 +25,25 @@ function getCallbackValue(request: NextRequest, key: string, cookieKey: string) 
 
 function getSafeNext(request: NextRequest) {
   return sanitizeDashboardNext(request.nextUrl.searchParams.get("next"));
+}
+
+function applySessionPolicy(request: NextRequest, response: NextResponse) {
+  const keepSignedIn = request.nextUrl.searchParams.get("keep_signed_in") !== "0";
+  const mode = keepSignedIn ? SESSION_MODE_PERSISTENT : SESSION_MODE_STANDARD;
+  const maxAge = keepSignedIn ? PERSISTENT_SESSION_MAX_AGE_SECONDS : undefined;
+  const cookieOptions = {
+    path: "/",
+    sameSite: "lax" as const,
+    ...(maxAge ? { maxAge } : {}),
+  };
+
+  response.cookies.set(SESSION_POLICY_COOKIE, mode, {
+    path: "/",
+    sameSite: "lax",
+    maxAge: PERSISTENT_SESSION_MAX_AGE_SECONDS,
+  });
+  response.cookies.set(SESSION_MODE_COOKIE, mode, cookieOptions);
+  response.cookies.set(SESSION_LAST_ACTIVE_COOKIE, String(Date.now()), cookieOptions);
 }
 
 export async function GET(request: NextRequest) {
@@ -108,6 +135,7 @@ export async function GET(request: NextRequest) {
         });
 
         const response = NextResponse.redirect(`${origin}${destination}`);
+        applySessionPolicy(request, response);
         response.cookies.delete("keyun_oauth_name");
         response.cookies.delete("keyun_oauth_email");
 
@@ -115,6 +143,7 @@ export async function GET(request: NextRequest) {
       }
 
       const response = NextResponse.redirect(`${origin}${next}`);
+      applySessionPolicy(request, response);
       response.cookies.delete("keyun_oauth_name");
       response.cookies.delete("keyun_oauth_email");
 

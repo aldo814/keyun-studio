@@ -9,6 +9,11 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  SESSION_LAST_ACTIVE_COOKIE,
+  SESSION_MODE_COOKIE,
+  SESSION_POLICY_COOKIE,
+} from "@/features/auth/session-policy";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +75,14 @@ function getSiteIdFromPath(pathname: string) {
   return match?.[1] ?? "";
 }
 
+function clearSessionPolicyCookies() {
+  const attributes = "path=/; Max-Age=0; SameSite=Lax";
+
+  document.cookie = `${SESSION_MODE_COOKIE}=; ${attributes}`;
+  document.cookie = `${SESSION_LAST_ACTIVE_COOKIE}=; ${attributes}`;
+  document.cookie = `${SESSION_POLICY_COOKIE}=; ${attributes}`;
+}
+
 export function DashboardShell({
   children,
   profile,
@@ -104,6 +117,7 @@ export function DashboardShell({
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
+      clearSessionPolicyCookies();
       router.replace("/login?next=/dashboard");
       router.refresh();
     } finally {
