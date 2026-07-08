@@ -10812,7 +10812,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
           <div
             className={cn(
               "flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl border border-blue-100 bg-white transition-all",
-              isPreviewExpanded ? "max-w-[min(96vw,1540px)]" : "max-w-6xl",
+              isPreviewExpanded ? "max-h-[96vh] max-w-[min(98vw,1920px)]" : "max-w-6xl",
             )}
           >
             <header className="flex items-start justify-between gap-5 border-b border-blue-100 px-6 py-4">
@@ -10856,7 +10856,12 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                   : "grid-cols-[minmax(0,1fr)_320px]",
               )}
             >
-              <div className="min-h-0 overflow-auto bg-[#f5f8ff] p-6">
+              <div
+                className={cn(
+                  "min-h-0 overflow-auto bg-[#f5f8ff]",
+                  isPreviewExpanded ? "p-3 sm:p-4" : "p-6",
+                )}
+              >
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex rounded-lg bg-white p-1">
                     {[
@@ -10893,7 +10898,7 @@ export function DesignEditor({ site, page, siteBoards, sitePages }: DesignEditor
                     "mx-auto overflow-hidden rounded-xl border border-blue-100 bg-white transition-all",
                     previewViewport === "desktop"
                       ? isPreviewExpanded
-                        ? "max-w-[1180px]"
+                        ? "max-w-[1920px]"
                         : "max-w-[980px]"
                       : previewViewport === "tablet"
                         ? "max-w-[720px]"
